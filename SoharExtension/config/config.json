@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "sohar-header-footer-application-customizer": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/soharHeaderFooter/SoharHeaderFooterApplicationCustomizer.js",
+          "manifest": "./src/extensions/soharHeaderFooter/SoharHeaderFooterApplicationCustomizer.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "SoharHeaderFooterApplicationCustomizerStrings": "lib/extensions/soharHeaderFooter/loc/{locale}.js"
+  }
+}

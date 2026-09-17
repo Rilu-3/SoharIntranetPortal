@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "sohar-intranet-portal-client-side-solution",
+    "id": "e55b727b-1ba2-40ca-b033-cc2f2b510eeb",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.20.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "sohar-intranet-portal description"
+      },
+      "longDescription": {
+        "default": "sohar-intranet-portal description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "sohar-intranet-portal Feature",
+        "description": "The feature that activates elements of the sohar-intranet-portal solution.",
+        "id": "7eeace03-778d-477a-ab15-56b495144a61",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/sohar-intranet-portal.sppkg"
+  }
+}
