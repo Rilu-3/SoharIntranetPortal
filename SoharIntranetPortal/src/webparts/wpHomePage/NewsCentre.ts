@@ -19,19 +19,32 @@ interface INewsItem {
 export default class NewsCentre {
 
   private context: WebPartContext;
+
   private newsItems: INewsItem[] = [];
 
+  /*
+   * Root element belonging only to News Centre.
+   *
+   * This prevents News Centre from interfering
+   * with other sections on the final homepage.
+   */
+  private rootElement!: HTMLElement;
+
+
   public static singleElementHtml: string = `
+
     <div class="news-item flex-column flex-sm-row">
 
       <div class="d-flex flex-grow-1 align-items-center gap-3">
 
         <div class="news-icon">
+
           <img
             src="__KEY_URL_IMGICON__"
             alt="__KEY_DATA_TITLE__"
             class="news-item-image"
           />
+
         </div>
 
         <div class="flex-grow-1">
@@ -77,9 +90,12 @@ export default class NewsCentre {
       </a>
 
     </div>
+
   `;
 
+
   public static allElementsHtml: string = `
+
     <div class="panel-card px-2 py-4 d-flex flex-column">
 
       <div class="panel-header px-2 w-100 float-start mb-4">
@@ -114,48 +130,58 @@ export default class NewsCentre {
         <ul class="news-tabs-list px-2">
 
           <li>
+
             <div
               data-news-category="All"
               class="tab-title-pill tab-title-pill-active"
             >
               All
             </div>
+
           </li>
 
           <li>
+
             <div
               data-news-category="Announcements"
               class="tab-title-pill"
             >
               Announcements
             </div>
+
           </li>
 
           <li>
+
             <div
               data-news-category="Events"
               class="tab-title-pill"
             >
               Events
             </div>
+
           </li>
 
           <li>
+
             <div
               data-news-category="News"
               class="tab-title-pill"
             >
               News
             </div>
+
           </li>
 
           <li>
+
             <div
               data-news-category="Circulars"
               class="tab-title-pill"
             >
               Circulars
             </div>
+
           </li>
 
         </ul>
@@ -168,49 +194,51 @@ export default class NewsCentre {
       </div>
 
     </div>
+
   `;
 
+
   public static noRecord: string = `
+
     <div class="w-100 float-start text-center py-4">
+
       <p class="m-0 strive-text-secondary">
         No News Available
       </p>
+
     </div>
+
   `;
+
 
   constructor(
     context: WebPartContext
   ) {
+
     this.context = context;
+
   }
 
-  public render(): void {
+
+  /*
+   * =====================================================
+   * RENDER NEWS CENTRE
+   * =====================================================
+   *
+   * The WebPart gives us the root container.
+   *
+   * NewsCentre renders everything inside that container.
+   */
+  public render(
+    rootElement: HTMLElement
+  ): void {
+
+    this.rootElement =
+      rootElement;
 
     /*
-     * Find the existing News Centre
-     * in UabHomePage HTML.
+     * Arrow icon.
      */
-    const newsTabs =
-      document.querySelector(
-        '#news-tabs'
-      );
-
-    if (!newsTabs) {
-
-      console.error(
-        '❌ #news-tabs not found.'
-      );
-
-      return;
-    }
-
-    const parent =
-      newsTabs.parentElement;
-
-    if (!parent) {
-      return;
-    }
-
     const arrowUrl =
       `${this.context.pageContext.web.absoluteUrl}` +
       `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
@@ -218,7 +246,7 @@ export default class NewsCentre {
     /*
      * Render News Centre HTML.
      */
-    parent.innerHTML =
+    this.rootElement.innerHTML =
       NewsCentre.allElementsHtml
         .replace(
           /__KEY_URL_ARROW__/g,
@@ -229,8 +257,15 @@ export default class NewsCentre {
      * Load News from SharePoint.
      */
     this.loadNews();
+
   }
 
+
+  /*
+   * =====================================================
+   * LOAD NEWS
+   * =====================================================
+   */
   private async loadNews(): Promise<void> {
 
     try {
@@ -267,6 +302,7 @@ export default class NewsCentre {
         throw new Error(
           `News API failed: ${response.status} ${response.statusText}`
         );
+
       }
 
       const data =
@@ -280,10 +316,16 @@ export default class NewsCentre {
         this.newsItems
       );
 
+      /*
+       * Initially display all News.
+       */
       this.renderNewsItems(
         'All'
       );
 
+      /*
+       * Attach category click events.
+       */
       this.attachTabEvents();
 
     } catch (error) {
@@ -300,10 +342,29 @@ export default class NewsCentre {
 
         container.innerHTML =
           NewsCentre.noRecord;
+
       }
+
     }
+
   }
 
+
+  /*
+   * =====================================================
+   * RENDER NEWS ITEMS
+   * =====================================================
+   *
+   * IMPORTANT:
+   *
+   * Existing category filtering is preserved.
+   *
+   * Events → only Events
+   * News → only News
+   * Announcements → only Announcements
+   * Circulars → only Circulars
+   * All → all items
+   */
   private renderNewsItems(
     category: string
   ): void {
@@ -318,6 +379,7 @@ export default class NewsCentre {
       );
 
       return;
+
     }
 
     let filteredItems =
@@ -348,7 +410,9 @@ export default class NewsCentre {
 
           }
         );
+
     }
+
 
     /*
      * No records.
@@ -361,9 +425,12 @@ export default class NewsCentre {
         NewsCentre.noRecord;
 
       return;
+
     }
 
+
     let allElementsHtml = '';
+
 
     filteredItems.forEach(
       (item: INewsItem) => {
@@ -373,7 +440,11 @@ export default class NewsCentre {
          * NEWS IMAGE FROM LIST ATTACHMENT
          * =====================================
          *
-         * Same logic as your Quick Links code.
+         * This is the working logic.
+         *
+         * Image comes from:
+         *
+         * /Lists/News/Attachments/{ID}/{fileName}
          */
 
         let imageUrl = '';
@@ -406,8 +477,11 @@ export default class NewsCentre {
               item.NewsIcon,
               error
             );
+
           }
+
         }
+
 
         console.log(
           'News:',
@@ -424,6 +498,7 @@ export default class NewsCentre {
           imageUrl
         );
 
+
         /*
          * Date.
          */
@@ -432,6 +507,7 @@ export default class NewsCentre {
             item.PublishedDate
           );
 
+
         /*
          * Details page.
          */
@@ -439,12 +515,14 @@ export default class NewsCentre {
           `${this.context.pageContext.web.absoluteUrl}` +
           `/Lists/News/DispForm.aspx?ID=${item.Id}`;
 
+
         /*
          * Arrow icon.
          */
         const arrowUrl =
           `${this.context.pageContext.web.absoluteUrl}` +
           `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+
 
         /*
          * Create News HTML.
@@ -495,33 +573,71 @@ export default class NewsCentre {
               arrowUrl
             );
 
+
         allElementsHtml +=
           singleElementHtml;
 
       }
     );
 
+
     /*
      * Put all News items into container.
      */
     container.innerHTML =
       allElementsHtml;
+
   }
 
+
+  /*
+   * =====================================================
+   * GET NEWS ITEMS CONTAINER
+   * =====================================================
+   *
+   * IMPORTANT:
+   *
+   * Search only inside News Centre.
+   *
+   * This prevents conflicts with other sections
+   * when the complete homepage is merged.
+   */
   private getNewsItemsContainer():
     HTMLElement | null {
 
-    return document.querySelector(
+    if (!this.rootElement) {
+
+      return null;
+
+    }
+
+    return this.rootElement.querySelector(
       '#news-items-container'
     ) as HTMLElement | null;
+
   }
 
+
+  /*
+   * =====================================================
+   * TAB EVENTS
+   * =====================================================
+   *
+   * Existing functionality preserved.
+   */
   private attachTabEvents(): void {
 
+    if (!this.rootElement) {
+
+      return;
+
+    }
+
     const tabs =
-      document.querySelectorAll(
+      this.rootElement.querySelectorAll(
         '[data-news-category]'
       );
+
 
     tabs.forEach(
       (tab: Element) => {
@@ -536,8 +652,11 @@ export default class NewsCentre {
               );
 
             if (!category) {
+
               return;
+
             }
+
 
             /*
              * Remove active class.
@@ -552,12 +671,14 @@ export default class NewsCentre {
               }
             );
 
+
             /*
              * Set active tab.
              */
             tab.classList.add(
               'tab-title-pill-active'
             );
+
 
             /*
              * Filter News.
@@ -571,14 +692,23 @@ export default class NewsCentre {
 
       }
     );
+
   }
 
+
+  /*
+   * =====================================================
+   * FORMAT DATE
+   * =====================================================
+   */
   private formatDate(
     dateValue: string
   ): string {
 
     if (!dateValue) {
+
       return '';
+
     }
 
     const date =
@@ -591,6 +721,7 @@ export default class NewsCentre {
     ) {
 
       return dateValue;
+
     }
 
     return date.toLocaleDateString(
@@ -601,32 +732,46 @@ export default class NewsCentre {
         year: 'numeric'
       }
     );
+
   }
 
+
+  /*
+   * =====================================================
+   * ESCAPE HTML
+   * =====================================================
+   */
   private escapeHtml(
     value: string
   ): string {
 
     return value
+
       .replace(
         /&/g,
         '&amp;'
       )
+
       .replace(
         /</g,
         '&lt;'
       )
+
       .replace(
         />/g,
         '&gt;'
       )
+
       .replace(
         /"/g,
         '&quot;'
       )
+
       .replace(
         /'/g,
         '&#039;'
       );
+
   }
+
 }

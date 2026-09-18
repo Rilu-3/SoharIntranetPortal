@@ -1,7 +1,6 @@
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { SPComponentLoader } from '@microsoft/sp-loader';
 
-import UabHomePage from './UabHomePage';
 import NewsCentre from './NewsCentre';
 
 export interface IWpHomePageWebPartProps {
@@ -24,21 +23,51 @@ export default class WpHomePageWebPart
   public render(): void {
 
     /*
-     * Render your existing homepage.
+     * =====================================================
+     * NEWS CENTRE ROOT
+     * =====================================================
+     *
+     * This WebPart owns the News Centre section.
+     *
+     * No dependency on UabHomePage.ts.
      */
-    this.domElement.innerHTML =
-      UabHomePage.allElementsHtml;
+    this.domElement.innerHTML = `
+      <div id="news-centre-root">
+      </div>
+    `;
 
     /*
-     * NewsCentre works with the #news-tabs
-     * already present in UabHomePage.
+     * =====================================================
+     * CREATE NEWS CENTRE
+     * =====================================================
      */
     this.newsCentre =
       new NewsCentre(
         this.context
       );
 
-    this.newsCentre.render();
+    /*
+     * =====================================================
+     * RENDER NEWS CENTRE
+     * =====================================================
+     */
+    const newsRoot =
+      this.domElement.querySelector(
+        '#news-centre-root'
+      ) as HTMLElement | null;
+
+    if (!newsRoot) {
+
+      console.error(
+        '❌ #news-centre-root not found.'
+      );
+
+      return;
+    }
+
+    this.newsCentre.render(
+      newsRoot
+    );
   }
 
   private async loadCSS(): Promise<void> {
