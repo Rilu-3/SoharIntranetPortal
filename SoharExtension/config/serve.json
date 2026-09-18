@@ -4,7 +4,7 @@
   "https": true,
   "serveConfigurations": {
     "default": {
-      "pageUrl": "https://{tenantDomain}/SitePages/myPage.aspx",
+      "pageUrl": "https://soharaluminium5.sharepoint.com/sites/DevPortal",
       "customActions": {
         "e1e94a7c-9e74-4207-945b-cd5d75173063": {
           "location": "ClientSideExtension.ApplicationCustomizer",
@@ -15,7 +15,7 @@
       }
     },
     "soharHeaderFooter": {
-      "pageUrl": "https://{tenantDomain}/SitePages/myPage.aspx",
+      "pageUrl": "https://soharaluminium5.sharepoint.com/sites/DevPortal",
       "customActions": {
         "e1e94a7c-9e74-4207-945b-cd5d75173063": {
           "location": "ClientSideExtension.ApplicationCustomizer",
