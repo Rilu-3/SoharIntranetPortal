@@ -66,7 +66,7 @@ export default class UpcomingEventsTemplate {
             </div>
 
             <div class="w-100 float-start d-flex justify-content-start">
-              <a href="#" class="link-arrow text-color-link">
+              <a href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Upcoming-Events.aspx" class="link-arrow text-color-link">
                 <span class="text-sm xxl-text-base font-bold">
                   View All Events
                 </span>
@@ -94,7 +94,7 @@ export default class UpcomingEventsTemplate {
             </div>
 
             <div class="w-100 float-start d-flex justify-content-start">
-              <a href="#" class="link-arrow text-color-link">
+              <a href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Upcoming-Events.aspx" class="link-arrow text-color-link">
                 <span class="text-sm xxl-text-base font-bold">
                   View All Events
                 </span>
