@@ -89,6 +89,7 @@ export default class QuickLinks {
 
         </div>
 
+
         <div class="w-100 float-start p-2 overflow-auto panel-card-quick-links quick-links-grid custom-scroll-view">
 
           <!-- Dynamic Quick Links will be inserted here -->
@@ -230,6 +231,11 @@ export default class QuickLinks {
         domElement
       );
 
+      this.setupFavouriteModal(
+      context,
+      domElement
+    );
+
 
       this.updateFavouriteTabVisibility(
         domElement,
@@ -244,10 +250,12 @@ export default class QuickLinks {
         error
       );
 
+
       const container =
         domElement.querySelector(
           '.quick-links-grid'
         );
+
 
       if (container) {
 
@@ -303,13 +311,6 @@ export default class QuickLinks {
 
     const data =
       await response.json();
-
-
-    console.log(
-      'Quick Links from SharePoint:',
-      data.value
-    );
-
 
     return data.value;
 
@@ -497,13 +498,13 @@ export default class QuickLinks {
 
     const activeItems =
       items.filter(
-        (item: IQuickLinksList) =>
+        (item) =>
           item.Status === 'Active'
       );
 
 
     activeItems.forEach(
-      (item: IQuickLinksList) => {
+      (item) => {
 
         const imageUrl =
           this.getImageUrl(
@@ -595,7 +596,7 @@ export default class QuickLinks {
 
     const activeItems =
       items.filter(
-        (item: IQuickLinksList) =>
+        (item) =>
           item.Status === 'Active'
       );
 
@@ -604,7 +605,7 @@ export default class QuickLinks {
 
 
     activeItems.forEach(
-      (item: IQuickLinksList) => {
+      (item) => {
 
         const isFavourite =
           favouriteIds.indexOf(
@@ -618,7 +619,6 @@ export default class QuickLinks {
             <input
               type="checkbox"
               value="${item.Id}"
-              data-favourite="ql-favourite"
               ${isFavourite ? 'checked' : ''}>
 
             <span>
@@ -812,8 +812,68 @@ export default class QuickLinks {
     );
 
   }
+   // =========================================================
+  // Setup Favourite Modal
+  // =========================================================
+
+  private static setupFavouriteModal(
+    context: WebPartContext,
+    domElement: HTMLElement
+  ): void {
+
+    const modal =
+      domElement.querySelector(
+        '#addFavouriteModal'
+      );
+
+    if (!modal) {
+
+      console.error(
+        'Favourite modal not found.'
+      );
+
+      return;
+
+    }
 
 
+    modal.addEventListener(
+      'show.bs.modal',
+      async () => {
+
+        const favouriteIds =
+          await this.getUserFavouriteIds(
+            context
+          );
+
+
+        const checkboxes =
+          domElement.querySelectorAll(
+            '.favourite-options input[type="checkbox"]'
+          );
+
+
+        checkboxes.forEach(
+          (checkbox) => {
+
+            const input =
+              checkbox as HTMLInputElement;
+
+            const quickLinkId =
+              Number(input.value);
+
+            input.checked =
+              favouriteIds.indexOf(
+                quickLinkId
+              ) !== -1;
+
+          }
+        );
+
+      }
+    );
+
+  }
   // =========================================================
   // Add / Remove Favourites
   // =========================================================
@@ -887,10 +947,6 @@ export default class QuickLinks {
           favouritesResponse.status
         );
 
-        alert(
-          'Unable to update favourites.'
-        );
-
         return;
 
       }
@@ -909,7 +965,6 @@ export default class QuickLinks {
 
       // =====================================================
       // Remove unchecked favourites
-      // Remove duplicate records
       // =====================================================
 
       for (
@@ -936,24 +991,6 @@ export default class QuickLinks {
           selectedIds.indexOf(
             quickLinkId
           ) === -1
-        ) {
-
-          await this.deleteFavourite(
-            context,
-            favourite.Id
-          );
-
-        }
-
-
-        // -----------------------------------------------
-        // Remove duplicate
-        // -----------------------------------------------
-
-        else if (
-          keptIds.indexOf(
-            quickLinkId
-          ) !== -1
         ) {
 
           await this.deleteFavourite(
@@ -1052,12 +1089,6 @@ export default class QuickLinks {
               errorText
             );
 
-
-            alert(
-              'Failed to update favourites.'
-            );
-
-
             return;
 
           }
@@ -1108,10 +1139,47 @@ export default class QuickLinks {
         favouriteIds
       );
 
+      // =====================================================
+      // Close Add Favourite Modal
+      // =====================================================
 
-      alert(
-        'Favourites updated successfully.'
-      );
+      const modal =
+        domElement.querySelector(
+          '#addFavouriteModal'
+        ) as HTMLElement;
+
+
+      if (modal) {
+
+        modal.classList.remove(
+          'show'
+        );
+
+        modal.style.display =
+          'none';
+
+        modal.setAttribute(
+          'aria-hidden',
+          'true'
+        );
+
+        document.body.classList.remove(
+          'modal-open'
+        );
+
+
+        const backdrop =
+          document.querySelector(
+            '.modal-backdrop'
+          );
+
+        if (backdrop) {
+
+          backdrop.remove();
+
+        }
+
+      }
 
 
     } catch (error) {
@@ -1119,11 +1187,6 @@ export default class QuickLinks {
       console.error(
         'Error updating favourites:',
         error
-      );
-
-
-      alert(
-        'Error updating favourites. Check the browser console.'
       );
 
     }
