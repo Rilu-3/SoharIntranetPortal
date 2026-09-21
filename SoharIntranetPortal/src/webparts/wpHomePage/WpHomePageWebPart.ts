@@ -1,5 +1,6 @@
 import { Version } from '@microsoft/sp-core-library';
 
+
 import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField
@@ -22,7 +23,6 @@ import { escape } from '@microsoft/sp-lodash-subset';
 
 import UpcomingEventsTemplate from './UpcomingEvents';
 
-import styles from './WpHomePageWebPart.module.scss';
 
 
 export interface IWpHomePageWebPartProps {
@@ -176,89 +176,60 @@ export default class WpHomePageWebPart
   }
 
 
-  private renderUpcomingEvents(): void {
+private renderUpcomingEvents(): void {
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
+  const baseUrl =
+    this.context.pageContext.web.absoluteUrl;
 
+  const rightArrow =
+    `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
 
-    const rightArrow =
-      `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+  const arrowRightShort =
+    `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
+  const myEvents =
+    this.getMyEvents();
 
-    const arrowRightShort =
-      `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+  const organizationalEvents =
+    this.getOrganizationalEvents();
 
+  let html =
+    UpcomingEventsTemplate.allElementsHtml;
 
-    const myEvents =
-      this.getMyEvents();
+  html =
+    html.replace(
+      /__KEY_ARROW_RIGHT_SHORT__/g,
+      arrowRightShort
+    );
 
+  const myEventsHtml =
+    this.renderEventElements(
+      myEvents,
+      rightArrow
+    );
 
-    const organizationalEvents =
-      this.getOrganizationalEvents();
+  const organizationalEventsHtml =
+    this.renderEventElements(
+      organizationalEvents,
+      rightArrow
+    );
 
+  html =
+    html.replace(
+      'id="events-list-my">',
+      `id="events-list-my">${myEventsHtml}`
+    );
 
-    let html =
-      UpcomingEventsTemplate.allElementsHtml;
-
-
-    /*
-     * Replace View All arrow.
-     */
-    html =
-      html.replace(
-        /__KEY_ARROW_RIGHT_SHORT__/g,
-        arrowRightShort
-      );
-
-
-    /*
-     * My Events.
-     */
-    const myEventsHtml =
-      this.renderEventElements(
-        myEvents,
-        rightArrow
-      );
-
-
-    /*
-     * Organizational Events.
-     */
-    const organizationalEventsHtml =
-      this.renderEventElements(
-        organizationalEvents,
-        rightArrow
-      );
+  html =
+    html.replace(
+      'id="events-list-org">',
+      `id="events-list-org">${organizationalEventsHtml}`
+    );
 
 
-    /*
-     * Put events inside the existing containers.
-     */
-    html =
-      html.replace(
-        'id="events-list-my">',
-        `id="events-list-my">${myEventsHtml}`
-      );
-
-
-    html =
-      html.replace(
-        'id="events-list-org">',
-        `id="events-list-org">${organizationalEventsHtml}`
-      );
-
-
-    /*
-     * Finally display the webpart.
-     */
-    this.domElement.innerHTML = `
-      <div class="${styles.wpHomePage}">
-        ${html}
-      </div>
-    `;
-  }
-
+  // Put your HTML directly into the webpart
+  this.domElement.innerHTML = html;
+}
 
   private getMyEvents(): IEventItem[] {
 
