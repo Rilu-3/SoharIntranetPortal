@@ -1,19 +1,14 @@
-import {
-  SPHttpClient,
-  SPHttpClientResponse
-} from '@microsoft/sp-http';
-
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 
-interface INewsItem {
+export interface INewsItem {
   Id: number;
   Title: string;
-  NewsIcon: any;
-  ShortDescription: string;
-  Category: string;
-  MainContent: string;
-  PublishedDate: string;
-  Status: string;
+  NewsIcon?: any;
+  ShortDescription?: string;
+  Category?: string;
+  MainContent?: string;
+  PublishedDate?: string;
+  Status?: string;
 }
 
 export default class NewsCentre {
@@ -23,28 +18,18 @@ export default class NewsCentre {
   private newsItems: INewsItem[] = [];
 
   /*
-   * Root element belonging only to News Centre.
-   *
-   * This prevents News Centre from interfering
-   * with other sections on the final homepage.
+   * HTML for ONE news item.
+   * This follows the original news-item structure.
    */
-  private rootElement!: HTMLElement;
-
-
-  public static singleElementHtml: string = `
-
+  private singleElementHtml: string = `
     <div class="news-item flex-column flex-sm-row">
 
       <div class="d-flex flex-grow-1 align-items-center gap-3">
 
         <div class="news-icon">
-
           <img
             src="__KEY_URL_IMGICON__"
-            alt="__KEY_DATA_TITLE__"
-            class="news-item-image"
-          />
-
+            alt="__KEY_DATA_TITLE__" />
         </div>
 
         <div class="flex-grow-1">
@@ -58,7 +43,6 @@ export default class NewsCentre {
           </p>
 
           <p class="news-meta mt-1">
-
             <span class="tag">
               __KEY_DATA_CATEGORY__
             </span>
@@ -66,7 +50,6 @@ export default class NewsCentre {
             &nbsp;•&nbsp;
 
             __KEY_DATA_DATE__
-
           </p>
 
         </div>
@@ -75,221 +58,239 @@ export default class NewsCentre {
 
       <a
         href="__KEY_URL_LINK__"
-        class="link-arrow text-color-link"
-      >
+        class="link-arrow text-color-link align-self-end align-self-sm-center flex-shrink-0">
 
-        <span>
+        <span class="text-sm xxl-text-base font-bold">
           Read More
         </span>
 
         <img
           src="__KEY_URL_ARROW__"
-          alt=""
-        />
+          alt="" />
 
       </a>
 
     </div>
-
   `;
 
+  /*
+   * COMPLETE News Centre HTML.
+   *
+   * The structure follows the original HTML.
+   * No news-content-* IDs are added.
+   */
+  private allElementsHtml: string = `
+    <div class="col-12 col-lg-6">
 
-  public static allElementsHtml: string = `
+      <div class="panel-card px-2 py-4 d-flex flex-column">
 
-    <div class="panel-card px-2 py-4 d-flex flex-column">
+        <div class="panel-header px-2 w-100 float-start mb-4">
 
-      <div class="panel-header px-2 w-100 float-start mb-4">
+          <h2 class="panel-title">
+            News Centre
+          </h2>
 
-        <h2 class="panel-title">
-          News Centre
-        </h2>
+          <a
+            href="#"
+            class="link-arrow text-color-link">
 
-        <a
-          href="#"
-          class="link-arrow text-color-link"
-        >
+            <span class="text-sm xxl-text-base font-bold">
+              View All News
+            </span>
 
-          <span class="text-sm xxl-text-base font-bold">
-            View All News
-          </span>
+            <img
+              src="__KEY_URL_ARROW__"
+              alt="" />
 
-          <img
-            src="__KEY_URL_ARROW__"
-            alt=""
-          />
+          </a>
 
-        </a>
-
-      </div>
-
-      <div
-        id="news-tabs"
-        class="w-100 float-start d-flex flex-column flex-grow-1 overflow-hidden"
-      >
-
-        <ul class="news-tabs-list px-2">
-
-          <li>
-
-            <div
-              data-news-category="All"
-              class="tab-title-pill tab-title-pill-active"
-            >
-              All
-            </div>
-
-          </li>
-
-          <li>
-
-            <div
-              data-news-category="Announcements"
-              class="tab-title-pill"
-            >
-              Announcements
-            </div>
-
-          </li>
-
-          <li>
-
-            <div
-              data-news-category="Events"
-              class="tab-title-pill"
-            >
-              Events
-            </div>
-
-          </li>
-
-          <li>
-
-            <div
-              data-news-category="News"
-              class="tab-title-pill"
-            >
-              News
-            </div>
-
-          </li>
-
-          <li>
-
-            <div
-              data-news-category="Circulars"
-              class="tab-title-pill"
-            >
-              Circulars
-            </div>
-
-          </li>
-
-        </ul>
+        </div>
 
         <div
-          id="news-items-container"
-          class="news-tabs-content w-100 float-start"
-        ></div>
+          id="news-tabs"
+          class="w-100 float-start d-flex flex-column flex-grow-1 overflow-hidden">
+
+          <ul class="news-tabs-list px-2">
+
+            <li>
+              <div
+                data-tab-news-id="news-panel-all"
+                class="tab-title-pill tab-title-pill-active">
+                All
+              </div>
+            </li>
+
+            <li>
+              <div
+                data-tab-news-id="news-panel-announcements"
+                class="tab-title-pill">
+                Announcements
+              </div>
+            </li>
+
+            <li>
+              <div
+                data-tab-news-id="news-panel-events"
+                class="tab-title-pill">
+                Events
+              </div>
+            </li>
+
+            <li>
+              <div
+                data-tab-news-id="news-panel-news"
+                class="tab-title-pill">
+                News
+              </div>
+            </li>
+
+            <li>
+              <div
+                data-tab-news-id="news-panel-circulars"
+                class="tab-title-pill">
+                Circulars
+              </div>
+            </li>
+
+          </ul>
+
+          <div
+            id="news-panel-all"
+            class="w-100 float-start news-panel-tab-view flex-grow-1"
+            style="display: block;">
+
+            <div
+              class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+            </div>
+
+          </div>
+
+          <div
+            id="news-panel-announcements"
+            class="w-100 float-start news-panel-tab-view flex-grow-1">
+
+            <div
+              class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+            </div>
+
+          </div>
+
+          <div
+            id="news-panel-events"
+            class="w-100 float-start news-panel-tab-view flex-grow-1">
+
+            <div
+              class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+            </div>
+
+          </div>
+
+          <div
+            id="news-panel-news"
+            class="w-100 float-start news-panel-tab-view flex-grow-1">
+
+            <div
+              class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+            </div>
+
+          </div>
+
+          <div
+            id="news-panel-circulars"
+            class="w-100 float-start news-panel-tab-view flex-grow-1">
+
+            <div
+              class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+            </div>
+
+          </div>
+
+        </div>
 
       </div>
 
     </div>
-
   `;
 
-
-  public static noRecord: string = `
-
-    <div class="w-100 float-start text-center py-4">
-
-      <p class="m-0 strive-text-secondary">
-        No News Available
-      </p>
-
-    </div>
-
-  `;
-
-
-  constructor(
-    context: WebPartContext
-  ) {
-
+  constructor(context: WebPartContext) {
     this.context = context;
-
   }
 
-
-  /*
-   * =====================================================
-   * RENDER NEWS CENTRE
-   * =====================================================
-   *
-   * The WebPart gives us the root container.
-   *
-   * NewsCentre renders everything inside that container.
+  /**
+   * Main render method
    */
-  public render(
-    rootElement: HTMLElement
-  ): void {
-
-    this.rootElement =
-      rootElement;
+  public async render(rootElement: HTMLElement): Promise<void> {
 
     /*
-     * Arrow icon.
+     * Insert the complete original News Centre structure.
      */
-    const arrowUrl =
-      `${this.context.pageContext.web.absoluteUrl}` +
-      `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    rootElement.innerHTML =
+      this.allElementsHtml.replace(
+        /__KEY_URL_ARROW__/g,
+        this.getArrowImageUrl()
+      );
 
     /*
-     * Render News Centre HTML.
+     * Load SharePoint News list.
      */
-    this.rootElement.innerHTML =
-      NewsCentre.allElementsHtml
-        .replace(
-          /__KEY_URL_ARROW__/g,
-          arrowUrl
-        );
+    await this.loadNews();
 
     /*
-     * Load News from SharePoint.
+     * Populate every category.
      */
-    this.loadNews();
+    this.renderCategory(
+      'All',
+      'news-panel-all'
+    );
 
+    this.renderCategory(
+      'Announcements',
+      'news-panel-announcements'
+    );
+
+    this.renderCategory(
+      'Events',
+      'news-panel-events'
+    );
+
+    this.renderCategory(
+      'News',
+      'news-panel-news'
+    );
+
+    this.renderCategory(
+      'Circulars',
+      'news-panel-circulars'
+    );
+
+    /*
+     * Attach tab click events.
+     */
+    this.attachTabEvents();
   }
 
-
-  /*
-   * =====================================================
-   * LOAD NEWS
-   * =====================================================
+  /**
+   * Load News items from SharePoint.
    */
   private async loadNews(): Promise<void> {
 
+    const webUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+    const apiUrl =
+      `${webUrl}/_api/web/lists/getbytitle('News')/items` +
+      `?$select=Id,Title,NewsIcon,ShortDescription,Category,MainContent,PublishedDate,Status` +
+      `&$filter=Status eq 'Active'` +
+      `&$orderby=PublishedDate desc`;
+
     try {
 
-      const webUrl =
-        this.context.pageContext.web.absoluteUrl;
-
-      const apiUrl =
-        `${webUrl}/_api/web/lists/getbytitle('News')/items` +
-        `?$select=Id,Title,NewsIcon,ShortDescription,Category,MainContent,PublishedDate,Status` +
-        `&$filter=Status eq 'Active'` +
-        `&$orderby=PublishedDate desc`;
-
-      console.log(
-        '📰 News API:',
-        apiUrl
-      );
-
-      const response:
-        SPHttpClientResponse =
-        await this.context.spHttpClient.get(
+      const response =
+        await fetch(
           apiUrl,
-          SPHttpClient.configurations.v1,
           {
+            method: 'GET',
+
             headers: {
               'Accept':
                 'application/json;odata=nometadata'
@@ -300,9 +301,8 @@ export default class NewsCentre {
       if (!response.ok) {
 
         throw new Error(
-          `News API failed: ${response.status} ${response.statusText}`
+          `News API failed: ${response.status}`
         );
-
       }
 
       const data =
@@ -312,416 +312,366 @@ export default class NewsCentre {
         data.value || [];
 
       console.log(
-        '📰 News items:',
+        '✅ News items loaded:',
         this.newsItems
       );
-
-      /*
-       * Initially display all News.
-       */
-      this.renderNewsItems(
-        'All'
-      );
-
-      /*
-       * Attach category click events.
-       */
-      this.attachTabEvents();
 
     } catch (error) {
 
       console.error(
-        '❌ Error loading News:',
+        '❌ Error loading News list:',
         error
       );
 
-      const container =
-        this.getNewsItemsContainer();
-
-      if (container) {
-
-        container.innerHTML =
-          NewsCentre.noRecord;
-
-      }
-
+      this.newsItems = [];
     }
-
   }
 
-
-  /*
-   * =====================================================
-   * RENDER NEWS ITEMS
-   * =====================================================
-   *
-   * IMPORTANT:
-   *
-   * Existing category filtering is preserved.
-   *
-   * Events → only Events
-   * News → only News
-   * Announcements → only Announcements
-   * Circulars → only Circulars
-   * All → all items
+  /**
+   * Render a category into the existing
+   * .panel-card-news element.
    */
-  private renderNewsItems(
-    category: string
+  private renderCategory(
+    category: string,
+    panelId: string
   ): void {
 
-    const container =
-      this.getNewsItemsContainer();
+    const panel =
+      document.getElementById(panelId);
 
-    if (!container) {
+    if (!panel) {
 
-      console.error(
-        '❌ #news-items-container not found.'
+      console.warn(
+        `⚠️ Panel not found: ${panelId}`
       );
 
       return;
-
     }
 
-    let filteredItems =
-      this.newsItems;
+    /*
+     * We use the ORIGINAL .panel-card-news
+     * from the HTML.
+     *
+     * No additional ID is required.
+     */
+    const container =
+      panel.querySelector(
+        '.panel-card-news'
+      ) as HTMLElement | null;
+
+    if (!container) {
+
+      console.warn(
+        `⚠️ .panel-card-news not found inside ${panelId}`
+      );
+
+      return;
+    }
 
     /*
-     * Category filtering.
+     * Filter SharePoint items.
      */
-    if (
-      category.toLowerCase() !== 'all'
-    ) {
+    let filteredItems: INewsItem[];
+
+    if (category === 'All') {
+
+      filteredItems =
+        this.newsItems;
+
+    } else {
 
       filteredItems =
         this.newsItems.filter(
-          (item: INewsItem) => {
-
-            return (
-              item.Category &&
+          item =>
+            this.normalizeValue(
               item.Category
-                .toString()
-                .trim()
-                .toLowerCase() ===
+            ) ===
+            this.normalizeValue(
               category
-                .toString()
-                .trim()
-                .toLowerCase()
-            );
-
-          }
+            )
         );
-
     }
-
 
     /*
      * No records.
      */
-    if (
-      filteredItems.length === 0
-    ) {
+    if (!filteredItems.length) {
 
       container.innerHTML =
-        NewsCentre.noRecord;
+        this.getNoRecordHtml();
 
       return;
-
     }
-
-
-    let allElementsHtml = '';
-
-
-    filteredItems.forEach(
-      (item: INewsItem) => {
-
-        /*
-         * =====================================
-         * NEWS IMAGE FROM LIST ATTACHMENT
-         * =====================================
-         *
-         * This is the working logic.
-         *
-         * Image comes from:
-         *
-         * /Lists/News/Attachments/{ID}/{fileName}
-         */
-
-        let imageUrl = '';
-
-        if (item.NewsIcon) {
-
-          try {
-
-            const imgData =
-              typeof item.NewsIcon === 'string'
-                ? JSON.parse(item.NewsIcon)
-                : item.NewsIcon;
-
-            const fileName =
-              imgData.fileName || '';
-
-            if (fileName) {
-
-              imageUrl =
-                `${this.context.pageContext.web.absoluteUrl}` +
-                `/Lists/News/Attachments/` +
-                `${item.Id}/${fileName}`;
-
-            }
-
-          } catch (error) {
-
-            console.error(
-              '❌ Error parsing NewsIcon:',
-              item.NewsIcon,
-              error
-            );
-
-          }
-
-        }
-
-
-        console.log(
-          'News:',
-          item.Title
-        );
-
-        console.log(
-          'Image:',
-          item.NewsIcon
-        );
-
-        console.log(
-          'Image URL:',
-          imageUrl
-        );
-
-
-        /*
-         * Date.
-         */
-        const date =
-          this.formatDate(
-            item.PublishedDate
-          );
-
-
-        /*
-         * Details page.
-         */
-        const detailsUrl =
-          `${this.context.pageContext.web.absoluteUrl}` +
-          `/Lists/News/DispForm.aspx?ID=${item.Id}`;
-
-
-        /*
-         * Arrow icon.
-         */
-        const arrowUrl =
-          `${this.context.pageContext.web.absoluteUrl}` +
-          `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
-
-
-        /*
-         * Create News HTML.
-         */
-        const singleElementHtml =
-          NewsCentre.singleElementHtml
-
-            .replace(
-              /__KEY_URL_IMGICON__/g,
-              imageUrl
-            )
-
-            .replace(
-              /__KEY_DATA_TITLE__/g,
-              this.escapeHtml(
-                item.Title || ''
-              )
-            )
-
-            .replace(
-              /__KEY_DATA_DESCRIPTION__/g,
-              this.escapeHtml(
-                item.ShortDescription || ''
-              )
-            )
-
-            .replace(
-              /__KEY_DATA_CATEGORY__/g,
-              this.escapeHtml(
-                item.Category || ''
-              )
-            )
-
-            .replace(
-              /__KEY_DATA_DATE__/g,
-              this.escapeHtml(
-                date
-              )
-            )
-
-            .replace(
-              /__KEY_URL_LINK__/g,
-              detailsUrl
-            )
-
-            .replace(
-              /__KEY_URL_ARROW__/g,
-              arrowUrl
-            );
-
-
-        allElementsHtml +=
-          singleElementHtml;
-
-      }
-    );
-
 
     /*
-     * Put all News items into container.
+     * Generate all news items using
+     * singleElementHtml.
      */
-    container.innerHTML =
-      allElementsHtml;
+    const html =
+      filteredItems
+        .map(
+          item =>
+            this.createSingleElementHtml(item)
+        )
+        .join('');
 
+    container.innerHTML =
+      html;
   }
 
-
-  /*
-   * =====================================================
-   * GET NEWS ITEMS CONTAINER
-   * =====================================================
-   *
-   * IMPORTANT:
-   *
-   * Search only inside News Centre.
-   *
-   * This prevents conflicts with other sections
-   * when the complete homepage is merged.
+  /**
+   * Generate ONE news item from
+   * singleElementHtml.
    */
-  private getNewsItemsContainer():
-    HTMLElement | null {
+  private createSingleElementHtml(
+    item: INewsItem
+  ): string {
 
-    if (!this.rootElement) {
+    const title =
+      this.escapeHtml(
+        item.Title || ''
+      );
 
-      return null;
+    const description =
+      this.escapeHtml(
+        item.ShortDescription || ''
+      );
 
+    const category =
+      this.escapeHtml(
+        item.Category || ''
+      );
+
+    const date =
+      this.formatDate(
+        item.PublishedDate
+      );
+
+    const imageUrl =
+      this.getNewsImageUrl(item);
+
+    const detailsUrl =
+      `${this.context.pageContext.web.absoluteUrl}` +
+      `/Lists/News/DispForm.aspx?ID=${item.Id}`;
+
+    return this.singleElementHtml
+
+      .replace(
+        /__KEY_URL_IMGICON__/g,
+        imageUrl
+      )
+
+      .replace(
+        /__KEY_DATA_TITLE__/g,
+        title
+      )
+
+      .replace(
+        /__KEY_DATA_DESCRIPTION__/g,
+        description
+      )
+
+      .replace(
+        /__KEY_DATA_CATEGORY__/g,
+        category
+      )
+
+      .replace(
+        /__KEY_DATA_DATE__/g,
+        date
+      )
+
+      .replace(
+        /__KEY_URL_LINK__/g,
+        detailsUrl
+      )
+
+      .replace(
+        /__KEY_URL_ARROW__/g,
+        this.getArrowImageUrl()
+      );
+  }
+
+  /**
+   * News image comes from the
+   * News list item's attachment.
+   */
+  private getNewsImageUrl(
+    item: INewsItem
+  ): string {
+
+    let imageUrl = '';
+
+    if (item.NewsIcon) {
+
+      try {
+
+        const imgData =
+          typeof item.NewsIcon === 'string'
+            ? JSON.parse(item.NewsIcon)
+            : item.NewsIcon;
+
+        const fileName =
+          imgData.fileName || '';
+
+        if (fileName) {
+
+          imageUrl =
+            `${this.context.pageContext.web.absoluteUrl}` +
+            `/Lists/News/Attachments/` +
+            `${item.Id}/${fileName}`;
+        }
+
+      } catch (error) {
+
+        console.error(
+          '❌ Error parsing NewsIcon:',
+          item.NewsIcon,
+          error
+        );
+      }
     }
 
-    return this.rootElement.querySelector(
-      '#news-items-container'
-    ) as HTMLElement | null;
-
+    return imageUrl;
   }
 
+  /**
+   * Existing arrow icon.
+   */
+  private getArrowImageUrl(): string {
 
-  /*
-   * =====================================================
-   * TAB EVENTS
-   * =====================================================
+    return (
+      `${this.context.pageContext.web.absoluteUrl}` +
+      `/SiteAssets/resources/images/icons/arrow-right-short.svg`
+    );
+  }
+
+  /**
+   * Original tab functionality.
    *
-   * Existing functionality preserved.
+   * Uses:
+   * data-tab-news-id="news-panel-*"
    */
   private attachTabEvents(): void {
 
-    if (!this.rootElement) {
-
-      return;
-
-    }
-
     const tabs =
-      this.rootElement.querySelectorAll(
-        '[data-news-category]'
+      document.querySelectorAll(
+        '#news-tabs .tab-title-pill'
       );
 
+    const panels =
+      document.querySelectorAll(
+        '#news-tabs .news-panel-tab-view'
+      );
 
     tabs.forEach(
-      (tab: Element) => {
+      tab => {
 
         tab.addEventListener(
           'click',
           () => {
 
-            const category =
+            const targetId =
               tab.getAttribute(
-                'data-news-category'
+                'data-tab-news-id'
               );
 
-            if (!category) {
-
+            if (!targetId) {
               return;
-
             }
 
+            /*
+             * Hide every panel.
+             */
+            panels.forEach(
+              panel => {
+
+                (
+                  panel as HTMLElement
+                ).style.display =
+                  'none';
+              }
+            );
 
             /*
              * Remove active class.
              */
             tabs.forEach(
-              (item: Element) => {
+              otherTab => {
 
-                item.classList.remove(
+                otherTab.classList.remove(
                   'tab-title-pill-active'
                 );
-
               }
             );
 
-
             /*
-             * Set active tab.
+             * Activate clicked tab.
              */
             tab.classList.add(
               'tab-title-pill-active'
             );
 
-
             /*
-             * Filter News.
+             * Show selected panel.
              */
-            this.renderNewsItems(
-              category
-            );
+            const targetPanel =
+              document.getElementById(
+                targetId
+              );
 
+            if (targetPanel) {
+
+              (
+                targetPanel as HTMLElement
+              ).style.display =
+                'block';
+            }
           }
         );
-
       }
     );
-
   }
 
+  /**
+   * No records message.
+   */
+  private getNoRecordHtml(): string {
 
-  /*
-   * =====================================================
-   * FORMAT DATE
-   * =====================================================
+    return `
+      <div class="news-item">
+
+        <div class="flex-grow-1">
+
+          <p class="news-desc">
+            No records found.
+          </p>
+
+        </div>
+
+      </div>
+    `;
+  }
+
+  /**
+   * Format PublishedDate.
+   *
+   * Example:
+   * May 20, 2024
    */
   private formatDate(
-    dateValue: string
+    dateValue?: string
   ): string {
 
     if (!dateValue) {
-
       return '';
-
     }
 
     const date =
       new Date(dateValue);
 
-    if (
-      isNaN(
-        date.getTime()
-      )
-    ) {
-
-      return dateValue;
-
+    if (isNaN(date.getTime())) {
+      return '';
     }
 
     return date.toLocaleDateString(
@@ -732,46 +682,50 @@ export default class NewsCentre {
         year: 'numeric'
       }
     );
-
   }
 
+  /**
+   * Normalize category values.
+   */
+  private normalizeValue(
+    value?: string
+  ): string {
 
-  /*
-   * =====================================================
-   * ESCAPE HTML
-   * =====================================================
+    return (
+      value || ''
+    )
+      .trim()
+      .toLowerCase();
+  }
+
+  /**
+   * Prevent HTML injection from
+   * SharePoint text values.
    */
   private escapeHtml(
     value: string
   ): string {
 
     return value
-
       .replace(
         /&/g,
         '&amp;'
       )
-
       .replace(
         /</g,
         '&lt;'
       )
-
       .replace(
         />/g,
         '&gt;'
       )
-
       .replace(
         /"/g,
         '&quot;'
       )
-
       .replace(
         /'/g,
         '&#039;'
       );
-
   }
-
 }
