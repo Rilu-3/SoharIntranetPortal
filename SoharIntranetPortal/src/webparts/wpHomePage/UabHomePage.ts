@@ -121,46 +121,14 @@ export default class UabHomePage{
                 </h2>
                 <h2 data-tab-ao="offers" class="panel-title panel-title-tab">Offers</h2>
               </div>
-              <a href="#" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
+              <a href="#" id="ao-view-all" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
                 </span><img src="./resources/images/icons/arrow-right-short.svg" /></a>
             </div>
             <div id="announcement" class="w-100 float-start ao-tab-view" style="display: block;">
             
             </div>
             <div id="offers" class="w-100 float-start ao-tab-view">
-              <div
-                class="w-100 d-flex flex-column float-start px-2 overflow-auto panel-card-announcement custom-scroll-view">
-                <div class="announcement-item">
-                  <div class="announcement-icon bg-1">
-                    <img src="./resources/images/icons/announcement-3.png" />
-                  </div>
-                  <div class="flex-grow-1">
-                    <p class="announcement-title mb-1">New Employee Offers</p>
-                    <p class="announcement-desc">Exclusive offers and discounts available for all employees.</p>
-                  </div>
-                  <span class="announcement-date">May 15, 2024</span>
-                </div>
-                <div class="announcement-item">
-                  <div class="announcement-icon bg-1">
-                    <img src="./resources/images/icons/announcement-3.png" />
-                  </div>
-                  <div class="flex-grow-1">
-                    <p class="announcement-title mb-1">New Employee Offers</p>
-                    <p class="announcement-desc">Exclusive offers and discounts available for all employees.</p>
-                  </div>
-                  <span class="announcement-date">May 15, 2024</span>
-                </div>
-                <div class="announcement-item">
-                  <div class="announcement-icon bg-1">
-                    <img src="./resources/images/icons/announcement-3.png" />
-                  </div>
-                  <div class="flex-grow-1">
-                    <p class="announcement-title mb-1">New Employee Offers</p>
-                    <p class="announcement-desc">Exclusive offers and discounts available for all employees.</p>
-                  </div>
-                  <span class="announcement-date">May 15, 2024</span>
-                </div>
-              </div>
+             
             </div>
           </div>
         </div>

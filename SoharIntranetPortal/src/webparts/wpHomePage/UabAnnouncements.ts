@@ -1,7 +1,7 @@
 export default class UabAnnouncements{
     public static allElementsHtml:string=`
     <div
-                class="w-100 d-flex flex-column float-start px-2 overflow-auto panel-card-announcement custom-scroll-view">
+              id="announcement-container"  class="w-100 d-flex flex-column float-start px-2 overflow-auto panel-card-announcement  custom-scroll-view">
           
               </div>`;
     public static singleElementHtml:string=`                <a class="announcement-item">
