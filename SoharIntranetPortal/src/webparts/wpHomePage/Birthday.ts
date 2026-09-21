@@ -16,7 +16,7 @@ export default class Birthday {
           </h2>
 
           <a
-            href="#"
+            href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Upcoming-Birthdys.aspx?web=1"
             class="link-arrow text-color-link"
           >
             <span class="text-sm xxl-text-base font-bold">
