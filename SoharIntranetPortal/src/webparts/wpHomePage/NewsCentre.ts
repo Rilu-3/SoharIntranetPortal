@@ -90,19 +90,19 @@ export default class NewsCentre {
             News Centre
           </h2>
 
-          <a
-            href="#"
-            class="link-arrow text-color-link">
+  <a
+      href="/sites/DevPortal/SitePages/News-List.aspx"
+      class="link-arrow text-color-link">
+      <span class="text-sm xxl-text-base font-bold">
 
-            <span class="text-sm xxl-text-base font-bold">
-              View All News
-            </span>
+        View All News
+      </span>
 
-            <img
-              src="__KEY_URL_ARROW__"
-              alt="" />
+    <img
+    src="__KEY_URL_ARROW__"
+    alt="" />
 
-          </a>
+    </a>
 
         </div>
 
