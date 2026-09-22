@@ -1,6 +1,5 @@
 import { Version } from '@microsoft/sp-core-library';
 
-
 import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField
@@ -12,7 +11,8 @@ import {
 
 import {
   SPHttpClient,
-  SPHttpClientResponse
+  SPHttpClientResponse,
+  MSGraphClientV3
 } from '@microsoft/sp-http';
 
 import {
@@ -22,7 +22,6 @@ import {
 import { escape } from '@microsoft/sp-lodash-subset';
 
 import UpcomingEventsTemplate from './UpcomingEvents';
-
 
 
 export interface IWpHomePageWebPartProps {
@@ -58,192 +57,342 @@ export default class WpHomePageWebPart
   private events: IEventItem[] = [];
 
 
-  public async render(): Promise<void> {
+  private myEvents: IEventItem[] = [];
 
-    this.loadCSS();
 
-    await this.loadEvents();
+public async render(): Promise<void> {
 
-    this.renderUpcomingEvents();
-    this.initializeUpcomingEvents();
-    this.initializeCalendar();
-  }
+  await this.loadCSS();
 
+  const today = new Date();
+
+  await Promise.all([
+    this.loadEvents(
+      today.getFullYear(),
+      today.getMonth()
+    ),
+    this.loadMyEvents(
+      today.getFullYear(),
+      today.getMonth()
+    )
+  ]);
+
+  this.renderUpcomingEvents();
+  this.initializeUpcomingEvents();
+  this.initializeCalendar();
+}
 
   private async loadCSS(): Promise<void> {
 
     const baseUrl =
       this.context.pageContext.web.absoluteUrl;
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/custom.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/font-size.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/home.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/variable.css`
     );
+
 
     // jQuery
     await SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
     );
 
+
     // jQuery UI
     await SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
     );
   }
-  private async loadEvents(): Promise<void> {
-
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
 
 
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
-      `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Category,Status` +
-      `&$orderby=EventDate asc`;
+private async loadEvents(
+  year: number,
+  month: number
+): Promise<void> {
 
+  const siteUrl =
+    this.context.pageContext.web.absoluteUrl;
 
-    try {
+  /*
+   * First day of selected month
+   */
+  const startDate =
+    new Date(
+      year,
+      month,
+      1
+    );
 
-      const response:
-        SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              Accept:
-                'application/json;odata=nometadata'
-            }
+  /*
+   * First day of next month
+   */
+  const endDate =
+    new Date(
+      year,
+      month + 1,
+      1
+    );
+
+  const startDateString =
+    startDate.toISOString();
+
+  const endDateString =
+    endDate.toISOString();
+
+  const url =
+    `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
+    `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Category,Status` +
+    `&$filter=EventDate ge datetime'${startDateString}' and EventDate lt datetime'${endDateString}'` +
+    `&$orderby=EventDate asc`;
+
+  try {
+
+    const response:
+      SPHttpClientResponse =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            Accept:
+              'application/json;odata=nometadata'
           }
-        );
-
-
-      if (!response.ok) {
-
-        console.error(
-          'Upcoming Events list error:',
-          response.status,
-          response.statusText
-        );
-
-        this.events = [];
-
-        return;
-      }
-
-
-      const data =
-        await response.json();
-
-
-      this.events =
-        data.value || [];
-
-
-      console.log(
-        'Upcoming Events:',
-        this.events
+        }
       );
 
-    } catch (error) {
+    if (!response.ok) {
 
       console.error(
-        'Error loading Upcoming Events:',
-        error
+        'Upcoming Events list error:',
+        response.status,
+        response.statusText
       );
 
       this.events = [];
+
+      return;
     }
+
+    const data =
+      await response.json();
+
+    this.events =
+      data.value || [];
+
+    console.log(
+      'Organizational Events:',
+      this.events
+    );
+
+  } catch (error) {
+
+    console.error(
+      'Error loading Upcoming Events:',
+      error
+    );
+
+    this.events = [];
+  }
+}
+
+
+private async loadMyEvents(
+  year: number,
+  month: number
+): Promise<void> {
+
+  try {
+
+    const client:
+      MSGraphClientV3 =
+      await this.context.msGraphClientFactory.getClient('3');
+
+    const startDate =
+      new Date(
+        year,
+        month,
+        1,
+        0,
+        0,
+        0
+      );
+
+    const endDate =
+      new Date(
+        year,
+        month + 1,
+        1,
+        0,
+        0,
+        0
+      );
+
+    const response =
+      await client
+        .api('/me/calendar/calendarView')
+        .query({
+          startDateTime:
+            startDate.toISOString(),
+
+          endDateTime:
+            endDate.toISOString()
+        })
+        .select(
+          'id,subject,start,end,location'
+        )
+        .orderby(
+          'start/dateTime'
+        )
+        .get();
+
+    console.log(
+      'Outlook Calendar Events:',
+      response.value
+    );
+
+    this.myEvents =
+      (response.value || []).map(
+        (
+          event: any,
+          index: number
+        ): IEventItem => {
+
+          return {
+
+            Id:
+              index + 1,
+
+            Title:
+              event.subject || '',
+
+            EventDate:
+              event.start?.dateTime || '',
+
+            StartTime:
+              event.start?.dateTime || '',
+
+            EndTime:
+              event.end?.dateTime || '',
+
+            Location:
+              event.location?.displayName || '',
+
+            Category:
+              'My Event',
+
+            Status:
+              'Active'
+          };
+        }
+      );
+
+  } catch (error) {
+
+    console.error(
+      'Error loading Outlook Calendar events:',
+      error
+    );
+
+    this.myEvents = [];
+  }
+}
+
+  private renderUpcomingEvents(): void {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    const rightArrow =
+      `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
+
+    const arrowRightShort =
+      `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+
+
+    const myEvents =
+      this.getMyEvents();
+
+
+    const organizationalEvents =
+      this.getOrganizationalEvents();
+
+
+    let html =
+      UpcomingEventsTemplate.allElementsHtml;
+
+
+    html =
+      html.replace(
+        /__KEY_ARROW_RIGHT_SHORT__/g,
+        arrowRightShort
+      );
+
+
+    const myEventsHtml =
+      this.renderEventElements(
+        myEvents,
+        rightArrow
+      );
+
+
+    const organizationalEventsHtml =
+      this.renderEventElements(
+        organizationalEvents,
+        rightArrow
+      );
+
+
+    html =
+      html.replace(
+        'id="events-list-my">',
+        `id="events-list-my">${myEventsHtml}`
+      );
+
+
+    html =
+      html.replace(
+        'id="events-list-org">',
+        `id="events-list-org">${organizationalEventsHtml}`
+      );
+
+    this.domElement.innerHTML = html;
   }
 
-
-private renderUpcomingEvents(): void {
-
-  const baseUrl =
-    this.context.pageContext.web.absoluteUrl;
-
-  const rightArrow =
-    `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
-
-  const arrowRightShort =
-    `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
-
-  const myEvents =
-    this.getMyEvents();
-
-  const organizationalEvents =
-    this.getOrganizationalEvents();
-
-  let html =
-    UpcomingEventsTemplate.allElementsHtml;
-
-  html =
-    html.replace(
-      /__KEY_ARROW_RIGHT_SHORT__/g,
-      arrowRightShort
-    );
-
-  const myEventsHtml =
-    this.renderEventElements(
-      myEvents,
-      rightArrow
-    );
-
-  const organizationalEventsHtml =
-    this.renderEventElements(
-      organizationalEvents,
-      rightArrow
-    );
-
-  html =
-    html.replace(
-      'id="events-list-my">',
-      `id="events-list-my">${myEventsHtml}`
-    );
-
-  html =
-    html.replace(
-      'id="events-list-org">',
-      `id="events-list-org">${organizationalEventsHtml}`
-    );
-
-
-  // Put your HTML directly into the webpart
-  this.domElement.innerHTML = html;
-}
 
   private getMyEvents(): IEventItem[] {
 
-    return this.events.filter(
-      (event: IEventItem) => {
+    return this.myEvents;
 
-        return (
-          event.Category === 'My Event' &&
-          event.Status === 'Active'
-        );
-
-      }
-    );
   }
+
 
 
   private getOrganizationalEvents(): IEventItem[] {
@@ -381,6 +530,7 @@ private renderUpcomingEvents(): void {
           )
           .toUpperCase(),
 
+
       day:
         date
           .getDate()
@@ -432,10 +582,7 @@ private renderUpcomingEvents(): void {
     }
 
 
-    /*
-     * SharePoint sometimes returns
-     * a complete date/time value.
-     */
+   
     if (timeValue.indexOf('T') !== -1) {
 
       const date =
@@ -603,43 +750,107 @@ private renderUpcomingEvents(): void {
   }
 
 
-  private initializeCalendar(): void {
+private initializeCalendar(): void {
 
-    const $ =
-      (window as any).jQuery;
+  const $ =
+    (window as any).jQuery;
 
+  if (
+    !$ ||
+    !$.fn ||
+    !$.fn.datepicker
+  ) {
 
-    /*
-     * jQuery UI may not have loaded yet.
-     * Do not stop the whole webpart.
-     */
-    if (
-      !$ ||
-      !$.fn ||
-      !$.fn.datepicker
-    ) {
+    console.warn(
+      'jQuery UI Datepicker is not available.'
+    );
 
-      console.warn(
-        'jQuery UI Datepicker is not available.'
-      );
-
-      return;
-    }
-
-
-    $('#events-calendar-my').datepicker({
-
-      dateFormat: 'dd M yy'
-
-    });
-
-
-    $('#events-calendar-org').datepicker({
-
-      dateFormat: 'dd M yy'
-
-    });
+    return;
   }
+
+  const self = this;
+
+  /*
+   * My Events
+   */
+  $('#events-calendar-my').datepicker({
+
+    dateFormat: 'dd M yy',
+
+    onChangeMonthYear:
+      async function (
+        year: number,
+        month: number
+      ): Promise<void> {
+
+        await self.loadMyEvents(
+          year,
+          month - 1
+        );
+
+        const rightArrow =
+          `${self.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
+        const myEventsHtml =
+          self.renderEventElements(
+            self.getMyEvents(),
+            rightArrow
+          );
+
+        const myEventsList =
+          self.domElement.querySelector(
+            '#events-list-my'
+          );
+
+        if (myEventsList) {
+
+          myEventsList.innerHTML =
+            myEventsHtml;
+        }
+      }
+  });
+
+
+  /*
+   * Organizational Events
+   */
+  $('#events-calendar-org').datepicker({
+
+    dateFormat: 'dd M yy',
+
+    onChangeMonthYear:
+      async function (
+        year: number,
+        month: number
+      ): Promise<void> {
+
+        await self.loadEvents(
+          year,
+          month - 1
+        );
+
+        const rightArrow =
+          `${self.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
+        const organizationalEventsHtml =
+          self.renderEventElements(
+            self.getOrganizationalEvents(),
+            rightArrow
+          );
+
+        const organizationalEventsList =
+          self.domElement.querySelector(
+            '#events-list-org'
+          );
+
+        if (organizationalEventsList) {
+
+          organizationalEventsList.innerHTML =
+            organizationalEventsHtml;
+        }
+      }
+  });
+}
 
 
   protected getPropertyPaneConfiguration():

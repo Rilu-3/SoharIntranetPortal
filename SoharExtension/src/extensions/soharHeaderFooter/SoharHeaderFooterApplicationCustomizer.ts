@@ -54,12 +54,9 @@ export default class SoharHeaderFooterApplicationCustomizer
 
     return Promise.resolve();
   }
-
-
   // ============================================================
   // CSS
   // ============================================================
-
   private _loadCSS(): void {
 
     const baseUrl: string =
@@ -121,8 +118,6 @@ export default class SoharHeaderFooterApplicationCustomizer
       `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
     );
   }
-
-
   // ============================================================
   // USER DESIGNATION
   // ============================================================
@@ -203,8 +198,6 @@ export default class SoharHeaderFooterApplicationCustomizer
       return '';
     }
   }
-
-
   // ============================================================
   // DEPARTMENTS
   // ============================================================
