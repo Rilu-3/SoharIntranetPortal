@@ -84,11 +84,11 @@ export default class WpHomePageWebPart
         '.birthday-view-all'
       ) as HTMLAnchorElement;
 
-    if (birthdayViewAll) {
-      birthdayViewAll.href =
-        `${this.context.pageContext.web.absoluteUrl}` +
-        `/Lists/Birthday/AllItems.aspx`;
-    }
+      if (birthdayViewAll) {
+        birthdayViewAll.href =
+          `${this.context.pageContext.web.absoluteUrl}` +
+          `/SitePages/Upcoming-Birthdys.aspx`;
+      }
 
     const birthdayArrow =
       this.domElement.querySelector(
