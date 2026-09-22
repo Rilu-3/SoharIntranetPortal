@@ -15,18 +15,17 @@ export default class Birthday {
             Upcoming Birthdays
           </h2>
 
-          <a
-            href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Upcoming-Birthdys.aspx?web=1"
-            class="link-arrow text-color-link"
-          >
-            <span class="text-sm xxl-text-base font-bold">
-              View All
-            </span>
+        <a
+          href="#"
+          class="link-arrow text-color-link birthday-view-all"
+        >
+          <span class="text-sm xxl-text-base font-bold">
+            View All
+          </span>
 
-            <img src="/sites/DevPortal/SiteAssets/resources/images/icons/arrow-right-short.svg" />
-
-          </a>
-
+          <img class="birthday-view-all-arrow" />
+        </a>
+        
         </div>
 
         <div

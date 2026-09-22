@@ -20,7 +20,7 @@ import QuickLinks from './QuickLinks';
 
 import Birthday from './Birthday';
 
-import './QuickLinks.module.scss';
+
 
 
 // =========================================================
@@ -69,9 +69,37 @@ export default class WpHomePageWebPart
 
     await this.loadCSS();
 
+    const workbenchContent = document.getElementById('workbenchPageContent');
+    if (workbenchContent) {
+      workbenchContent.style.maxWidth = 'none';
+    }
+ 
+
     this.domElement.innerHTML =
       QuickLinks.allElementsHtml +
       Birthday.allElementsHtml;
+
+    const birthdayViewAll =
+      this.domElement.querySelector(
+        '.birthday-view-all'
+      ) as HTMLAnchorElement;
+
+    if (birthdayViewAll) {
+      birthdayViewAll.href =
+        `${this.context.pageContext.web.absoluteUrl}` +
+        `/Lists/Birthday/AllItems.aspx`;
+    }
+
+    const birthdayArrow =
+      this.domElement.querySelector(
+        '.birthday-view-all-arrow'
+      ) as HTMLImageElement;
+
+    if (birthdayArrow) {
+      birthdayArrow.src =
+        `${this.context.pageContext.web.absoluteUrl}` +
+        `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    }
     
     await this.loadJS();
 
@@ -1011,6 +1039,17 @@ export default class WpHomePageWebPart
 
       }
 
+      const activeTab =
+        domElement.querySelector(
+          '.panel-title-filter-active'
+        ) as HTMLElement;
+
+      const activeTabValue =
+        activeTab?.getAttribute(
+          'data-filter-ql'
+        );
+
+
 
       // =====================================================
       // Refresh Quick Links
@@ -1044,9 +1083,22 @@ export default class WpHomePageWebPart
 
 
       this.updateFavouriteTabVisibility(
-        domElement,
-        favouriteIds
-      );
+            domElement,
+            favouriteIds
+          );
+
+          if (activeTabValue) {
+
+      const tabToRestore =
+        domElement.querySelector(
+          `[data-filter-ql="${activeTabValue}"]`
+        ) as HTMLElement;
+
+      if (tabToRestore) {
+        tabToRestore.click();
+      }
+
+    }
 
 
       // =====================================================
@@ -1382,7 +1434,7 @@ export default class WpHomePageWebPart
 
         .filter(
           (item) =>
-            item.difference <= 7
+            item.difference < 7
         )
 
         .sort(
@@ -1405,6 +1457,7 @@ export default class WpHomePageWebPart
   // =========================================================
 
   private async renderBirthdays(): Promise<void> {
+    
 
     const birthdays =
       await this.getBirthdays(
