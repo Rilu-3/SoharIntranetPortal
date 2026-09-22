@@ -83,7 +83,18 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * 7. Loading Offer data.
    */
   public async render(): Promise<void> {
-    this.domElement.innerHTML = UabHomePage.allElementsHtml;
+    const workbenchContent = document.getElementById('workbenchPageContent');
+    if (workbenchContent) {
+      workbenchContent.style.maxWidth = 'none';
+    }
+      const arrowIconUrl =
+    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+
+  this.domElement.innerHTML =
+    UabHomePage.allElementsHtml.replace(
+      "__KEY__ARROW__RIGHT__ICON__",
+      arrowIconUrl
+    );
 
     this.domElement.querySelector("#announcement")!.innerHTML =
       UabAnnouncements.allElementsHtml;
@@ -94,10 +105,10 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     this.setupViewAllLink();
 
     const AnnouncementApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc`;
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     const OfferApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,OfferImage,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc`;
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,OfferImage,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     await this._renderAnnouncementsAsync(AnnouncementApiUrl);
 
@@ -199,35 +210,37 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * link is changed according to the selected tab.
    */
   private setupViewAllLink(): void {
-    const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
+  const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
 
-    const viewAllLink =
-      this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
+  const viewAllLink =
+    this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
 
-    if (!viewAllLink) {
-      console.error('View All link not found');
-      return;
-    }
-
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-
-        const selectedTab = tab.getAttribute('data-tab-ao');
-
-        if (selectedTab === 'announcement') {
-          viewAllLink.href =
-            `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcements.aspx`;
-        }
-
-        if (selectedTab === 'offers') {
-          viewAllLink.href =
-            `${this.context.pageContext.web.absoluteUrl}/SitePages/Offer-List.aspx`;
-        }
-      });
-    });
+  if (!viewAllLink) {
+    console.error('View All link not found');
+    return;
   }
 
+  // Set the initial URL for the default Announcements tab
+  viewAllLink.href =
+    `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
 
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+
+      const selectedTab = tab.getAttribute('data-tab-ao');
+
+      if (selectedTab === 'announcement') {
+        viewAllLink.href =
+          `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
+      }
+
+      if (selectedTab === 'offers') {
+        viewAllLink.href =
+          `${this.context.pageContext.web.absoluteUrl}/SitePages/Offer-List.aspx`;
+      }
+    });
+  });
+}
   /*
    * ==========================================================
    * RENDER ANNOUNCEMENTS

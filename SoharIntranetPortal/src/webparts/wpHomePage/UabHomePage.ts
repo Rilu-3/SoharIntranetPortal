@@ -122,7 +122,7 @@ export default class UabHomePage{
                 <h2 data-tab-ao="offers" class="panel-title panel-title-tab">Offers</h2>
               </div>
               <a href="#" id="ao-view-all" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
-                </span><img src="./resources/images/icons/arrow-right-short.svg" /></a>
+                </span><img src="__KEY__ARROW__RIGHT__ICON__" /></a>
             </div>
             <div id="announcement" class="w-100 float-start ao-tab-view" style="display: block;">
             
