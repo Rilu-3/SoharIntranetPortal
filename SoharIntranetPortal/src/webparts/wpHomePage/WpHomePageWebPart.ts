@@ -43,11 +43,17 @@ export default class WpHomePageWebPart
 
     this.domElement.innerHTML =
       BannerTemplate.bannerHtml +
-      MediaGalleryTemplate.allElementsHtml;
+      MediaGalleryTemplate.allElementsHtml +
+      MediaGalleryTemplate.galleryModalHtml;
+
 
     this._getBannerItems();
 
     this._getMediaGalleryItems();
+
+
+    // Load home.js only after the HTML is available
+    this.loadHomeJS();
 
   }
 
@@ -59,8 +65,10 @@ export default class WpHomePageWebPart
       const siteUrl =
         this.context.pageContext.web.absoluteUrl;
 
+
       const url =
         `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image&$orderby=SortOrder asc`;
+
 
       const response =
         await this.context.spHttpClient.get(
@@ -74,14 +82,19 @@ export default class WpHomePageWebPart
           }
         );
 
+
       if (!response.ok) {
+
         throw new Error(
           `Banner list request failed: ${response.status}`
         );
+
       }
+
 
       const data =
         await response.json();
+
 
       const bannerItems: IBannerItem[] =
         data.value
@@ -94,14 +107,14 @@ export default class WpHomePageWebPart
               a.SortOrder - b.SortOrder
           );
 
-      console.log(
-        'Banner Items:',
-        bannerItems
-      );
+
+      console.log( 'Banner Items:', bannerItems);
+
 
       this._renderBanner(
         bannerItems
       );
+
 
     } catch (error) {
 
@@ -110,14 +123,18 @@ export default class WpHomePageWebPart
         error
       );
 
+
       const divBanner =
         this.domElement.querySelector(
           '#divBanner'
         );
 
+
       if (divBanner !== null) {
+
         divBanner.innerHTML =
           BannerTemplate.noRecord;
+
       }
 
     }
@@ -131,23 +148,30 @@ export default class WpHomePageWebPart
 
     let allElementsHtml: string = '';
 
+
     bannerItems.forEach(
       (item: IBannerItem) => {
 
         let imageData: any = {};
 
+
         if (item.Image) {
+
           imageData =
             typeof item.Image === 'string'
               ? JSON.parse(item.Image)
               : item.Image;
+
         }
+
 
         const fileName =
           imageData.fileName || '';
 
+
         const imageUrl =
           `${this.context.pageContext.web.absoluteUrl}/Lists/Banner/Attachments/${item.Id}/${fileName}`;
+
 
         const singleElementHtml =
           BannerTemplate.singleElementHtml
@@ -164,25 +188,33 @@ export default class WpHomePageWebPart
               item.Description || ''
             );
 
+
         allElementsHtml +=
           singleElementHtml;
 
       }
     );
 
+
     if (allElementsHtml === '') {
+
       allElementsHtml =
         BannerTemplate.noRecord;
+
     }
+
 
     const divBanner =
       this.domElement.querySelector(
         '#divBanner'
       );
 
+
     if (divBanner !== null) {
+
       divBanner.innerHTML =
         allElementsHtml;
+
     }
 
   }
@@ -195,8 +227,10 @@ export default class WpHomePageWebPart
       const siteUrl =
         this.context.pageContext.web.absoluteUrl;
 
+
       const url =
         `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
+
 
       const response =
         await this.context.spHttpClient.get(
@@ -210,14 +244,19 @@ export default class WpHomePageWebPart
           }
         );
 
+
       if (!response.ok) {
+
         throw new Error(
           `Media Gallery list request failed: ${response.status}`
         );
+
       }
+
 
       const data =
         await response.json();
+
 
       const galleryItems: IMediaGalleryItem[] =
         data.value
@@ -230,14 +269,17 @@ export default class WpHomePageWebPart
               a.SortOrder - b.SortOrder
           );
 
+
       console.log(
         'Media Gallery Items:',
         galleryItems
       );
 
+
       this._renderMediaGallery(
         galleryItems
       );
+
 
     } catch (error) {
 
@@ -246,14 +288,18 @@ export default class WpHomePageWebPart
         error
       );
 
+
       const galleryWrapper =
         this.domElement.querySelector(
           '.gallery-swiper .swiper-wrapper'
         );
 
+
       if (galleryWrapper !== null) {
+
         galleryWrapper.innerHTML =
           MediaGalleryTemplate.noRecord;
+
       }
 
     }
@@ -267,28 +313,36 @@ export default class WpHomePageWebPart
 
     let allElementsHtml: string = '';
 
+
     galleryItems.forEach(
       (item: IMediaGalleryItem) => {
 
         let imageData: any = {};
 
+
         if (item.Image) {
+
           imageData =
             typeof item.Image === 'string'
               ? JSON.parse(item.Image)
               : item.Image;
+
         }
+
 
         const fileName =
           imageData.fileName || '';
 
+
         const imageUrl =
           `${this.context.pageContext.web.absoluteUrl}/Lists/Media_Gallery/Attachments/${item.Id}/${fileName}`;
+
 
         console.log(
           'Gallery Image URL:',
           imageUrl
         );
+
 
         const singleElementHtml =
           MediaGalleryTemplate.singleElementHtml
@@ -301,26 +355,92 @@ export default class WpHomePageWebPart
               item.Caption || item.Title || ''
             );
 
+
         allElementsHtml +=
           singleElementHtml;
 
       }
     );
 
+
     if (allElementsHtml === '') {
+
       allElementsHtml =
         MediaGalleryTemplate.noRecord;
+
     }
+
 
     const galleryWrapper =
       this.domElement.querySelector(
         '.gallery-swiper .swiper-wrapper'
       );
 
+
     if (galleryWrapper !== null) {
 
       galleryWrapper.innerHTML =
         allElementsHtml;
+
+
+      /*
+       * Fill Modal Gallery
+       */
+
+      const modalWrapper =
+        this.domElement.querySelector(
+          '.gallery-modal-swiper .swiper-wrapper'
+        );
+
+
+      if (modalWrapper !== null) {
+
+        let modalElementsHtml: string = '';
+
+
+        galleryItems.forEach(
+          (item: IMediaGalleryItem) => {
+
+            let imageData: any = {};
+
+
+            if (item.Image) {
+
+              imageData =
+                typeof item.Image === 'string'
+                  ? JSON.parse(item.Image)
+                  : item.Image;
+
+            }
+
+
+            const fileName =
+              imageData.fileName || '';
+
+
+            const imageUrl =
+              `${this.context.pageContext.web.absoluteUrl}/Lists/Media_Gallery/Attachments/${item.Id}/${fileName}`;
+
+
+            modalElementsHtml += `
+              <div class="swiper-slide gallery-swiper-slide">
+                <img
+                  src="${imageUrl}"
+                  alt="${item.Caption || item.Title || ''}"
+                />
+              </div>
+            `;
+
+          }
+        );
+
+
+        modalWrapper.innerHTML =
+          modalElementsHtml;
+
+      }
+
+
 
       const galleryElement =
         this.domElement.querySelector(
@@ -328,6 +448,7 @@ export default class WpHomePageWebPart
         ) as HTMLElement & {
           swiper?: any;
         };
+
 
       if (
         galleryElement &&
@@ -343,8 +464,77 @@ export default class WpHomePageWebPart
   }
 
 
+  private async loadBootstrap(): Promise<void> {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    if (
+      typeof (window as any).bootstrap !== 'undefined'
+    ) {
+
+      return;
+
+    }
+
+
+    const bootstrapModule =
+      await SPComponentLoader.loadScript<any>(
+        `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+      );
+
+
+    if (bootstrapModule) {
+
+      (window as any).bootstrap =
+        bootstrapModule;
+
+    }
+
+
+    console.log(
+      'Bootstrap loaded:',
+      typeof (window as any).bootstrap
+    );
+
+  }
+
+
+  private async loadHomeJS(): Promise<void> {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    try {
+
+      await SPComponentLoader.loadScript(
+        `${baseUrl}/SiteAssets/resources/js/home.js`
+      );
+
+
+      console.log(
+        'home.js loaded'
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        'Error loading home.js:',
+        error
+      );
+
+    }
+
+  }
+
+
   protected get dataVersion(): Version {
+
     return Version.parse('1.0');
+
   }
 
 
@@ -353,33 +543,41 @@ export default class WpHomePageWebPart
     const baseUrl =
       this.context.pageContext.web.absoluteUrl;
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/variable.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/font-size.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/custom.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/home.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
@@ -397,9 +595,7 @@ export default class WpHomePageWebPart
       `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
     );
 
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-    );
+    await this.loadBootstrap();
 
     await SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
@@ -417,10 +613,6 @@ export default class WpHomePageWebPart
       `${baseUrl}/SiteAssets/resources/js/common.js`
     );
 
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/home.js`
-    );
-
   }
 
 
@@ -428,7 +620,9 @@ export default class WpHomePageWebPart
 
     this.loadCSS();
 
+
     await this.loadJS();
+
 
     return super.onInit();
 
@@ -439,7 +633,9 @@ export default class WpHomePageWebPart
     IPropertyPaneConfiguration {
 
     return {
+
       pages: []
+
     };
 
   }
