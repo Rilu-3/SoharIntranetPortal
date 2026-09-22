@@ -17,18 +17,24 @@ import * as strings from 'SoharHeaderFooterApplicationCustomizerStrings';
 import Header from './Header';
 import Footer from './Footer';
 
+
 const LOG_SOURCE: string =
   'SoharHeaderFooterApplicationCustomizer';
+
 
 export interface ISoharHeaderFooterApplicationCustomizerProperties {
   testMessage: string;
 }
 
+
 export default class SoharHeaderFooterApplicationCustomizer
   extends BaseApplicationCustomizer<ISoharHeaderFooterApplicationCustomizerProperties> {
 
+
   private _topPlaceholder: PlaceholderContent | undefined;
+
   private _bottomPlaceholder: PlaceholderContent | undefined;
+
 
   @override
   public async onInit(): Promise<void> {
@@ -44,58 +50,82 @@ export default class SoharHeaderFooterApplicationCustomizer
 
     await this._renderHeader();
 
-    this._renderFooter();
+    await this._renderFooter();
 
     return Promise.resolve();
   }
+
+
+  // ============================================================
+  // CSS
+  // ============================================================
 
   private _loadCSS(): void {
 
     const baseUrl: string =
       this.context.pageContext.web.absoluteUrl;
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/custom.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/font-size.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/home.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
     );
 
+
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
     );
+
 
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/variable.css`
     );
   }
 
+
+  // ============================================================
+  // JavaScript
+  // ============================================================
+
   private _loadJS(): void {
 
     const baseUrl: string =
       this.context.pageContext.web.absoluteUrl;
 
+
     SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
     );
   }
+
+
+  // ============================================================
+  // USER DESIGNATION
+  // ============================================================
 
   private async _getUserDesignation(
     userEmail: string
@@ -104,10 +134,12 @@ export default class SoharHeaderFooterApplicationCustomizer
     const siteUrl: string =
       this.context.pageContext.web.absoluteUrl;
 
+
     const url =
       `${siteUrl}/_api/web/lists/getbytitle('PRT Master Users')/items` +
       `?$select=Designation` +
       `&$filter=User_x0020_Email eq '${userEmail}'`;
+
 
     try {
 
@@ -122,6 +154,7 @@ export default class SoharHeaderFooterApplicationCustomizer
           }
         );
 
+
       if (!response.ok) {
 
         throw new Error(
@@ -129,13 +162,16 @@ export default class SoharHeaderFooterApplicationCustomizer
         );
       }
 
+
       const data =
         await response.json();
+
 
       console.log(
         'User designation data:',
         data.value
       );
+
 
       if (
         data.value &&
@@ -144,6 +180,7 @@ export default class SoharHeaderFooterApplicationCustomizer
 
         return data.value[0].Designation || '';
       }
+
 
       return '';
 
@@ -154,6 +191,7 @@ export default class SoharHeaderFooterApplicationCustomizer
         error
       );
 
+
       Log.error(
         LOG_SOURCE,
         error instanceof Error
@@ -161,17 +199,25 @@ export default class SoharHeaderFooterApplicationCustomizer
           : new Error(String(error))
       );
 
+
       return '';
     }
   }
+
+
+  // ============================================================
+  // DEPARTMENTS
+  // ============================================================
 
   private async _getDepartments(): Promise<string> {
 
     const siteUrl: string =
       this.context.pageContext.web.absoluteUrl;
 
+
     const url =
       `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link`;
+
 
     try {
 
@@ -186,6 +232,7 @@ export default class SoharHeaderFooterApplicationCustomizer
           }
         );
 
+
       if (!response.ok) {
 
         throw new Error(
@@ -193,13 +240,16 @@ export default class SoharHeaderFooterApplicationCustomizer
         );
       }
 
+
       const data =
         await response.json();
+
 
       console.log(
         'Departments data:',
         data.value
       );
+
 
       const departmentItems =
         data.value.map(
@@ -207,6 +257,7 @@ export default class SoharHeaderFooterApplicationCustomizer
 
             const link =
               department.Link?.Url || '#';
+
 
             return `
               <li>
@@ -220,6 +271,7 @@ export default class SoharHeaderFooterApplicationCustomizer
           }
         ).join('');
 
+
       return departmentItems;
 
     } catch (error) {
@@ -229,6 +281,7 @@ export default class SoharHeaderFooterApplicationCustomizer
         error
       );
 
+
       Log.error(
         LOG_SOURCE,
         error instanceof Error
@@ -236,9 +289,15 @@ export default class SoharHeaderFooterApplicationCustomizer
           : new Error(String(error))
       );
 
+
       return '';
     }
   }
+
+
+  // ============================================================
+  // RENDER HEADER
+  // ============================================================
 
   private async _renderHeader(): Promise<void> {
 
@@ -260,6 +319,7 @@ export default class SoharHeaderFooterApplicationCustomizer
         );
     }
 
+
     if (!this._topPlaceholder) {
 
       Log.error(
@@ -270,23 +330,30 @@ export default class SoharHeaderFooterApplicationCustomizer
       return;
     }
 
+
     const siteUrl: string =
       this.context.pageContext.web.absoluteUrl;
+
 
     const userName: string =
       this.context.pageContext.user.displayName;
 
+
     const userEmail: string =
       this.context.pageContext.user.email;
+
 
     const profilePhoto: string =
       `${siteUrl}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
+
     const designation: string =
       await this._getUserDesignation(userEmail);
 
+
     const departmentItems: string =
       await this._getDepartments();
+
 
     const header: Header =
       new Header(
@@ -297,47 +364,232 @@ export default class SoharHeaderFooterApplicationCustomizer
         departmentItems
       );
 
+
     this._topPlaceholder.domElement.innerHTML =
       header.render();
   }
 
-  private _renderFooter(): void {
 
-    if (!this._bottomPlaceholder) {
+  // ============================================================
+  // GET FOOTER ITEMS FROM SHAREPOINT
+  // ============================================================
 
-      this._bottomPlaceholder =
-        this.context.placeholderProvider.tryCreateContent(
-          PlaceholderName.Bottom,
-          {
-            onDispose: () => {
+private async _getFooterItems(): Promise<any[]> {
 
-              Log.info(
-                LOG_SOURCE,
-                'Bottom placeholder disposed'
-              );
+  const siteUrl =
+    this.context.pageContext.web.absoluteUrl;
 
-            }
+  const url =
+    `${siteUrl}/_api/web/lists/getbytitle('Footer')/items` +
+    `?$select=Id,ContactDetails,Category,Status,Icon` +
+    `&$orderby=Id asc`;
+
+  console.log(
+    'Footer API URL:',
+    url
+  );
+
+  try {
+
+    const response =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            'Accept':
+              'application/json;odata=nometadata'
           }
-        );
-    }
-
-    if (!this._bottomPlaceholder) {
-
-      Log.error(
-        LOG_SOURCE,
-        new Error('Bottom placeholder was not created')
+        }
       );
 
-      return;
+    if (!response.ok) {
+
+      const errorText =
+        await response.text();
+
+      console.error(
+        'Footer API Error:',
+        errorText
+      );
+
+      throw new Error(
+        `Failed to load Footer: ${response.status}`
+      );
     }
 
-    const siteUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+    const data =
+      await response.json();
 
-    const footer: Footer =
-      new Footer(siteUrl);
+    console.log(
+      'COMPLETE FOOTER DATA:',
+      JSON.stringify(
+        data.value,
+        null,
+        2
+      )
+    );
 
-    this._bottomPlaceholder.domElement.innerHTML =
-      footer.render();
+    return data.value || [];
+
+  } catch (error) {
+
+    console.error(
+      'Footer loading error:',
+      error
+    );
+
+    return [];
   }
+}
+
+  // ============================================================
+  // RENDER FOOTER ITEMS
+  // ============================================================
+
+private _renderFooterItems(items: any[]): string {
+
+  return items.map((item: any) => {
+
+    const contactDetails =
+      item.ContactDetails || '';
+
+    let imageUrl = '';
+
+    if (item.Icon) {
+
+      const imgData = JSON.parse(item.Icon);
+
+      imageUrl =
+        `${this.context.pageContext.web.absoluteUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
+
+    }
+
+    return Footer.itemTemplate
+      .replace(
+        '__ICON_URL__',
+        imageUrl
+      )
+      .replace(
+        '__CONTACT_DETAILS__',
+        contactDetails
+      );
+
+  }).join('');
+}
+  // ============================================================
+  // RENDER FOOTER
+  // ============================================================
+
+private async _renderFooter(): Promise<void> {
+
+  // Create Bottom Placeholder
+  if (!this._bottomPlaceholder) {
+
+    this._bottomPlaceholder =
+      this.context.placeholderProvider.tryCreateContent(
+        PlaceholderName.Bottom,
+        {
+          onDispose: () => {
+            Log.info(
+              LOG_SOURCE,
+              'Bottom placeholder disposed'
+            );
+          }
+        }
+      );
+  }
+
+  // Check Bottom Placeholder
+  if (!this._bottomPlaceholder) {
+
+    Log.error(
+      LOG_SOURCE,
+      new Error('Bottom placeholder was not created')
+    );
+
+    return;
+  }
+
+  // Get Footer Items from SharePoint
+  const footerItems =
+    await this._getFooterItems();
+
+  console.log(
+    'Footer Items:',
+    footerItems
+  );
+
+  // Get only Active items
+  const activeItems =
+    footerItems.filter(
+      (item: any) =>
+        String(item.Status || '')
+          .trim()
+          .toLowerCase() === 'active'
+    );
+
+  console.log(
+    'Active Footer Items:',
+    activeItems
+  );
+
+  // Important Contacts
+  const importantContacts =
+    activeItems.filter(
+      (item: any) =>
+        String(item.Category || '')
+          .trim()
+          .toLowerCase() ===
+        'important contacts'
+    );
+
+  // Medical Services
+  const medicalServices =
+    activeItems.filter(
+      (item: any) =>
+        String(item.Category || '')
+          .trim()
+          .toLowerCase() ===
+        'medical services'
+    );
+
+  console.log(
+    'Important Contacts:',
+    importantContacts
+  );
+
+  console.log(
+    'Medical Services:',
+    medicalServices
+  );
+
+  // Render Important Contacts Items
+  const importantContactsHtml =
+    this._renderFooterItems(
+      importantContacts
+    );
+
+  // Render Medical Services Items
+  const medicalServicesHtml =
+    this._renderFooterItems(
+      medicalServices
+    );
+
+  // Render Footer Template
+  this._bottomPlaceholder.domElement.innerHTML =
+    Footer.html
+      .replace(
+        '__IMPORTANT_CONTACTS__',
+        importantContactsHtml
+      )
+      .replace(
+        '__MEDICAL_SERVICES__',
+        medicalServicesHtml
+      )
+      .replace(
+        '__CURRENT_YEAR__',
+        new Date().getFullYear().toString()
+      );
+}
 }
