@@ -5,8 +5,13 @@ import { Log } from '@microsoft/sp-core-library';
 import {
   BaseApplicationCustomizer,
   PlaceholderContent,
-  PlaceholderName
+  PlaceholderName,
+  
 } from '@microsoft/sp-application-base';
+
+import {
+  MSGraphClientV3
+} from '@microsoft/sp-http';
 
 import { SPComponentLoader } from '@microsoft/sp-loader';
 
@@ -122,82 +127,47 @@ export default class SoharHeaderFooterApplicationCustomizer
   // USER DESIGNATION
   // ============================================================
 
-  private async _getUserDesignation(
-    userEmail: string
-  ): Promise<string> {
+// ============================================================
+// USER DESIGNATION FROM MICROSOFT ENTRA ID
+// ============================================================
 
-    const siteUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+private async _getUserDesignation(): Promise<string> {
 
+  try {
 
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('PRT Master Users')/items` +
-      `?$select=Designation` +
-      `&$filter=User_x0020_Email eq '${userEmail}'`;
+    const client: MSGraphClientV3 =
+      await this.context.msGraphClientFactory.getClient('3');
 
+    const user =
+      await client
+        .api('/me')
+        .select('jobTitle')
+        .get();
 
-    try {
+    console.log(
+      'Microsoft Entra user designation:',
+      user.jobTitle
+    );
 
-      const response =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept': 'application/json;odata=nometadata'
-            }
-          }
-        );
+    return user.jobTitle || '';
 
+  } catch (error) {
 
-      if (!response.ok) {
+    console.error(
+      'Microsoft Entra designation loading error:',
+      error
+    );
 
-        throw new Error(
-          `Failed to load designation: ${response.status} ${response.statusText}`
-        );
-      }
+    Log.error(
+      LOG_SOURCE,
+      error instanceof Error
+        ? error
+        : new Error(String(error))
+    );
 
-
-      const data =
-        await response.json();
-
-
-      console.log(
-        'User designation data:',
-        data.value
-      );
-
-
-      if (
-        data.value &&
-        data.value.length > 0
-      ) {
-
-        return data.value[0].Designation || '';
-      }
-
-
-      return '';
-
-    } catch (error) {
-
-      console.error(
-        'Designation loading error:',
-        error
-      );
-
-
-      Log.error(
-        LOG_SOURCE,
-        error instanceof Error
-          ? error
-          : new Error(String(error))
-      );
-
-
-      return '';
-    }
+    return '';
   }
+}
   // ============================================================
   // DEPARTMENTS
   // ============================================================
@@ -340,10 +310,9 @@ export default class SoharHeaderFooterApplicationCustomizer
       `${siteUrl}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
 
-    const designation: string =
-      await this._getUserDesignation(userEmail);
-
-
+const designation: string =
+  await this._getUserDesignation();
+  
     const departmentItems: string =
       await this._getDepartments();
 
@@ -361,8 +330,6 @@ export default class SoharHeaderFooterApplicationCustomizer
     this._topPlaceholder.domElement.innerHTML =
       header.render();
   }
-
-
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================
