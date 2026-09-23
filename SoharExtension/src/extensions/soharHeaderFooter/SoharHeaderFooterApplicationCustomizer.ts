@@ -123,9 +123,7 @@ export default class SoharHeaderFooterApplicationCustomizer
       `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
     );
   }
-  // ============================================================
-  // USER DESIGNATION
-  // ============================================================
+
 
 // ============================================================
 // USER DESIGNATION FROM MICROSOFT ENTRA ID
@@ -312,7 +310,7 @@ private async _getUserDesignation(): Promise<string> {
 
 const designation: string =
   await this._getUserDesignation();
-  
+
     const departmentItems: string =
       await this._getDepartments();
 
