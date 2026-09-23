@@ -4,11 +4,7 @@ export default class NewsCentre {
    * ============================================================
    * SINGLE NEWS ITEM
    * ============================================================
-   *
-   * This follows the ORIGINAL "All" news-item HTML structure.
-   *
-   * Only hardcoded data has been replaced with placeholders.
-   * Classes, nesting and HTML structure are preserved.
+  
    */
   public readonly singleElementHtml: string = `
     <div class="news-item flex-column flex-sm-row">
@@ -34,19 +30,7 @@ export default class NewsCentre {
    * ============================================================
    * COMPLETE NEWS CENTRE HTML
    * ============================================================
-   *
-   * This is the ORIGINAL HTML structure.
-   *
-   * IMPORTANT:
-   * - IDs are preserved.
-   * - Classes are preserved.
-   * - DOM nesting is preserved.
-   * - Tab names are preserved.
-   * - data-tab-news-id values are preserved.
-   * - Only hardcoded content which needs to become dynamic
-   *   has been replaced.
-   *
-   * No SharePoint functionality exists in this class.
+  
    */
   public readonly allElementsHtml: string = `
 <div class="col-12 col-lg-6">
@@ -98,10 +82,7 @@ export default class NewsCentre {
    * ============================================================
    * NO ELEMENT HTML
    * ============================================================
-   *
-   * Used when a category contains no records.
-   *
-   * This keeps the existing News Centre visual language.
+ 
    */
   public readonly noElementHtml: string = `
     <div class="news-item">
@@ -116,9 +97,7 @@ export default class NewsCentre {
    * ============================================================
    * CONSTRUCTOR
    * ============================================================
-   *
-   * No functionality is required here.
+  
    */
-  public constructor() {
-  }
+
 }
