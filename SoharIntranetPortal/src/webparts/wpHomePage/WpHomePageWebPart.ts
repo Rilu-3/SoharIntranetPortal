@@ -20,6 +20,8 @@ import QuickLinks from './QuickLinks';
 
 import Birthday from './Birthday';
 
+import SocialMedia from './SocialMedia';
+
 
 
 
@@ -79,7 +81,8 @@ export default class WpHomePageWebPart
 
     this.domElement.innerHTML =
       QuickLinks.allElementsHtml +
-      Birthday.allElementsHtml;
+      Birthday.allElementsHtml +
+      SocialMedia.allElementsHtml;
 
     const birthdayViewAll =
       this.domElement.querySelector(
@@ -110,6 +113,8 @@ export default class WpHomePageWebPart
 
 
     await this.renderBirthdays();
+
+    await this.initializeSocialMedia();
 
   }
 
@@ -1559,6 +1564,58 @@ export default class WpHomePageWebPart
 
   }
 
+  // =====================================================
+// HR API - Birthdays
+// =====================================================
+
+// private async getHRBirthdays(): Promise<any[]> {
+
+//   const apiUrl = 'HR_API_URL_WILL_BE_PROVIDED';
+
+//   // API implementation will be added
+//   // once HR provides endpoint and authentication details.
+
+//   return [];
+// }
+
+// =========================================================
+// SOCIAL MEDIA
+// =========================================================
+
+private async initializeSocialMedia(): Promise<void> {
+
+  const instagramContainer =
+    this.domElement.querySelector(
+      '#social-instagram'
+    ) as HTMLElement;
+
+  if (instagramContainer) {
+    instagramContainer.innerHTML = `
+      <iframe
+        src="https://widgets.sociablekit.com/instagram-feed/iframe/25716225"
+        frameborder="0"
+        width="100%"
+        height="387.984px">
+      </iframe>
+    `;
+  }
+
+  const twitterContainer =
+    this.domElement.querySelector(
+      '#social-twitter'
+    ) as HTMLElement;
+
+  if (twitterContainer) {
+    twitterContainer.innerHTML = `
+      <iframe
+        src="https://widgets.sociablekit.com/twitter-feed/iframe/25716230"
+        frameborder="0"
+        width="100%"
+        height="387.984px">
+      </iframe>
+    `;
+  }
+}
 
 private async loadCSS(): Promise<void> {
   const baseUrl =
