@@ -39,16 +39,21 @@ export default class WpHomePageWebPart
   extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
 
+  // ==================== RENDER ====================
+
   public render(): void {
 
+    // Render the Banner, Media Gallery and Gallery Modal HTML
     this.domElement.innerHTML =
       BannerTemplate.bannerHtml +
       MediaGalleryTemplate.allElementsHtml +
       MediaGalleryTemplate.galleryModalHtml;
 
 
+    // Load Banner items from SharePoint
     this._getBannerItems();
 
+    // Load Active Media Gallery items from SharePoint
     this._getMediaGalleryItems();
 
 
@@ -57,6 +62,8 @@ export default class WpHomePageWebPart
 
   }
 
+
+  // ==================== GET BANNER ITEMS ====================
 
   private async _getBannerItems(): Promise<void> {
 
@@ -142,6 +149,8 @@ export default class WpHomePageWebPart
   }
 
 
+  // ==================== RENDER BANNER ====================
+
   private _renderBanner(
     bannerItems: IBannerItem[]
   ): void {
@@ -219,6 +228,8 @@ export default class WpHomePageWebPart
 
   }
 
+
+  // ==================== GET MEDIA GALLERY ITEMS ====================
 
   private async _getMediaGalleryItems(): Promise<void> {
 
@@ -306,6 +317,8 @@ export default class WpHomePageWebPart
 
   }
 
+
+  // ==================== RENDER MEDIA GALLERY ====================
 
   private _renderMediaGallery(
     galleryItems: IMediaGalleryItem[]
@@ -464,6 +477,8 @@ export default class WpHomePageWebPart
   }
 
 
+  // ==================== LOAD BOOTSTRAP ====================
+
   private async loadBootstrap(): Promise<void> {
 
     const baseUrl =
@@ -501,6 +516,8 @@ export default class WpHomePageWebPart
   }
 
 
+  // ==================== LOAD HOME JS ====================
+
   private async loadHomeJS(): Promise<void> {
 
     const baseUrl =
@@ -537,6 +554,8 @@ export default class WpHomePageWebPart
 
   }
 
+
+  // ==================== LOAD CSS ====================
 
   private loadCSS(): void {
 
@@ -586,6 +605,8 @@ export default class WpHomePageWebPart
   }
 
 
+  // ==================== LOAD JS ====================
+
   private async loadJS(): Promise<void> {
 
     const baseUrl =
@@ -615,6 +636,8 @@ export default class WpHomePageWebPart
 
   }
 
+
+  // ==================== INITIALIZE WEB PART ====================
 
   protected async onInit(): Promise<void> {
 
