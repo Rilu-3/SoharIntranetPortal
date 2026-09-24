@@ -43,6 +43,12 @@ export default class WpHomePageWebPart
 
   public render(): void {
 
+
+    const workbenchContent = document.getElementById('workbenchPageContent');
+    if (workbenchContent) {
+      workbenchContent.style.maxWidth = 'none';
+    }
+
     // Render the Banner, Media Gallery and Gallery Modal HTML
     this.domElement.innerHTML =
       BannerTemplate.bannerHtml +
