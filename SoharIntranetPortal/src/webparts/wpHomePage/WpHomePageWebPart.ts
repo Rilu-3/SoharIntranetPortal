@@ -22,13 +22,42 @@ import {
 import { escape } from '@microsoft/sp-lodash-subset';
 
 import UpcomingEventsTemplate from './UpcomingEvents';
+import { BannerTemplate } from './BannerTemplate';
+import MediaGalleryTemplate from './MediaGalleryTemplate';
+import UabAnnouncements from './UabAnnouncements';
+import UabOffers from './UabOffers';
+
+import UabOfferAnnouncementWrapper from './UabOfferAnnouncementWrapper';
+
+
 export interface IWpHomePageWebPartProps {
   description: string;
 }
+
+
+interface IBannerItem {
+  Id: number;
+  Title: string;
+  Description: string;
+  Status: string;
+  SortOrder: number;
+  Image: any;
+}
+
+
+interface IMediaGalleryItem {
+  Id: number;
+  Title: string;
+  Caption: string;
+  Status: string;
+  SortOrder: number;
+  Image: any;
+}
+
+
 // Interface used for both Outlook My Events
 // and SharePoint Organizational Events
 export interface IEventItem {
-
   Id: number;
 
   Title: string;
@@ -42,7 +71,23 @@ export interface IEventItem {
   Location: string;
 
   Status: string;
+}
+interface IAnnouncement {
+  Id: number;
+  Title: string;
+  ShortDescription: string;
+  Icon: string;
+  Created: string;
+}
 
+
+
+interface IOffer {
+  Id: number;
+  Title: string;
+  Description: string;
+  OfferImage: string;
+  Created: string;
 }
 
 export default class WpHomePageWebPart
@@ -52,25 +97,32 @@ export default class WpHomePageWebPart
   // Stores Organizational Events
   // fetched from the SharePoint Upcoming Events list
   private events: IEventItem[] = [];
+
+
   // Stores My Events
   // fetched from the logged-in user's Outlook calendar
   private myEvents: IEventItem[] = [];
 
 
-  // Main render method of the web part
+  // ==================== RENDER ====================
+
   public async render(): Promise<void> {
-    const workbenchContent = document.getElementById('workbenchPageContent');
+
+    const workbenchContent =
+      document.getElementById('workbenchPageContent');
+
     if (workbenchContent) {
       workbenchContent.style.maxWidth = 'none';
     }
-    // Load required CSS and JavaScript resources
-    await this.loadCSS();
+
 
     // Get the current date
     const today = new Date();
 
+
     // Load both event sources at the same time
     await Promise.all([
+
       // Load Organizational Events from SharePoint
       this.loadEvents(
         today.getFullYear(),
@@ -82,79 +134,238 @@ export default class WpHomePageWebPart
         today.getFullYear(),
         today.getMonth()
       )
+
     ]);
 
-    // Create the Upcoming Events HTML
+    const arrowIconUrl =
+    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    /*
+     * Create the complete page HTML first.
+     *
+     * This is important because Banner,
+     * Upcoming Events and Media Gallery
+     * must have their own containers.
+     */
+    this.domElement.innerHTML =
+      BannerTemplate.bannerHtml +
+      UpcomingEventsTemplate.allElementsHtml +
+      MediaGalleryTemplate.allElementsHtml +
+      MediaGalleryTemplate.galleryModalHtml+   UabOfferAnnouncementWrapper.allElementsHtml.replace(
+      "__KEY__ARROW__RIGHT__ICON__",
+      arrowIconUrl
+    );
+
+      ;
+
+
+    // Create Upcoming Events inside its existing containers
     this.renderUpcomingEvents();
+
 
     // Initialize My Events / Organizational Events tabs
     this.initializeUpcomingEvents();
 
+
     // Initialize both calendars
     this.initializeCalendar();
+
+
+
+
+ 
+    this.domElement.querySelector("#announcement")!.innerHTML =
+      UabAnnouncements.allElementsHtml;
+
+    this.domElement.querySelector("#offers")!.innerHTML =
+      UabOffers.allElementsHtml;
+
+    this.setupViewAllLink();
+
+    const AnnouncementApiUrl =
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+
+    const OfferApiUrl =
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,OfferImage,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+
+    await this._renderAnnouncementsAsync(AnnouncementApiUrl);
+
+    await this._renderOffersAsync(OfferApiUrl);
+
+
+    // Load Banner items from SharePoint
+    await this._getBannerItems();
+
+
+    // Load Active Media Gallery items from SharePoint
+    await this._getMediaGalleryItems();
+
+
+    // Load home.js only after the HTML is available
+    await this.loadHomeJS();
+
   }
 
 
-  // Loads CSS files and JavaScript files
-  // required by the Upcoming Events UI
-  private async loadCSS(): Promise<void> {
+  // ==================== LOAD CSS ====================
 
-    // Get the current SharePoint site URL
+  private loadCSS(): void {
+
     const baseUrl =
       this.context.pageContext.web.absoluteUrl;
 
 
-    // Bootstrap CSS
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
     );
 
 
-    // Custom CSS
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/custom.css`
-    );
-
-
-    // Font size CSS
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/font-size.css`
-    );
-
-
-    // Home page CSS
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/home.css`
-    );
-
-
-    // jQuery UI CSS
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
     );
 
 
-    // CSS variables
     SPComponentLoader.loadCss(
       `${baseUrl}/SiteAssets/resources/css/variable.css`
     );
 
 
-    // Load jQuery
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/font-size.css`
+    );
+
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
+    );
+
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/custom.css`
+    );
+
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/home.css`
+    );
+
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
+    );
+
+  }
+
+
+  // ==================== LOAD JS ====================
+
+  private async loadJS(): Promise<void> {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
     await SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
     );
 
 
-    // Load jQuery UI
+    await this.loadBootstrap();
+
+
+    await SPComponentLoader.loadScript(
+      `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+    );
+
+
     await SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
     );
+
+
+    await SPComponentLoader.loadScript(
+      `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+    );
+
+
+    await SPComponentLoader.loadScript(
+      `${baseUrl}/SiteAssets/resources/js/common.js`
+    );
+
   }
 
 
-  // Loads Organizational Events
-  // from the SharePoint "Upcoming Events" list
+  // ==================== LOAD BOOTSTRAP ====================
+
+  private async loadBootstrap(): Promise<void> {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    if (
+      typeof (window as any).bootstrap !== 'undefined'
+    ) {
+
+      return;
+
+    }
+
+
+    const bootstrapModule =
+      await SPComponentLoader.loadScript<any>(
+        `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+      );
+
+
+    if (bootstrapModule) {
+
+      (window as any).bootstrap =
+        bootstrapModule;
+
+    }
+
+
+    console.log(
+      'Bootstrap loaded:',
+      typeof (window as any).bootstrap
+    );
+
+  }
+
+
+  // ==================== LOAD HOME JS ====================
+
+  private async loadHomeJS(): Promise<void> {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    try {
+
+      await SPComponentLoader.loadScript(
+        `${baseUrl}/SiteAssets/resources/js/home.js`
+      );
+
+
+      console.log(
+        'home.js loaded'
+      );
+
+    } catch (error) {
+
+      console.error(
+        'Error loading home.js:',
+        error
+      );
+
+    }
+
+  }
+
+
+  // ==================== LOAD EVENTS ====================
+
   private async loadEvents(
     year: number,
     month: number
@@ -163,6 +374,7 @@ export default class WpHomePageWebPart
     // Get the current SharePoint site URL
     const siteUrl =
       this.context.pageContext.web.absoluteUrl;
+
 
     /*
      * First day of selected month
@@ -174,6 +386,7 @@ export default class WpHomePageWebPart
         1
       );
 
+
     /*
      * First day of next month
      */
@@ -184,26 +397,24 @@ export default class WpHomePageWebPart
         1
       );
 
+
     // Convert the dates into ISO format
     // for the SharePoint REST API
     const startDateString =
       startDate.toISOString();
 
+
     const endDateString =
       endDate.toISOString();
 
+
     // SharePoint REST API URL
-    //
-    // $select -> gets only the required columns
-    //
-    // $filter -> gets events only from the selected month
-    //
-    // $orderby -> sorts events by EventDate
     const url =
       `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
       `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status` +
       `&$filter=EventDate ge datetime'${startDateString}' and EventDate lt datetime'${endDateString}'` +
       `&$orderby=EventDate asc`;
+
 
     try {
 
@@ -221,6 +432,7 @@ export default class WpHomePageWebPart
           }
         );
 
+
       // Check whether the API request was successful
       if (!response.ok) {
 
@@ -230,25 +442,32 @@ export default class WpHomePageWebPart
           response.statusText
         );
 
+
         // Clear events if the request fails
         this.events = [];
 
+
         return;
+
       }
+
 
       // Convert API response into JSON
       const data =
         await response.json();
 
+
       // Store SharePoint events
       this.events =
         data.value || [];
+
 
       // Display the fetched events in the console
       console.log(
         'Organizational Events:',
         this.events
       );
+
 
     } catch (error) {
 
@@ -258,148 +477,142 @@ export default class WpHomePageWebPart
         error
       );
 
+
       // Clear events when an error occurs
       this.events = [];
+
     }
+
   }
 
 
-  // Loads the logged-in user's
-  // Outlook Calendar events using Microsoft Graph
- private async loadMyEvents(
-  year: number,
-  month: number
-): Promise<void> {
+  // ==================== LOAD MY EVENTS ====================
 
-  try {
+  private async loadMyEvents(
+    year: number,
+    month: number
+  ): Promise<void> {
 
-    // Create Microsoft Graph client
-    //
-    // This client is used to communicate with
-    // Microsoft Graph APIs using the current
-    // SharePoint user's authentication
-    const client:
-      MSGraphClientV3 =
-      await this.context.msGraphClientFactory.getClient('3');
+    try {
 
-    // First day of selected month
-    const startDate =
-      new Date(
-        year,
-        month,
-        1,
-        0,
-        0,
-        0
+      // Create Microsoft Graph client
+      const client:
+        MSGraphClientV3 =
+        await this.context.msGraphClientFactory.getClient('3');
+
+
+      // First day of selected month
+      const startDate =
+        new Date(
+          year,
+          month,
+          1,
+          0,
+          0,
+          0
+        );
+
+
+      // First day of next month
+      const endDate =
+        new Date(
+          year,
+          month + 1,
+          1,
+          0,
+          0,
+          0
+        );
+
+
+      // Call Microsoft Graph Calendar API
+      const response =
+        await client
+          .api('/me/calendar/calendarView')
+
+          .query({
+            startDateTime:
+              startDate.toISOString(),
+
+            endDateTime:
+              endDate.toISOString()
+          })
+
+          .select(
+            'id,subject,start,end,location'
+          )
+
+          .orderby(
+            'start/dateTime'
+          )
+
+          .get();
+
+
+      // Display Outlook events in the browser console
+      console.log(
+        'Outlook Calendar Events:',
+        response.value
       );
 
-    // First day of next month
-    const endDate =
-      new Date(
-        year,
-        month + 1,
-        1,
-        0,
-        0,
-        0
+
+      // Convert Outlook events into the
+      // common IEventItem format
+      this.myEvents =
+        (response.value || []).map(
+          (
+            event: any,
+            index: number
+          ): IEventItem => {
+
+            return {
+
+              Id:
+                index + 1,
+
+              Title:
+                event.subject || '',
+
+              EventDate:
+                event.start?.dateTime || '',
+
+              StartTime:
+                event.start?.dateTime || '',
+
+              EndTime:
+                event.end?.dateTime || '',
+
+              Location:
+                event.location?.displayName || '',
+
+              Status:
+                'Active'
+
+            };
+
+          }
+        );
+
+
+    } catch (error) {
+
+      // Handle Microsoft Graph errors
+      console.error(
+        'Error loading Outlook Calendar events:',
+        error
       );
 
-    // Call Microsoft Graph Calendar API
-    //
-    // /me means the currently logged-in user
-    //
-    // calendarView returns calendar events
-    // between the start and end dates
-    const response =
-      await client
-        .api('/me/calendar/calendarView')
 
-        // Define the date range for Outlook events
-        .query({
-          startDateTime:
-            startDate.toISOString(),
+      // Clear Outlook events if an error occurs
+      this.myEvents = [];
 
-          endDateTime:
-            endDate.toISOString()
-        })
+    }
 
-        // Request only the required Outlook fields
-        .select(
-          'id,subject,start,end,location'
-        )
-
-        // Sort Outlook events by start date/time
-        .orderby(
-          'start/dateTime'
-        )
-
-        // Execute the Microsoft Graph request
-        .get();
-
-    // Display Outlook events in the browser console
-    console.log(
-      'Outlook Calendar Events:',
-      response.value
-    );
-
-    // Convert Outlook events into the
-    // common IEventItem format
-    this.myEvents =
-      (response.value || []).map(
-        (
-          event: any,
-          index: number
-        ): IEventItem => {
-
-          return {
-
-            // Create a local ID for the event
-            Id:
-              index + 1,
-
-            // Outlook event subject becomes the title
-            Title:
-              event.subject || '',
-
-            // Outlook start date/time
-            EventDate:
-              event.start?.dateTime || '',
-
-            // Outlook start date/time
-            StartTime:
-              event.start?.dateTime || '',
-
-            // Outlook end date/time
-            EndTime:
-              event.end?.dateTime || '',
-
-            // Outlook location
-            Location:
-              event.location?.displayName || '',
-
-            // Mark Outlook events as Active
-            Status:
-              'Active'
-          };
-        }
-      );
-
-  } catch (error) {
-
-    // Handle Microsoft Graph errors
-    console.error(
-      'Error loading Outlook Calendar events:',
-      error
-    );
-
-    // Clear Outlook events if an error occurs
-    this.myEvents = [];
   }
-}
 
 
-  // Creates the complete Upcoming Events UI
-  // using the imported template
+  // ==================== RENDER UPCOMING EVENTS ====================
+
   private renderUpcomingEvents(): void {
 
     // Get the SharePoint site URL
@@ -427,19 +640,6 @@ export default class WpHomePageWebPart
       this.getOrganizationalEvents();
 
 
-    // Get the main HTML template
-    let html =
-      UpcomingEventsTemplate.allElementsHtml;
-
-
-    // Replace the arrow placeholder
-    html =
-      html.replace(
-        /__KEY_ARROW_RIGHT_SHORT__/g,
-        arrowRightShort
-      );
-
-
     // Generate HTML for My Events
     const myEventsHtml =
       this.renderEventElements(
@@ -456,110 +656,163 @@ export default class WpHomePageWebPart
       );
 
 
-    // Insert My Events into the template
-    html =
-      html.replace(
-        'id="events-list-my">',
-        `id="events-list-my">${myEventsHtml}`
+    /*
+     * Insert My Events into the existing
+     * Upcoming Events container.
+     */
+    const myEventsList =
+      this.domElement.querySelector(
+        '#events-list-my'
       );
 
 
-    // Insert Organizational Events into the template
-    html =
-      html.replace(
-        'id="events-list-org">',
-        `id="events-list-org">${organizationalEventsHtml}`
+    if (myEventsList) {
+
+      myEventsList.innerHTML =
+        myEventsHtml;
+
+    }
+
+
+    /*
+     * Insert Organizational Events into
+     * the existing Upcoming Events container.
+     */
+    const organizationalEventsList =
+      this.domElement.querySelector(
+        '#events-list-org'
       );
 
-    // Display the final HTML in the web part
-    this.domElement.innerHTML = html;
+
+    if (organizationalEventsList) {
+
+      organizationalEventsList.innerHTML =
+        organizationalEventsHtml;
+
+    }
+
+
+    /*
+     * Replace arrow placeholder without
+     * replacing the complete page HTML.
+     */
+    const eventCalendarViews =
+      this.domElement.querySelectorAll(
+        '.event-calendar-view'
+      );
+
+
+    eventCalendarViews.forEach(
+      (view: Element) => {
+
+        view.innerHTML =
+          view.innerHTML.replace(
+            /__KEY_ARROW_RIGHT_SHORT__/g,
+            arrowRightShort
+          );
+
+      }
+    );
+
   }
 
 
-  // Returns only future My Events
-  // from the Outlook calendar
-private getMyEvents(): IEventItem[] {
+  // ==================== GET MY EVENTS ====================
 
-  // Get today's date
-  const today = new Date();
+  private getMyEvents(): IEventItem[] {
 
-  // Remove the current time
-  // so comparison is based only on the date
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
-
-  // Filter Outlook events
-  return this.myEvents.filter(
-    (event: IEventItem) => {
-
-      // Convert event date into JavaScript Date
-      const eventDate =
-        new Date(event.EventDate);
-
-      // Remove the time from the event date
-      eventDate.setHours(
-        0,
-        0,
-        0,
-        0
-      );
-
-      // Keep today's and future events
-      return eventDate >= today;
-    }
-  );
-}
+    // Get today's date
+    const today = new Date();
 
 
-// Returns only future active Organizational Events
-// from the SharePoint list
-private getOrganizationalEvents(): IEventItem[] {
+    // Remove the current time
+    today.setHours(
+      0,
+      0,
+      0,
+      0
+    );
 
-  // Get today's date
-  const today = new Date();
 
-  // Remove the current time
-  // so comparison is based only on the date
-  today.setHours(
-    0,
-    0,
-    0,
-    0
-  );
+    // Filter Outlook events
+    return this.myEvents.filter(
+      (event: IEventItem) => {
 
-  // Filter SharePoint events
-  return this.events.filter(
-    (event: IEventItem) => {
+        // Convert event date into JavaScript Date
+        const eventDate =
+          new Date(event.EventDate);
 
-      // Ignore events that are not Active
-      if (event.Status !== 'Active') {
-        return false;
+
+        // Remove the time from the event date
+        eventDate.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+
+        // Keep today's and future events
+        return eventDate >= today;
+
       }
+    );
 
-      // Convert event date into JavaScript Date
-      const eventDate =
-        new Date(event.EventDate);
-
-      // Remove the time from the event date
-      eventDate.setHours(
-        0,
-        0,
-        0,
-        0
-      );
-
-      // Keep today's and future events
-      return eventDate >= today;
-    }
-  );
-}
+  }
 
 
-  // Creates the HTML for the event cards
+  // ==================== GET ORGANIZATIONAL EVENTS ====================
+
+  private getOrganizationalEvents(): IEventItem[] {
+
+    // Get today's date
+    const today = new Date();
+
+
+    // Remove the current time
+    today.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+
+    // Filter SharePoint events
+    return this.events.filter(
+      (event: IEventItem) => {
+
+        // Ignore events that are not Active
+        if (event.Status !== 'Active') {
+          return false;
+        }
+
+
+        // Convert event date into JavaScript Date
+        const eventDate =
+          new Date(event.EventDate);
+
+
+        // Remove the time from the event date
+        eventDate.setHours(
+          0,
+          0,
+          0,
+          0
+        );
+
+
+        // Keep today's and future events
+        return eventDate >= today;
+
+      }
+    );
+
+  }
+
+
+  // ==================== RENDER EVENT ELEMENTS ====================
+
   private renderEventElements(
     events: IEventItem[],
     rightArrow: string
@@ -571,6 +824,7 @@ private getOrganizationalEvents(): IEventItem[] {
     if (!events.length) {
 
       return UpcomingEventsTemplate.noRecord;
+
     }
 
 
@@ -651,14 +905,16 @@ private getOrganizationalEvents(): IEventItem[] {
 
 
           return html;
+
         }
       )
       .join('');
+
   }
 
 
-  // Converts the event date into
-  // month and day for display
+  // ==================== FORMAT DATE ====================
+
   private formatDate(
     eventDate: string
   ): {
@@ -678,13 +934,13 @@ private getOrganizationalEvents(): IEventItem[] {
         month: '',
         day: ''
       };
+
     }
 
 
     return {
 
       // Get short month name
-      // Example: SEP
       month:
         date
           .toLocaleString(
@@ -697,17 +953,18 @@ private getOrganizationalEvents(): IEventItem[] {
 
 
       // Get day number
-      // Example: 30
       day:
         date
           .getDate()
           .toString()
+
     };
+
   }
 
 
-  // Converts start and end time
-  // into a display format
+  // ==================== FORMAT TIME ====================
+
   private formatTime(
     startTime: string,
     endTime: string
@@ -731,6 +988,7 @@ private getOrganizationalEvents(): IEventItem[] {
     if (!start && !end) {
 
       return '';
+
     }
 
 
@@ -738,15 +996,18 @@ private getOrganizationalEvents(): IEventItem[] {
     if (!end) {
 
       return start;
+
     }
 
 
     // Display start and end time together
     return `${start} – ${end}`;
+
   }
 
 
-  // Converts time values into 12-hour AM/PM format
+  // ==================== PARSE TIME ====================
+
   private parseSharePointTime(
     timeValue: string
   ): string {
@@ -755,8 +1016,8 @@ private getOrganizationalEvents(): IEventItem[] {
     if (!timeValue) {
 
       return '';
-    }
 
+    }
 
 
     // Check whether the value is an ISO date/time
@@ -779,7 +1040,9 @@ private getOrganizationalEvents(): IEventItem[] {
             hour12: true
           }
         );
+
       }
+
     }
 
 
@@ -838,16 +1101,20 @@ private getOrganizationalEvents(): IEventItem[] {
           `${('0' + minutes).slice(-2)} ` +
           `${period}`
         );
+
       }
+
     }
 
 
     // Return original value if it cannot be parsed
     return timeValue;
+
   }
 
 
-  // Initializes the My Events and Organizational Events tabs
+  // ==================== INITIALIZE TABS ====================
+
   private initializeUpcomingEvents(): void {
 
     // Find all event tabs
@@ -862,6 +1129,8 @@ private getOrganizationalEvents(): IEventItem[] {
       this.domElement.querySelectorAll(
         '.event-calendar-view'
       );
+
+
     // Add click event to each tab
     tabs.forEach(
       (tab: Element) => {
@@ -890,7 +1159,8 @@ private getOrganizationalEvents(): IEventItem[] {
 
               }
             );
-           
+
+
             panels.forEach(
               (panel: Element) => {
 
@@ -900,6 +1170,8 @@ private getOrganizationalEvents(): IEventItem[] {
 
               }
             );
+
+
             /*
              * Activate selected tab.
              */
@@ -928,20 +1200,26 @@ private getOrganizationalEvents(): IEventItem[] {
                 ).style.display = 'block';
 
               }
+
             }
+
           }
         );
+
       }
     );
+
   }
 
 
-  // Initializes the jQuery UI calendars
+  // ==================== INITIALIZE CALENDAR ====================
+
   private initializeCalendar(): void {
 
     // Get jQuery from the global window object
     const $ =
       (window as any).jQuery;
+
 
     // Check whether jQuery UI Datepicker is available
     if (
@@ -954,12 +1232,17 @@ private getOrganizationalEvents(): IEventItem[] {
         'jQuery UI Datepicker is not available.'
       );
 
+
       return;
+
     }
+
 
     // Store current web part instance
     // so it can be accessed inside callback functions
     const self = this;
+
+
     /*
      * My Events
      */
@@ -967,6 +1250,7 @@ private getOrganizationalEvents(): IEventItem[] {
 
       // Date display format
       dateFormat: 'dd M yy',
+
 
       // Runs when the user changes the calendar month
       onChangeMonthYear:
@@ -981,9 +1265,11 @@ private getOrganizationalEvents(): IEventItem[] {
             month - 1
           );
 
+
           // Get event arrow image
           const rightArrow =
             `${self.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
 
           // Rebuild My Events HTML
           const myEventsHtml =
@@ -992,19 +1278,24 @@ private getOrganizationalEvents(): IEventItem[] {
               rightArrow
             );
 
+
           // Find My Events list container
           const myEventsList =
             self.domElement.querySelector(
               '#events-list-my'
             );
 
+
           // Replace old events with new events
           if (myEventsList) {
 
             myEventsList.innerHTML =
               myEventsHtml;
+
           }
+
         }
+
     });
 
 
@@ -1015,6 +1306,7 @@ private getOrganizationalEvents(): IEventItem[] {
 
       // Date display format
       dateFormat: 'dd M yy',
+
 
       // Runs when the user changes the calendar month
       onChangeMonthYear:
@@ -1029,9 +1321,11 @@ private getOrganizationalEvents(): IEventItem[] {
             month - 1
           );
 
+
           // Get event arrow image
           const rightArrow =
             `${self.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
 
           // Rebuild Organizational Events HTML
           const organizationalEventsHtml =
@@ -1040,21 +1334,788 @@ private getOrganizationalEvents(): IEventItem[] {
               rightArrow
             );
 
+
           // Find Organizational Events list container
           const organizationalEventsList =
             self.domElement.querySelector(
               '#events-list-org'
             );
 
+
           // Replace old events with new events
           if (organizationalEventsList) {
 
             organizationalEventsList.innerHTML =
               organizationalEventsHtml;
+
           }
+
         }
+
     });
+
   }
+
+
+  // ==================== GET BANNER ITEMS ====================
+
+  private async _getBannerItems(): Promise<void> {
+
+    try {
+
+      const siteUrl =
+        this.context.pageContext.web.absoluteUrl;
+
+
+      const url =
+        `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image&$orderby=SortOrder asc`;
+
+
+      const response =
+        await this.context.spHttpClient.get(
+          url,
+          SPHttpClient.configurations.v1,
+          {
+            headers: {
+              'Accept':
+                'application/json;odata=nometadata'
+            }
+          }
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `Banner list request failed: ${response.status}`
+        );
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      const bannerItems: IBannerItem[] =
+        data.value
+          .filter(
+            (item: IBannerItem) =>
+              item.Status === 'Active'
+          )
+          .sort(
+            (a: IBannerItem, b: IBannerItem) =>
+              a.SortOrder - b.SortOrder
+          );
+
+
+      console.log(
+        'Banner Items:',
+        bannerItems
+      );
+
+
+      this._renderBanner(
+        bannerItems
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        'Error loading Banner list:',
+        error
+      );
+
+
+      const divBanner =
+        this.domElement.querySelector(
+          '#divBanner'
+        );
+
+
+      if (divBanner !== null) {
+
+        divBanner.innerHTML =
+          BannerTemplate.noRecord;
+
+      }
+
+    }
+
+  }
+
+
+  // ==================== RENDER BANNER ====================
+
+  private _renderBanner(
+    bannerItems: IBannerItem[]
+  ): void {
+
+    let allElementsHtml: string = '';
+
+
+    bannerItems.forEach(
+      (item: IBannerItem) => {
+
+        let imageData: any = {};
+
+
+        if (item.Image) {
+
+          imageData =
+            typeof item.Image === 'string'
+              ? JSON.parse(item.Image)
+              : item.Image;
+
+        }
+
+
+        const fileName =
+          imageData.fileName || '';
+
+
+        const imageUrl =
+          `${this.context.pageContext.web.absoluteUrl}/Lists/Banner/Attachments/${item.Id}/${fileName}`;
+
+
+        const singleElementHtml =
+          BannerTemplate.singleElementHtml
+            .replace(
+              '__KEY_BANNER_IMAGE__',
+              imageUrl
+            )
+            .replace(
+              /__KEY_BANNER_TITLE__/g,
+              item.Title || ''
+            )
+            .replace(
+              '__KEY_BANNER_DESCRIPTION__',
+              item.Description || ''
+            );
+
+
+        allElementsHtml +=
+          singleElementHtml;
+
+      }
+    );
+
+
+    if (allElementsHtml === '') {
+
+      allElementsHtml =
+        BannerTemplate.noRecord;
+
+    }
+
+
+    const divBanner =
+      this.domElement.querySelector(
+        '#divBanner'
+      );
+
+
+    if (divBanner !== null) {
+
+      divBanner.innerHTML =
+        allElementsHtml;
+
+    }
+
+  }
+
+
+  // ==================== GET MEDIA GALLERY ITEMS ====================
+
+  private async _getMediaGalleryItems(): Promise<void> {
+
+    try {
+
+      const siteUrl =
+        this.context.pageContext.web.absoluteUrl;
+
+
+      const url =
+        `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
+
+
+      const response =
+        await this.context.spHttpClient.get(
+          url,
+          SPHttpClient.configurations.v1,
+          {
+            headers: {
+              'Accept':
+                'application/json;odata=nometadata'
+            }
+          }
+        );
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `Media Gallery list request failed: ${response.status}`
+        );
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      const galleryItems: IMediaGalleryItem[] =
+        data.value
+          .filter(
+            (item: IMediaGalleryItem) =>
+              item.Status === 'Active'
+          )
+          .sort(
+            (a: IMediaGalleryItem, b: IMediaGalleryItem) =>
+              a.SortOrder - b.SortOrder
+          );
+
+
+      console.log(
+        'Media Gallery Items:',
+        galleryItems
+      );
+
+
+      this._renderMediaGallery(
+        galleryItems
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        'Error loading Media Gallery list:',
+        error
+      );
+
+
+      const galleryWrapper =
+        this.domElement.querySelector(
+          '.gallery-swiper .swiper-wrapper'
+        );
+
+
+      if (galleryWrapper !== null) {
+
+        galleryWrapper.innerHTML =
+          MediaGalleryTemplate.noRecord;
+
+      }
+
+    }
+
+  }
+
+
+  // ==================== RENDER MEDIA GALLERY ====================
+
+  private _renderMediaGallery(
+    galleryItems: IMediaGalleryItem[]
+  ): void {
+
+    let allElementsHtml: string = '';
+
+
+    galleryItems.forEach(
+      (item: IMediaGalleryItem) => {
+
+        let imageData: any = {};
+
+
+        if (item.Image) {
+
+          imageData =
+            typeof item.Image === 'string'
+              ? JSON.parse(item.Image)
+              : item.Image;
+
+        }
+
+
+        const fileName =
+          imageData.fileName || '';
+
+
+        const imageUrl =
+          `${this.context.pageContext.web.absoluteUrl}/Lists/Media_Gallery/Attachments/${item.Id}/${fileName}`;
+
+
+        console.log(
+          'Gallery Image URL:',
+          imageUrl
+        );
+
+
+        const singleElementHtml =
+          MediaGalleryTemplate.singleElementHtml
+            .replace(
+              '__KEY_GALLERY_IMAGE__',
+              imageUrl
+            )
+            .replace(
+              '__KEY_GALLERY_CAPTION__',
+              item.Caption || item.Title || ''
+            );
+
+
+        allElementsHtml +=
+          singleElementHtml;
+
+      }
+    );
+
+
+    if (allElementsHtml === '') {
+
+      allElementsHtml =
+        MediaGalleryTemplate.noRecord;
+
+    }
+
+
+    const galleryWrapper =
+      this.domElement.querySelector(
+        '.gallery-swiper .swiper-wrapper'
+      );
+
+
+    if (galleryWrapper !== null) {
+
+      galleryWrapper.innerHTML =
+        allElementsHtml;
+
+
+      /*
+       * Fill Modal Gallery
+       */
+      const modalWrapper =
+        this.domElement.querySelector(
+          '.gallery-modal-swiper .swiper-wrapper'
+        );
+
+
+      if (modalWrapper !== null) {
+
+        let modalElementsHtml: string = '';
+
+
+        galleryItems.forEach(
+          (item: IMediaGalleryItem) => {
+
+            let imageData: any = {};
+
+
+            if (item.Image) {
+
+              imageData =
+                typeof item.Image === 'string'
+                  ? JSON.parse(item.Image)
+                  : item.Image;
+
+            }
+
+
+            const fileName =
+              imageData.fileName || '';
+
+
+            const imageUrl =
+              `${this.context.pageContext.web.absoluteUrl}/Lists/Media_Gallery/Attachments/${item.Id}/${fileName}`;
+
+
+            modalElementsHtml += `
+              <div class="swiper-slide gallery-swiper-slide">
+                <img
+                  src="${imageUrl}"
+                  alt="${item.Caption || item.Title || ''}"
+                />
+              </div>
+            `;
+
+          }
+        );
+
+
+        modalWrapper.innerHTML =
+          modalElementsHtml;
+
+      }
+
+
+      const galleryElement =
+        this.domElement.querySelector(
+          '.gallery-swiper'
+        ) as HTMLElement & {
+          swiper?: any;
+        };
+
+
+      if (
+        galleryElement &&
+        galleryElement.swiper
+      ) {
+
+        galleryElement.swiper.update();
+
+      }
+
+    }
+
+  }
+  private setupViewAllLink(): void {
+  const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
+
+  const viewAllLink =
+    this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
+
+  if (!viewAllLink) {
+    console.error('View All link not found');
+    return;
+  }
+
+  // Set the initial URL for the default Announcements tab
+  viewAllLink.href =
+    `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+
+      const selectedTab = tab.getAttribute('data-tab-ao');
+
+      if (selectedTab === 'announcement') {
+        viewAllLink.href =
+          `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
+      }
+
+      if (selectedTab === 'offers') {
+        viewAllLink.href =
+          `${this.context.pageContext.web.absoluteUrl}/SitePages/Offer-List.aspx`;
+      }
+    });
+  });
+}
+  /*
+   * ==========================================================
+   * RENDER ANNOUNCEMENTS
+   * ==========================================================
+   *
+   * Gets Announcement data from SharePoint and converts each
+   * SharePoint item into the Announcement HTML template.
+   */
+  private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
+
+    const data: IAnnouncement[] =
+      await this._getAnnouncementsData(apiUrl);
+
+    console.log("Announcements data", data);
+
+    let allElementsHtml: string = "";
+
+    try {
+
+      data.forEach((item, index) => {
+
+        let imageUrl = '';
+
+        /*
+         * The Icon column contains JSON data.
+         * Extract the file name from the JSON and construct
+         * the SharePoint attachment URL.
+         */
+        if (item.Icon) {
+
+          const imageData = JSON.parse(item.Icon);
+
+          // console.log(imageData);
+
+          const fileName = imageData.fileName;
+
+          // Build the image URL using the fileName
+          imageUrl =
+            `${this.context.pageContext.web.absoluteUrl}/Lists/Announcements/Attachments/${item.Id}/${fileName}`;
+
+          // console.log(imageUrl);
+        }
+
+        /*
+         * Convert the SharePoint Created date into the
+         * required display format.
+         */
+        let createddate = this.formatDates(item.Created);
+
+        /*
+         * Replace the placeholders in the Announcement
+         * HTML template with actual SharePoint data.
+         */
+        let singleElementHtml = UabAnnouncements.singleElementHtml
+          .replace("__KEY__ANNOUNCEMENT__ICON__", imageUrl)
+          .replace("__KEY__ANNOUNCEMENT__TITLE__", item.Title)
+          .replace("__KEY__ANNOUNCEMENT__DESCRIPTION__", item.ShortDescription)
+          .replace("__KEY__ANNOUNCEMENT__DATE__", createddate);
+
+        /*
+         * Add the generated Announcement HTML to the
+         * complete HTML string.
+         */
+        allElementsHtml += singleElementHtml;
+      })
+
+    }
+    catch (error) {
+      console.error('Error rendering QuickList:', error);
+    }
+
+    /*
+     * Insert all generated Announcement HTML into the
+     * Announcement container.
+     */
+    this.domElement.querySelector("#announcement-container")!.innerHTML =
+      allElementsHtml;
+  }
+
+
+  /*
+   * ==========================================================
+   * RENDER OFFERS
+   * ==========================================================
+   *
+   * Gets Offer data from SharePoint and converts each
+   * SharePoint item into the Offer HTML template.
+   */
+  private async _renderOffersAsync(apiUrl: string): Promise<void> {
+
+    const data: IOffer[] =
+      await this._getOffersData(apiUrl);
+
+    console.log("Offers data", data);
+
+    let allElementsHtml: string = "";
+
+    try {
+
+      data.forEach((item, index) => {
+
+        let imageUrl = '';
+
+        /*
+         * The OfferImage column contains JSON data.
+         * Extract the file name and construct the
+         * SharePoint attachment URL.
+         */
+        if (item.OfferImage) {
+
+          const imageData = JSON.parse(item.OfferImage);
+
+          // console.log(imageData);
+
+          const fileName = imageData.fileName;
+
+          // Build the image URL using the fileName
+          imageUrl =
+            `${this.context.pageContext.web.absoluteUrl}/Lists/Offers/Attachments/${item.Id}/${fileName}`;
+
+          // console.log(imageUrl);
+        }
+
+        /*
+         * Convert the SharePoint Created date into the
+         * required display format.
+         */
+        let createddate = this.formatDates(item.Created);
+
+        /*
+         * Replace the placeholders in the Offer HTML template
+         * with actual SharePoint data.
+         */
+        let singleElementHtml = UabOffers.singleElementHtml
+          .replace("__KEY__OFFER__ICON__", imageUrl)
+          .replace("__KEY__OFFER__TITLE__", item.Title)
+          .replace("__KEY__OFFER__DESCRIPTION__", item.Description)
+          .replace("__KEY__OFFER__DATE__", createddate);
+
+        /*
+         * Add the generated Offer HTML to the complete
+         * HTML string.
+         */
+        allElementsHtml += singleElementHtml;
+
+      })
+
+    }
+    catch (error) {
+      console.error('Error rendering QuickList:', error);
+    }
+
+    /*
+     * Insert all generated Offer HTML into the Offer container.
+     */
+    this.domElement.querySelector("#offer-container")!.innerHTML =
+      allElementsHtml;
+  }
+
+
+  /*
+   * ==========================================================
+   * GET ANNOUNCEMENT DATA
+   * ==========================================================
+   *
+   * Sends a GET request to the SharePoint REST API and
+   * returns the Announcement list items.
+   */
+  private async _getAnnouncementsData(
+    apiUrl: string
+  ): Promise<IAnnouncement[]> {
+
+    try {
+
+      const response: SPHttpClientResponse =
+        await this.context.spHttpClient.get(
+          apiUrl,
+          SPHttpClient.configurations.v1
+        );
+
+      if (response.ok) {
+
+        const data = await response.json();
+
+        return data.value;
+
+      } else {
+
+        console.error(
+          `Request failed with status ${response.status}: ${response.statusText}`
+        );
+
+        throw new Error(
+          `Request failed with status ${response.status}: ${response.statusText}`
+        );
+      }
+
+    }
+    catch (error) {
+
+      console.log("error occured", error);
+
+      throw error;
+    }
+  }
+
+
+  /*
+   * ==========================================================
+   * GET OFFER DATA
+   * ==========================================================
+   *
+   * Sends a GET request to the SharePoint REST API and
+   * returns the Offer list items.
+   */
+  private async _getOffersData(
+    apiUrl: string
+  ): Promise<IOffer[]> {
+
+    try {
+
+      const response: SPHttpClientResponse =
+        await this.context.spHttpClient.get(
+          apiUrl,
+          SPHttpClient.configurations.v1
+        );
+
+      if (response.ok) {
+
+        const data = await response.json();
+
+        return data.value;
+
+      } else {
+
+        console.error(
+          `Request failed with status ${response.status}: ${response.statusText}`
+        );
+
+        throw new Error(
+          `Request failed with status ${response.status}: ${response.statusText}`
+        );
+      }
+
+    }
+    catch (error) {
+
+      console.log("error occured", error);
+
+      throw error;
+    }
+  }
+
+
+  /*
+   * ==========================================================
+   * FORMAT DATE
+   * ==========================================================
+   *
+   * Converts the SharePoint Created date into:
+   *
+   *     Sep 21, 2026
+   *
+   * If the date is empty or invalid, the original value
+   * is returned where appropriate.
+   */
+  private formatDates(
+    dateValue: string
+  ): string {
+
+    if (!dateValue) {
+      return '';
+    }
+
+    const date =
+      new Date(dateValue);
+
+    if (
+      isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return dateValue;
+    }
+
+    return date.toLocaleDateString(
+      'en-US',
+      {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }
+    );
+  }
+
+
+
+  // ==================== INITIALIZE WEB PART ====================
+
+  protected async onInit(): Promise<void> {
+
+    this.loadCSS();
+
+
+    await this.loadJS();
+
+
+    return super.onInit();
+
+  }
+
+
+  // ==================== PROPERTY PANE ====================
 
   protected getPropertyPaneConfiguration():
     IPropertyPaneConfiguration {
@@ -1095,11 +2156,16 @@ private getOrganizationalEvents(): IEventItem[] {
       ]
 
     };
+
   }
 
+
+  // ==================== DATA VERSION ====================
 
   protected get dataVersion(): Version {
 
     return Version.parse('1.0');
+
   }
+
 }

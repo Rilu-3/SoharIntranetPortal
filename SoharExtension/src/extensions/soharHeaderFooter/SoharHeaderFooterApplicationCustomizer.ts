@@ -617,5 +617,39 @@ private async _renderFooter(): Promise<void> {
         '__CURRENT_YEAR__',
         new Date().getFullYear().toString()
       );
+
+  // Move the existing footer placeholder into SharePoint Canvas
+  const spCanvasElement =
+    document.querySelector('.SPCanvas div');
+
+  if (spCanvasElement) {
+
+    // Remove duplicate footer placeholders already inside Canvas
+    const existingFooters =
+      spCanvasElement.querySelectorAll(
+        '#bottomPlaceholder'
+      );
+
+    existingFooters.forEach(
+      (footer: Element) => {
+        if (
+          footer !==
+          this._bottomPlaceholder!.domElement
+        ) {
+          footer.remove();
+        }
+      }
+    );
+
+    // Move the actual Bottom Placeholder
+    if (
+      this._bottomPlaceholder.domElement.parentElement !==
+      spCanvasElement
+    ) {
+      spCanvasElement.appendChild(
+        this._bottomPlaceholder.domElement
+      );
+    }
+  }
 }
 }
