@@ -253,7 +253,8 @@ private async _getUserDesignation(): Promise<string> {
               <li>
                 <a
                   class="dropdown-item text-sm"
-                  href="${link}">
+                  href="${link}"
+                  target="_blank" data-interception="off">
                   ${department.Title}
                 </a>
               </li>

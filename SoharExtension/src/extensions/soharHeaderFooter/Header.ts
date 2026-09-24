@@ -19,7 +19,9 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+                target="_blank"
+                data-interception="off">
 
               <img
                 class="logo-desktop"
@@ -38,6 +40,7 @@ export default class Header {
               <input
                 type="text"
                 class="form-control"
+                id="inputGlobalSearchBox"
                 placeholder="Search people, documents, pages..."
               >
 
@@ -139,13 +142,13 @@ export default class Header {
 
                   <a 
                       class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-  href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-  target="_blank"
-  data-interception="off"
-  id="navbarScrollingDropdown"
-  role="button"
-  aria-expanded="false"
-  data-bs-toggle="dropdown" > 
+                                href="#"
+                                target="_blank"
+                                data-interception="off"
+                                id="navbarScrollingDropdown"
+                                role="button"
+                                aria-expanded="false"
+                                data-bs-toggle="dropdown" > 
                       
                     
 
