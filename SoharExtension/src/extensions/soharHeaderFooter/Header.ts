@@ -137,13 +137,16 @@ export default class Header {
 
                 <li class="nav-item d-lg-flex dropdown">
 
-                  <a
-                    class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-                    href="#"
-                    id="navbarScrollingDropdown"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false">
+                  <a 
+                      class="nav-link dropdown-toggle d-flex align-items-center gap-2"
+  href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+  target="_blank"
+  data-interception="off"
+  id="navbarScrollingDropdown"
+  role="button"
+  aria-expanded="false"> 
+                      
+                    >
 
                     <img
                       class="nav-menu-icon"
@@ -157,6 +160,7 @@ export default class Header {
                       class="dropdown-arrow-nav"
                       src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
                       alt=""
+                      data-bs-toggle="dropdown" 
                     />
 
                   </a>

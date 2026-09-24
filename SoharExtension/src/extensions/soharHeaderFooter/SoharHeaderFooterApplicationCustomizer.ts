@@ -113,17 +113,46 @@ export default class SoharHeaderFooterApplicationCustomizer
   // JavaScript
   // ============================================================
 
-  private _loadJS(): void {
+private _loadJS(): void {
 
-    const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  const baseUrl: string =
+    this.context.pageContext.web.absoluteUrl;
 
+  // jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+  );
 
-    SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-    );
-  }
+  // jQuery UI - depends on jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+  );
 
+  // Bootstrap - depends on jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  );
+
+  // jQuery Marquee - depends on jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+  );
+
+  // Swiper
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+  );
+
+  // Common project JS
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/common.js`
+  );
+
+  // Home page JS
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/home.js`
+  );
+}
 
 // ============================================================
 // USER DESIGNATION FROM MICROSOFT ENTRA ID
@@ -327,7 +356,46 @@ const designation: string =
 
     this._topPlaceholder.domElement.innerHTML =
       header.render();
+      this._setupSearchFunctionality();
+
   }
+
+  private _setupSearchFunctionality(): void {
+
+  if (!this._topPlaceholder || !this._topPlaceholder.domElement) {
+    return;
+  }
+
+  const inputMainSearchBox =
+    this._topPlaceholder.domElement.querySelector(
+      '#inputGlobalSearchBox'
+    ) as HTMLInputElement;
+
+  if (inputMainSearchBox) {
+
+    inputMainSearchBox.addEventListener(
+      'keydown',
+      (event: KeyboardEvent) => {
+
+        if (event.key === 'Enter') {
+
+          const searchKey =
+            inputMainSearchBox.value;
+
+          if (searchKey) {
+
+            window.open(
+              `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+              '_blank'
+            );
+          }
+
+          event.preventDefault();
+        }
+      }
+    );
+  }
+}
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================
