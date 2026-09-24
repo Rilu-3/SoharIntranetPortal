@@ -144,9 +144,10 @@ export default class Header {
   data-interception="off"
   id="navbarScrollingDropdown"
   role="button"
-  aria-expanded="false"> 
+  aria-expanded="false"
+  data-bs-toggle="dropdown" > 
                       
-                    >
+                    
 
                     <img
                       class="nav-menu-icon"
@@ -160,7 +161,7 @@ export default class Header {
                       class="dropdown-arrow-nav"
                       src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
                       alt=""
-                      data-bs-toggle="dropdown" 
+                      
                     />
 
                   </a>
