@@ -1,9 +1,11 @@
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
-import UabHomePage from './UabHomePage';
+
 import { SPComponentLoader } from '@microsoft/sp-loader';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import UabAnnouncements from './UabAnnouncements';
 import UabOffers from './UabOffers';
+
+import UabOfferAnnouncementWrapper from './UabOfferAnnouncementWrapper';
 
 
 /*
@@ -91,7 +93,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
   this.domElement.innerHTML =
-    UabHomePage.allElementsHtml.replace(
+    UabOfferAnnouncementWrapper.allElementsHtml.replace(
       "__KEY__ARROW__RIGHT__ICON__",
       arrowIconUrl
     );
