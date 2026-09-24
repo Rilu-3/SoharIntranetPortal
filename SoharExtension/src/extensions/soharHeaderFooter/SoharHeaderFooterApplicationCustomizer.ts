@@ -107,24 +107,49 @@ export default class SoharHeaderFooterApplicationCustomizer
       `${baseUrl}/SiteAssets/resources/css/variable.css`
     );
   }
-
-
   // ============================================================
   // JavaScript
   // ============================================================
+private _loadJS(): void {
 
-  private _loadJS(): void {
+  const baseUrl: string =
+    this.context.pageContext.web.absoluteUrl;
 
-    const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  // jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+  );
 
+  // jQuery UI - depends on jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+  );
 
-    SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-    );
-  }
+  // Bootstrap - depends on jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  );
 
+  // jQuery Marquee - depends on jQuery
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+  );
 
+  // Swiper
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+  );
+
+  // Common project JS
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/common.js`
+  );
+
+  // Home page JS
+  SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/home.js`
+  );
+}
 // ============================================================
 // USER DESIGNATION FROM MICROSOFT ENTRA ID
 // ============================================================
@@ -254,8 +279,6 @@ private async _getUserDesignation(): Promise<string> {
       return '';
     }
   }
-
-
   // ============================================================
   // RENDER HEADER
   // ============================================================
