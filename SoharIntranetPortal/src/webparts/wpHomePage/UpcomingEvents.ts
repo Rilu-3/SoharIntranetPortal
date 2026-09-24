@@ -66,7 +66,7 @@ export default class UpcomingEventsTemplate {
             </div>
 
             <div class="w-100 float-start d-flex justify-content-start">
-              <a href="https://outlook.office.com/calendar/" class="link-arrow text-color-link">
+              <a href="https://outlook.office.com/calendar/  target="_blank" data-interception="off" class="link-arrow text-color-link">
                 <span class="text-sm xxl-text-base font-bold">
                   View All Events
                 </span>
@@ -94,7 +94,7 @@ export default class UpcomingEventsTemplate {
             </div>
 
             <div class="w-100 float-start d-flex justify-content-start">
-              <a href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Upcoming-Events.aspx" class="link-arrow text-color-link">
+              <a href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Upcoming-Events.aspx  target="_blank" data-interception="off" class="link-arrow text-color-link">
                 <span class="text-sm xxl-text-base font-bold">
                   View All Events
                 </span>

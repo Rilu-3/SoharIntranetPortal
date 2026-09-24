@@ -327,7 +327,49 @@ const designation: string =
 
     this._topPlaceholder.domElement.innerHTML =
       header.render();
+
+       this._setupSearchFunctionality();
   }
+
+private _setupSearchFunctionality(): void {
+
+  if (
+    !this._topPlaceholder ||
+    !this._topPlaceholder.domElement
+  ) {
+    return;
+  }
+
+  const inputMainSearchBox =
+    this._topPlaceholder.domElement.querySelector(
+      '#inputGlobalSearchBox'
+    ) as HTMLInputElement;
+
+  if (inputMainSearchBox) {
+
+    inputMainSearchBox.addEventListener(
+      'keydown',
+      (event: KeyboardEvent) => {
+
+        if (event.key === 'Enter') {
+
+          const searchKey =
+            inputMainSearchBox.value.trim();
+
+          if (searchKey) {
+
+            window.open(
+              `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+              '_blank'
+            );
+          }
+
+          event.preventDefault();
+        }
+      }
+    );
+  }
+}
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================

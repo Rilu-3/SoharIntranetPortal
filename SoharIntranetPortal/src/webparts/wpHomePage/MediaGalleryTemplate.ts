@@ -15,8 +15,8 @@ export default class MediaGalleryTemplate {
       <div class="panel-card px-3 py-4">
         <div class="panel-header w-100 float-start mb-4">
           <h2 class="panel-title">Media Gallery</h2>
-          <a href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Media-Gallery.aspx" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
-            </span><img src="/sites/DevPortal/SiteAssets/resources/images/icons/arrow-right-short.svg" /></a>
+          <a href="https://soharaluminium5.sharepoint.com/sites/DevPortal/SitePages/Media-Gallery.aspx target="_blank" data-interception="off" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
+            </span><img src="/sites/DevPortal/SiteAssets/resources/images/icons/arrow-right-short.svg" target="_blank" data-interception="off /></a>
         </div>
 
         <div class="w-100 d-flex flex-column float-start panel-card-gallery">
