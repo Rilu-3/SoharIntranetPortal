@@ -137,7 +137,8 @@ export default class WpHomePageWebPart
 
     ]);
 
-
+    const arrowIconUrl =
+    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
     /*
      * Create the complete page HTML first.
      *
@@ -149,7 +150,12 @@ export default class WpHomePageWebPart
       BannerTemplate.bannerHtml +
       UpcomingEventsTemplate.allElementsHtml +
       MediaGalleryTemplate.allElementsHtml +
-      MediaGalleryTemplate.galleryModalHtml;
+      MediaGalleryTemplate.galleryModalHtml+   UabOfferAnnouncementWrapper.allElementsHtml.replace(
+      "__KEY__ARROW__RIGHT__ICON__",
+      arrowIconUrl
+    );
+
+      ;
 
 
     // Create Upcoming Events inside its existing containers
@@ -163,15 +169,10 @@ export default class WpHomePageWebPart
     // Initialize both calendars
     this.initializeCalendar();
 
-    const arrowIconUrl =
-    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-  this.domElement.innerHTML =
-    UabOfferAnnouncementWrapper.allElementsHtml.replace(
-      "__KEY__ARROW__RIGHT__ICON__",
-      arrowIconUrl
-    );
 
+
+ 
     this.domElement.querySelector("#announcement")!.innerHTML =
       UabAnnouncements.allElementsHtml;
 
