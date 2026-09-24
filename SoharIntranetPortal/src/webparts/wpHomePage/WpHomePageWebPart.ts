@@ -59,7 +59,10 @@ export default class WpHomePageWebPart
 
   // Main render method of the web part
   public async render(): Promise<void> {
-
+    const workbenchContent = document.getElementById('workbenchPageContent');
+    if (workbenchContent) {
+      workbenchContent.style.maxWidth = 'none';
+    }
     // Load required CSS and JavaScript resources
     await this.loadCSS();
 
