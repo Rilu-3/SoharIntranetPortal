@@ -1615,6 +1615,21 @@ private async initializeSocialMedia(): Promise<void> {
       </iframe>
     `;
   }
+    const linkedinContainer =
+    this.domElement.querySelector(
+      '#social-linkedin'
+    ) as HTMLElement;
+
+  if (linkedinContainer) {
+    linkedinContainer.innerHTML = `
+      <iframe
+        src="https://widgets.sociablekit.com/linkedin-page-posts/iframe/25716233"
+        frameborder="0"
+        width="100%"
+        height="387.984px">
+      </iframe>
+    `;
+  }
 }
 
 private async loadCSS(): Promise<void> {
