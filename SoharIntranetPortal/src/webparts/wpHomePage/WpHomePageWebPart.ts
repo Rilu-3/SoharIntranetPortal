@@ -85,42 +85,41 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * 7. Loading Offer data.
    */
   public async render(): Promise<void> {
-    const workbenchContent = document.getElementById('workbenchPageContent');
-    if (workbenchContent) {
-      workbenchContent.style.maxWidth = 'none';
-    }
- 
+     const baseUrl = this.context.pageContext.web.absoluteUrl;
 
-  this.domElement.innerHTML =
-    AnnouncementOffer.allElementsHtml;
-     const arrowIconUrl =
-    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
-    this.setupViewAllLink(arrowIconUrl);
+  const workbenchContent = document.getElementById('workbenchPageContent');
 
-    const AnnouncementApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+  if (workbenchContent) {
+    workbenchContent.style.maxWidth = 'none';
+  }
 
-    const OfferApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,OfferImage,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+  this.domElement.innerHTML = AnnouncementOffer.allElementsHtml;
 
-    await this._renderAnnouncementsAsync(AnnouncementApiUrl);
+  const arrowIconUrl =
+    `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-    await this._renderOffersAsync(OfferApiUrl);
+  this.setupViewAllLink(arrowIconUrl);
+
+  const announcementApiUrl =
+    `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items` +
+    `?$select=Id,Title,ShortDescription,Icon,Created,Status` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=Created desc` +
+    `&$top=3`;
+
+  const offerApiUrl =
+    `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items` +
+    `?$select=Id,Title,Description,OfferImage,Created,Status` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=Created desc` +
+    `&$top=3`;
+
+  await this._renderAnnouncementsAsync(announcementApiUrl);
+  await this._renderOffersAsync(offerApiUrl);
   }
 
 
-  /*
-   * ==========================================================
-   * LOAD CSS AND JAVASCRIPT
-   * ==========================================================
-   *
-   * Loads the external CSS and JavaScript files required
-   * by the home page.
-   *
-   * All files are stored inside:
-   *
-   * /SiteAssets/resources/
-   */
+
   private async loadCSS(): Promise<void> {
 
     const baseUrl = this.context.pageContext.web.absoluteUrl;
@@ -202,50 +201,58 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * When the user clicks a tab, the URL of the View All
    * link is changed according to the selected tab.
    */
-  private setupViewAllLink(arrowIconUrl: string): void {
+
     
-  const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
+private setupViewAllLink(arrowIconUrl: string): void {
+
+  const baseUrl = this.context.pageContext.web.absoluteUrl;
+
   const arrowImage =
     this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
-
-
-
-  if (!arrowImage) {
-    console.error('View All arrow image not found');
+    if (!arrowImage) {
+    console.error('arrow image element not found');
     return;
   }
 
-  // Set the arrow image URL
+  // Set arrow image
   arrowImage.src = arrowIconUrl;
   const viewAllLink =
     this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
 
   if (!viewAllLink) {
-    console.error('View All link not found');
+    console.error('View All elements not found');
     return;
   }
-
-  // Set the initial URL for the default Announcements tab
+  
   viewAllLink.href =
-    `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
+    `${baseUrl}/SitePages/Announcement.aspx`;
 
+  const tabs =
+    this.domElement.querySelectorAll('[data-tab-ao]');
+
+
+
+  // Set default URL
+  // Change URL when tab changes
   tabs.forEach((tab) => {
+
     tab.addEventListener('click', () => {
 
       const selectedTab = tab.getAttribute('data-tab-ao');
 
       if (selectedTab === 'announcement') {
         viewAllLink.href =
-          `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
+          `${baseUrl}/SitePages/Announcement.aspx`;
       }
-
-      if (selectedTab === 'offers') {
+      else if (selectedTab === 'offers') {
         viewAllLink.href =
-          `${this.context.pageContext.web.absoluteUrl}/SitePages/Offer-List.aspx`;
+          `${baseUrl}/SitePages/Offer-List.aspx`;
       }
     });
+
   });
 }
+
   /*
    * ==========================================================
    * RENDER ANNOUNCEMENTS
@@ -255,7 +262,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * SharePoint item into the Announcement HTML template.
    */
   private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
-
+ try {
     const data: IAnnouncement[] =
       await this._getAnnouncementsData(apiUrl);
 
@@ -263,9 +270,9 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     let allElementsHtml: string = "";
 
-    try {
+   
 
-      data.forEach((item, index) => {
+      data.forEach((item) => {
 
         let imageUrl = '';
 
@@ -311,18 +318,18 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
          */
         allElementsHtml += singleElementHtml;
       })
-
+        /*
+     * Insert all generated Announcement HTML into the
+     * Announcement container.
+     */
+this.domElement.querySelector("#announcement-container")!.innerHTML =allElementsHtml;
     }
     catch (error) {
       console.error('Error rendering QuickList:', error);
     }
 
-    /*
-     * Insert all generated Announcement HTML into the
-     * Announcement container.
-     */
-    this.domElement.querySelector("#announcement-container")!.innerHTML =
-      allElementsHtml;
+  
+    
   }
 
 
@@ -335,7 +342,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * SharePoint item into the Offer HTML template.
    */
   private async _renderOffersAsync(apiUrl: string): Promise<void> {
-
+try{
     const data: IOffer[] =
       await this._getOffersData(apiUrl);
 
@@ -343,9 +350,9 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     let allElementsHtml: string = "";
 
-    try {
 
-      data.forEach((item, index) => {
+
+      data.forEach((item) => {
 
         let imageUrl = '';
 
@@ -392,17 +399,18 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
         allElementsHtml += singleElementHtml;
 
       })
-
+          /*
+     * Insert all generated Offer HTML into the Offer container.
+     */
+   this.domElement.querySelector("#offer-container")!.innerHTML =
+      allElementsHtml;
     }
     catch (error) {
       console.error('Error rendering QuickList:', error);
     }
 
-    /*
-     * Insert all generated Offer HTML into the Offer container.
-     */
-    this.domElement.querySelector("#offer-container")!.innerHTML =
-      allElementsHtml;
+
+ 
   }
 
 
