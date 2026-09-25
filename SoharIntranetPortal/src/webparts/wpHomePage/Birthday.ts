@@ -6,7 +6,7 @@ export default class Birthday {
 
   public static allElementsHtml: string = `
 
-    <div class="col-12 col-lg-4">
+   
       <div class="panel-card px-2 py-4">
 
         <div class="panel-header px-2 w-100 float-start mb-4">
@@ -37,7 +37,7 @@ export default class Birthday {
         </div>
 
       </div>
-    </div>
+   
 
   `;
 

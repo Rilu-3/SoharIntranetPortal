@@ -33,11 +33,11 @@ export default class NewsCentre {
   
    */
   public static allElementsHtml: string = `
-<div class="col-12 col-lg-6">
+
   <div class="panel-card px-2 py-4 d-flex flex-column">
     <div class="panel-header px-2 w-100 float-start mb-4">
       <h2 class="panel-title">News Centre</h2>
-      <a href="__KEY_URL_VIEW_ALL__"  target="_blank" data-interception="off" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
+      <a href="__KEY_URL_VIEW_ALL__" id="news-view-all" target="_blank" data-interception="off" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
           News</span><img src="__KEY_URL_ARROW__" /></a>
     </div>
     <div id="news-tabs" class="w-100 float-start d-flex flex-column flex-grow-1 overflow-hidden">
@@ -74,7 +74,7 @@ export default class NewsCentre {
 
     </div>
   </div>
-</div>
+
   `;
 
 

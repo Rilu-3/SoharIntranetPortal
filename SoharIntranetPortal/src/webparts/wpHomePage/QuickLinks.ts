@@ -26,7 +26,7 @@ export default class QuickLinks {
 
   public static allElementsHtml: string = `
 
-    <div class="col-12 col-lg-6">
+    
       <div class="panel-card px-2 py-4">
 
         <div class="panel-header px-2 w-100 float-start pb-3 d-flex align-items-center">
@@ -79,93 +79,10 @@ export default class QuickLinks {
         </div>
 
       </div>
-    </div>
+   
 
 
-    <!-- Add Favourite Modal -->
-
-    <div
-      class="modal fade favourite-modal"
-      id="addFavouriteModal"
-      tabindex="-1"
-      aria-labelledby="addFavouriteModalLabel"
-      aria-hidden="true">
-
-      <div
-        class="modal-dialog modal-dialog-centered modal-dialog-scrollable custom-scroll-view">
-
-        <div class="modal-content">
-
-          <div class="modal-header">
-
-            <h5
-              class="modal-title"
-              id="addFavouriteModalLabel">
-              Add to Favourites
-            </h5>
-
-            <svg
-              class="cursor-pointer flex-shrink-0"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-              width="15"
-              height="15"
-              viewBox="0 0 15 15"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-
-              <path
-                d="M0.666992 0.666016L14.0003 13.9993M0.666992 13.9993L14.0003 0.666016"
-                stroke="#005187"
-                stroke-width="1.33333"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-              </path>
-
-            </svg>
-
-          </div>
-
-
-          <div class="modal-body">
-
-            <p class="mb-3 modal-body-fav-title">
-              Select the quick links you want to add to your favourites.
-            </p>
-
-            <div class="favourite-options">
-
-              <!-- Dynamic Favourite Options -->
-
-            </div>
-
-          </div>
-
-
-          <div class="modal-footer">
-
-            <button
-              type="button"
-              class="btn-appearance-none btn-brand btn-brand-secondary px-3 py-1 text-sm"
-              data-bs-dismiss="modal">
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              class="btn-appearance-none btn-brand btn-brand-primary px-3 py-1 text-sm"
-              id="btnAddFavourites">
-              Add to Favourites
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
+   
   `;
 
 }

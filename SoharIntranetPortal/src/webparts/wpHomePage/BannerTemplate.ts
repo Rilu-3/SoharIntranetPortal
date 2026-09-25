@@ -33,11 +33,7 @@ export class BannerTemplate {
 
   public static bannerHtml: string = `
 
-    <div class="main-wrapper w-100 float-start min-h-screen-wrapper">
-
-      <div class="container container-sa px-3 px-lg-4 py-3 mx-auto">
-
-        <div class="row gy-3 gx-3 clearfix">
+ 
 
           <div class="col-12">
 
@@ -55,11 +51,7 @@ export class BannerTemplate {
 
           </div>
 
-        </div>
 
-      </div>
-
-    </div>
 
   `;
 

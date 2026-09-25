@@ -1,6 +1,6 @@
 export default class AnnouncementOffer {
     public static allElementsHtml:string=`
-           <div class="col-12 col-lg-6">
+         
  
           <div class="panel-card px-2 py-4">
  
@@ -45,7 +45,7 @@ export default class AnnouncementOffer {
  
           </div>
  
-        </div>
+       
     `;
  
     public static singleElementHtml:string=`  <div class="announcement-item">

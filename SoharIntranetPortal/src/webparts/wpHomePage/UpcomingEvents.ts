@@ -24,7 +24,7 @@ export default class UpcomingEventsTemplate {
 
   public static allElementsHtml: string = `
 
-    <div class="col-12 col-lg-6">
+   
       <div class="panel-card px-2 py-4">
 
         <div class="panel-header px-2 w-100 float-start">
@@ -106,7 +106,7 @@ export default class UpcomingEventsTemplate {
 
         </div>
       </div>
-    </div>
+   
 
   `;
 

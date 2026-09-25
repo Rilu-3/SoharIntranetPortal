@@ -1,5 +1,5 @@
 import { Version } from '@microsoft/sp-core-library';
-
+import Wrapper from './Wrapper';
 import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField
@@ -32,6 +32,7 @@ import AnnouncementOffer from './AnnouncementOffer';
 import QuickLinks from './QuickLinks';
 import Birthday from './Birthday';
 import SocialMedia from './SocialMedia';
+import NewsCentre from './NewsCentre';
 
 
 
@@ -114,8 +115,22 @@ export interface IBirthdayList {
   Status: string;
 }
 
+interface INewsItem {
+  Id: number;
+  Title: string;
+  NewsIcon?: any;
+  ShortDescription?: string;
+  Category?: string;
+  MainContent?: string;
+  PublishedDate?: string;
+  Status?: string;
+}
+
 export default class WpHomePageWebPart
   extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
+
+
+    private newsCentreItems: INewsItem[] = [];
 
 
   // Stores Organizational Events
@@ -169,6 +184,54 @@ private setupSocialMediaTutorialLinkObserver(): void {
     }
 
 
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+       
+
+
+    /*
+     * ==========================================================
+     * 2. SET STATIC ELEMENTS
+     * ==========================================================
+     */
+
+    const newsarrowIconUrl =
+      `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+
+  
+
+
+    /*
+     * ==========================================================
+     * 3. CREATE NEWS API URL
+     * ==========================================================
+     */
+
+    const newsApiUrl =
+      `${baseUrl}/_api/web/lists/getbytitle('News')/items` +
+      `?$select=Id,Title,NewsIcon,ShortDescription,Category,MainContent,PublishedDate,Status` +
+      `&$filter=Status eq 'Active'` +
+      `&$orderby=PublishedDate desc`;
+
+
+    /*
+     * ==========================================================
+     * 4. GET NEWS DATA AND RENDER IT
+     * ==========================================================
+     */
+
+  
+
+    /*
+     * ==========================================================
+     * 5. ATTACH TAB FUNCTIONALITY
+     * ==========================================================
+     */
+
+   
+
+
     // Get the current date
     const today = new Date();
 
@@ -199,14 +262,26 @@ private setupSocialMediaTutorialLinkObserver(): void {
      * Upcoming Events and Media Gallery
      * must have their own containers.
      */
-    this.domElement.innerHTML =
-      BannerTemplate.bannerHtml +
-      UpcomingEventsTemplate.allElementsHtml +
-      MediaGalleryTemplate.allElementsHtml +
-      MediaGalleryTemplate.galleryModalHtml+   AnnouncementOffer.allElementsHtml +
-      QuickLinks.allElementsHtml +
-      Birthday.allElementsHtml+
-      SocialMedia.allElementsHtml;
+    
+    this.domElement.innerHTML =Wrapper.wrapperHtml;
+    this.domElement.querySelector('#banner-container')!.innerHTML = BannerTemplate.bannerHtml;
+    this.domElement.querySelector('#announcement-offer-container')!.innerHTML = AnnouncementOffer.allElementsHtml;
+    this.domElement.querySelector('#quick-links-container')!.innerHTML = QuickLinks.allElementsHtml;
+    this.domElement.querySelector('#news-container')!.innerHTML = NewsCentre.allElementsHtml;
+    this.domElement.querySelector('#upcoming-events-container')!.innerHTML = UpcomingEventsTemplate.allElementsHtml;
+    this.domElement.querySelector('#social-media-container')!.innerHTML = SocialMedia.allElementsHtml;
+     this.domElement.querySelector('#birthday-container')!.innerHTML = Birthday.allElementsHtml;
+     this.domElement.querySelector('#media-gallery-container')!.innerHTML = MediaGalleryTemplate.allElementsHtml;
+    
+      // BannerTemplate.bannerHtml +
+      // UpcomingEventsTemplate.allElementsHtml +
+      // NewsCentre.allElementsHtml+
+      // MediaGalleryTemplate.allElementsHtml +
+      // MediaGalleryTemplate.galleryModalHtml +   
+      // AnnouncementOffer.allElementsHtml +
+      // QuickLinks.allElementsHtml +
+      // Birthday.allElementsHtml+
+      // SocialMedia.allElementsHtml;
 
       const birthdayViewAll =
       this.domElement.querySelector(
@@ -230,6 +305,10 @@ private setupSocialMediaTutorialLinkObserver(): void {
         `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
     }
 
+      this.newsCentreSetupViewAll(
+      newsarrowIconUrl
+    );
+
     
 
 
@@ -240,7 +319,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
     // Initialize My Events / Organizational Events tabs
     this.initializeUpcomingEvents();
 
-
+    
     // Initialize both calendars
     this.initializeCalendar();
 
@@ -264,11 +343,11 @@ private setupSocialMediaTutorialLinkObserver(): void {
 
 
     // Load Banner items from SharePoint
-    await this._getBannerItems();
+     await this._getBannerItems();
 
 
     // Load Active Media Gallery items from SharePoint
-    await this._getMediaGalleryItems();
+     await this._getMediaGalleryItems();
 
     
     await this.initializeQuickLinks();
@@ -278,11 +357,1093 @@ private setupSocialMediaTutorialLinkObserver(): void {
 
     await this.initializeSocialMedia();
 
-
+    await this._renderNewsAsync(
+      newsApiUrl
+    );
+   this.newsCentreAttachTabEvents();
 
     // Load home.js only after the HTML is available
-    await this.loadHomeJS();
+    this.loadHomeJS();
 
+  }
+
+
+  private newsCentreSetupViewAll(
+    arrowIconUrl: string
+  ): void {
+
+    const baseUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    /*
+     * ----------------------------------------------------------
+     * Find View All link by ID.
+     * ----------------------------------------------------------
+     */
+
+    let viewAllLink =
+      this.domElement.querySelector(
+        '#news-view-all'
+      ) as HTMLAnchorElement | null;
+
+
+    /*
+     * ----------------------------------------------------------
+     * Fallback:
+     * Your older template may still contain the placeholder
+     * directly in the href.
+     * ----------------------------------------------------------
+     */
+
+    if (!viewAllLink) {
+
+      viewAllLink =
+        this.domElement.querySelector(
+          'a[href="__KEY_URL_VIEW_ALL__"]'
+        ) as HTMLAnchorElement | null;
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * Set View All URL.
+     * ----------------------------------------------------------
+     */
+
+    if (viewAllLink) {
+
+      viewAllLink.href =
+        `${baseUrl}/SitePages/News-List.aspx`;
+
+    }
+    else {
+
+      console.warn(
+        'News View All link not found.'
+      );
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * Find arrow image by ID.
+     * ----------------------------------------------------------
+     */
+
+    let arrowImage =
+      this.domElement.querySelector(
+        '#news-view-all-arrow'
+      ) as HTMLImageElement | null;
+
+
+    /*
+     * ----------------------------------------------------------
+     * Fallback:
+     * Older template may still contain the placeholder
+     * directly in the image src.
+     * ----------------------------------------------------------
+     */
+
+    if (!arrowImage) {
+
+      arrowImage =
+        this.domElement.querySelector(
+          'img[src="__KEY_URL_ARROW__"]'
+        ) as HTMLImageElement | null;
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * Set arrow image.
+     * ----------------------------------------------------------
+     */
+
+    if (arrowImage) {
+
+      arrowImage.src =
+        arrowIconUrl;
+
+    }
+    else {
+
+      console.warn(
+        'News View All arrow image not found.'
+      );
+    }
+  }
+
+
+  /*
+   * ============================================================
+   * RENDER NEWS
+   * ============================================================
+   *
+   * Gets News data from SharePoint.
+   *
+   * After getting the data:
+   *
+   * 1. Store it in newsCentreItems.
+   * 2. Render All News.
+   * 3. Render Announcements.
+   */
+
+  private async _renderNewsAsync(
+    apiUrl: string
+  ): Promise<void> {
+
+    try {
+
+      /*
+       * ========================================================
+       * GET SHAREPOINT DATA
+       * ========================================================
+       */
+
+      const data: INewsItem[] =
+        await this._getNewsData(
+          apiUrl
+        );
+
+
+      /*
+       * Store the data.
+       *
+       * This is required later for tab filtering.
+       */
+
+      this.newsCentreItems =
+        data;
+
+
+      console.log(
+        'News items loaded:',
+        this.newsCentreItems
+      );
+
+
+      /*
+       * ========================================================
+       * DEFAULT TAB — ALL
+       * ========================================================
+       */
+
+      this.newsCentreRenderCategory(
+        'All'
+      );
+
+
+      /*
+       * ========================================================
+       * ANNOUNCEMENTS TAB
+       * ========================================================
+       */
+
+      this.newsCentreRenderCategory(
+        'Announcements'
+      );
+
+    }
+    catch (error) {
+
+      console.error(
+        'Error rendering News:',
+        error
+      );
+    }
+  }
+
+
+  /*
+   * ============================================================
+   * RENDER CATEGORY
+   * ============================================================
+   *
+   * THIS IS THE MAIN TEMPLATE RENDERING METHOD.
+   *
+   * The structure is intentionally the same as your
+   * AnnouncementOffer rendering pattern:
+   *
+   * let singleElementHtml =
+   *     NewsCentre.singleElementHtml
+   *       .replace(...)
+   *       .replace(...);
+   *
+   * allElementsHtml += singleElementHtml;
+   *
+   * container.innerHTML = allElementsHtml;
+   */
+
+  
+
+  private newsCentreRenderCategory(
+    category: string
+  ): void {
+ 
+ 
+    /*
+     * ==========================================================
+     * 1. DETERMINE THE PANEL
+     * ==========================================================
+     */
+ 
+    let panel: HTMLElement | null = null;
+ 
+ 
+    /*
+     * All
+     */
+ 
+    if (category === 'All') {
+ 
+      panel =
+        this.domElement.querySelector(
+          '#news-panel-all'
+        ) as HTMLElement | null;
+    }
+ 
+ 
+    /*
+     * Announcements
+     */
+ 
+    else if (
+      category === 'Announcements'
+    ) {
+ 
+      panel =
+        this.domElement.querySelector(
+          '#news-panel-announcements'
+        ) as HTMLElement | null;
+    }
+ 
+ 
+    /*
+     * Events / News / Circulars
+     *
+     * These reuse the All panel.
+     */
+ 
+    else if (
+      category === 'Events' ||
+      category === 'News' ||
+      category === 'Circulars'
+    ) {
+ 
+      panel =
+        this.domElement.querySelector(
+          '#news-panel-all'
+        ) as HTMLElement | null;
+    }
+ 
+ 
+    /*
+     * If the required panel cannot be found,
+     * stop safely.
+     */
+ 
+    if (!panel) {
+ 
+      console.error(
+        `News panel not found for category: ${category}`
+      );
+ 
+      return;
+    }
+ 
+ 
+    /*
+     * ==========================================================
+     * 2. FIND NEWS CONTAINER
+     * ==========================================================
+     *
+     * This is the container into which the generated
+     * single News item HTML will be inserted.
+     */
+ 
+    const container =
+      panel.querySelector(
+        '.panel-card-news'
+      ) as HTMLElement | null;
+ 
+ 
+    if (!container) {
+ 
+      console.error(
+        `News container not found for category: ${category}`
+      );
+ 
+      return;
+    }
+ 
+ 
+    /*
+     * ==========================================================
+     * 3. FILTER ITEMS
+     * ==========================================================
+     */
+ 
+    let items: INewsItem[];
+ 
+ 
+    if (category === 'All') {
+ 
+      /*
+       * All News items.
+       */
+ 
+      items =
+        this.newsCentreItems;
+    }
+    else {
+ 
+      /*
+       * Only the selected category.
+       */
+ 
+      items =
+        this.newsCentreItems.filter(
+          (item) =>
+            this.newsCentreNormalizeValue(
+              item.Category
+            ) ===
+            this.newsCentreNormalizeValue(
+              category
+            )
+        );
+    }
+ 
+ 
+    /*
+     * ==========================================================
+     * 4. START COMPLETE HTML STRING
+     * ==========================================================
+     */
+ 
+    let allElementsHtml: string = "";
+ 
+ 
+    /*
+     * ==========================================================
+     * 5. LOOP THROUGH SHAREPOINT ITEMS
+     * ==========================================================
+     */
+ 
+    items.forEach(
+      (item) => {
+ 
+ 
+        /*
+         * ======================================================
+         * IMAGE URL
+         * ======================================================
+         *
+         * Use the helper method here.
+         *
+         * This means newsCentreGetImageUrl() is no longer
+         * an unused method.
+         */
+ 
+        const imageUrl =
+          this.newsCentreGetImageUrl(
+            item
+          );
+ 
+ 
+        /*
+         * ======================================================
+         * DATE
+         * ======================================================
+         */
+ 
+        const createddate =
+          this.newsCentreFormatDate(
+            item.PublishedDate
+          );
+ 
+ 
+        /*
+         * ======================================================
+         * DETAILS URL
+         * ======================================================
+         */
+ 
+        const detailsUrl =
+          `${this.context.pageContext.web.absoluteUrl}` +
+          `/Lists/News/DispForm.aspx?ID=${item.Id}`;
+ 
+ 
+        /*
+         * ======================================================
+         * TAKE SINGLE ELEMENT TEMPLATE
+         * ======================================================
+         *
+         * THIS is the important part.
+         */
+ 
+        let singleElementHtml =
+          NewsCentre.singleElementHtml;
+ 
+ 
+        /*
+         * ======================================================
+         * REPLACE PLACEHOLDERS
+         * ======================================================
+         */
+ 
+        singleElementHtml =
+          singleElementHtml
+ 
+            /*
+             * News icon
+             */
+ 
+            .replace(
+              /__KEY_URL_IMGICON__/g,
+              imageUrl
+            )
+ 
+            /*
+             * News title
+             */
+ 
+            .replace(
+              /__KEY_DATA_TITLE__/g,
+              this.newsCentreEscapeHtml(
+                item.Title || ''
+              )
+            )
+ 
+            /*
+             * Short description
+             */
+ 
+            .replace(
+              /__KEY_DATA_DESCRIPTION__/g,
+              this.newsCentreEscapeHtml(
+                item.ShortDescription || ''
+              )
+            )
+ 
+            /*
+             * Category
+             */
+ 
+            .replace(
+              /__KEY_DATA_CATEGORY__/g,
+              this.newsCentreEscapeHtml(
+                item.Category || ''
+              )
+            )
+ 
+            /*
+             * Published date
+             */
+ 
+            .replace(
+              /__KEY_DATA_DATE__/g,
+              createddate
+            )
+ 
+            /*
+             * News details link
+             */
+ 
+            .replace(
+              /__KEY_URL_LINK__/g,
+              detailsUrl
+            )
+ 
+            /*
+             * Arrow image
+             */
+ 
+            .replace(
+              /__KEY_URL_ARROW__/g,
+              this.newsCentreGetArrowImageUrl()
+            );
+ 
+ 
+        /*
+         * ======================================================
+         * ADD GENERATED ITEM TO COMPLETE HTML
+         * ======================================================
+         */
+ 
+        allElementsHtml +=
+          singleElementHtml;
+ 
+      }
+    );
+ 
+ 
+    /*
+     * ==========================================================
+     * 6. NO DATA
+     * ==========================================================
+     */
+ 
+    if (!items.length) {
+ 
+      allElementsHtml =
+        NewsCentre.noElementHtml;
+    }
+ 
+ 
+    /*
+     * ==========================================================
+     * 7. INSERT GENERATED HTML INTO CONTAINER
+     * ==========================================================
+     *
+     * Same basic pattern as AnnouncementOffer.
+     */
+ 
+    container.innerHTML =
+      allElementsHtml;
+  }
+
+
+  /*
+   * ============================================================
+   * GET NEWS DATA
+   * ============================================================
+   *
+   * Sends GET request to the SharePoint REST API.
+   */
+
+  private async _getNewsData(
+    apiUrl: string
+  ): Promise<INewsItem[]> {
+
+    try {
+
+      const response: SPHttpClientResponse =
+        await this.context.spHttpClient.get(
+          apiUrl,
+          SPHttpClient.configurations.v1,
+          {
+            headers: {
+              'Accept':
+                'application/json;odata=nometadata'
+            }
+          }
+        );
+
+
+      /*
+       * Check HTTP response.
+       */
+
+      if (!response.ok) {
+
+        throw new Error(
+          `News API failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+
+      /*
+       * Convert response to JSON.
+       */
+
+      const data =
+        await response.json();
+
+
+      /*
+       * Return SharePoint items.
+       */
+
+      return data.value || [];
+
+    }
+    catch (error) {
+
+      console.error(
+        'Error loading News list:',
+        error
+      );
+
+      throw error;
+    }
+  }
+
+
+  /*
+   * ============================================================
+   * NEWS IMAGE URL
+   * ============================================================
+   *
+   * NewsIcon contains JSON information about the uploaded
+   * attachment.
+   */
+
+  private newsCentreGetImageUrl(
+    item: INewsItem
+  ): string {
+
+    /*
+     * No NewsIcon.
+     */
+
+    if (!item.NewsIcon) {
+
+      return '';
+    }
+
+
+    try {
+
+      /*
+       * NewsIcon may already be an object or may be
+       * returned from SharePoint as a JSON string.
+       */
+
+      const imageData =
+        typeof item.NewsIcon === 'string'
+          ? JSON.parse(item.NewsIcon)
+          : item.NewsIcon;
+
+
+      /*
+       * Get file name.
+       */
+
+      const fileName =
+        imageData?.fileName ||
+        imageData?.FileName ||
+        '';
+
+
+      /*
+       * No file name.
+       */
+
+      if (!fileName) {
+
+        return '';
+      }
+
+
+      /*
+       * Build SharePoint attachment URL.
+       */
+
+      const webUrl =
+        this.context.pageContext.web.absoluteUrl;
+
+
+      return (
+        `${webUrl}/Lists/News/Attachments/` +
+        `${item.Id}/${fileName}`
+      );
+
+    }
+    catch (error) {
+
+      console.error(
+        'Error parsing NewsIcon:',
+        error
+      );
+
+      return '';
+    }
+  }
+
+
+  /*
+   * ============================================================
+   * ARROW IMAGE URL
+   * ============================================================
+   */
+
+  private newsCentreGetArrowImageUrl(): string {
+
+    const webUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+
+    return (
+      `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`
+    );
+  }
+
+
+  /*
+   * ============================================================
+   * TAB FUNCTIONALITY
+   * ============================================================
+   */
+
+  private newsCentreAttachTabEvents(): void {
+
+
+    /*
+     * Find all News tabs.
+     */
+
+    const tabs =
+      this.domElement.querySelectorAll(
+        '#news-tabs .tab-title-pill'
+      );
+
+
+    /*
+     * Find All panel.
+     */
+
+    const allPanel =
+      this.domElement.querySelector(
+        '#news-panel-all'
+      ) as HTMLElement | null;
+
+
+    /*
+     * Find Announcements panel.
+     */
+
+    const announcementPanel =
+      this.domElement.querySelector(
+        '#news-panel-announcements'
+      ) as HTMLElement | null;
+
+
+    /*
+     * No tabs found.
+     */
+
+    if (!tabs.length) {
+
+      console.warn(
+        'News tabs not found.'
+      );
+
+      return;
+    }
+
+
+    /*
+     * ==========================================================
+     * ADD CLICK EVENT
+     * ==========================================================
+     */
+
+    tabs.forEach(
+      (tab) => {
+
+        tab.addEventListener(
+          'click',
+          () => {
+
+
+            /*
+             * Get the target panel ID.
+             */
+
+            const targetId =
+              tab.getAttribute(
+                'data-tab-news-id'
+              );
+
+
+            if (!targetId) {
+
+              return;
+            }
+
+
+            /*
+             * ==================================================
+             * REMOVE ACTIVE CLASS
+             * ==================================================
+             */
+
+            tabs.forEach(
+              (otherTab) => {
+
+                otherTab.classList.remove(
+                  'tab-title-pill-active'
+                );
+              }
+            );
+
+
+            /*
+             * Add active class to clicked tab.
+             */
+
+            tab.classList.add(
+              'tab-title-pill-active'
+            );
+
+
+            /*
+             * ==================================================
+             * ALL TAB
+             * ==================================================
+             */
+
+            if (
+              targetId ===
+              'news-panel-all'
+            ) {
+
+              if (allPanel) {
+
+                allPanel.style.display =
+                  'block';
+              }
+
+
+              if (announcementPanel) {
+
+                announcementPanel.style.display =
+                  'none';
+              }
+
+
+              /*
+               * Generate All News HTML.
+               */
+
+              this.newsCentreRenderCategory(
+                'All'
+              );
+
+
+              return;
+            }
+
+
+            /*
+             * ==================================================
+             * ANNOUNCEMENTS TAB
+             * ==================================================
+             */
+
+            if (
+              targetId ===
+              'news-panel-announcements'
+            ) {
+
+              if (allPanel) {
+
+                allPanel.style.display =
+                  'none';
+              }
+
+
+              if (announcementPanel) {
+
+                announcementPanel.style.display =
+                  'block';
+              }
+
+
+              /*
+               * Generate Announcements HTML.
+               */
+
+              this.newsCentreRenderCategory(
+                'Announcements'
+              );
+
+
+              return;
+            }
+
+
+            /*
+             * ==================================================
+             * EVENTS / NEWS / CIRCULARS
+             * ==================================================
+             *
+             * Reuse the All panel.
+             */
+
+            if (allPanel) {
+
+              allPanel.style.display =
+                'block';
+            }
+
+
+            if (announcementPanel) {
+
+              announcementPanel.style.display =
+                'none';
+            }
+
+
+            /*
+             * Determine selected category.
+             */
+
+            let category = '';
+
+
+            if (
+              targetId ===
+              'news-panel-events'
+            ) {
+
+              category =
+                'Events';
+            }
+
+
+            if (
+              targetId ===
+              'news-panel-news'
+            ) {
+
+              category =
+                'News';
+            }
+
+
+            if (
+              targetId ===
+              'news-panel-circulars'
+            ) {
+
+              category =
+                'Circulars';
+            }
+
+
+            /*
+             * Generate HTML using
+             * NewsCentre.singleElementHtml.
+             */
+
+            this.newsCentreRenderCategory(
+              category
+            );
+          }
+        );
+      }
+    );
+
+
+    /*
+     * ==========================================================
+     * DEFAULT TAB STATE
+     * ==========================================================
+     */
+
+    if (allPanel) {
+
+      allPanel.style.display =
+        'block';
+    }
+
+
+    if (announcementPanel) {
+
+      announcementPanel.style.display =
+        'none';
+    }
+  }
+
+
+  /*
+   * ============================================================
+   * DATE FORMAT
+   * ============================================================
+   *
+   * Example:
+   *
+   * Sep 25, 2026
+   */
+
+  private newsCentreFormatDate(
+    value?: string
+  ): string {
+
+    if (!value) {
+
+      return '';
+    }
+
+
+    const date =
+      new Date(value);
+
+
+    if (
+      isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return '';
+    }
+
+
+    return date.toLocaleDateString(
+      'en-US',
+      {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }
+    );
+  }
+
+
+  /*
+   * ============================================================
+   * NORMALIZE VALUE
+   * ============================================================
+   *
+   * Used when comparing categories.
+   */
+
+  private newsCentreNormalizeValue(
+    value?: string
+  ): string {
+
+    return (
+      value || ''
+    )
+      .trim()
+      .toLowerCase();
+  }
+
+
+  /*
+   * ============================================================
+   * ESCAPE HTML
+   * ============================================================
+   */
+
+  private newsCentreEscapeHtml(
+    value: string
+  ): string {
+
+    return value
+      .replace(
+        /&/g,
+        '&amp;'
+      )
+      .replace(
+        /</g,
+        '&lt;'
+      )
+      .replace(
+        />/g,
+        '&gt;'
+      )
+      .replace(
+        /"/g,
+        '&quot;'
+      )
+      .replace(
+        /'/g,
+        '&#039;'
+      );
   }
 
 
