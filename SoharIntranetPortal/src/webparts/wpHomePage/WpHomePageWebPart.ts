@@ -27,9 +27,8 @@ import { escape } from '@microsoft/sp-lodash-subset';
 import UpcomingEventsTemplate from './UpcomingEvents';
 import { BannerTemplate } from './BannerTemplate';
 import MediaGalleryTemplate from './MediaGalleryTemplate';
-import UabAnnouncements from './UabAnnouncements';
-import UabOffers from './UabOffers';
-import UabOfferAnnouncementWrapper from './UabOfferAnnouncementWrapper';
+
+import AnnouncementOffer from './AnnouncementOffer';
 import QuickLinks from './QuickLinks';
 import Birthday from './Birthday';
 import SocialMedia from './SocialMedia';
@@ -204,9 +203,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
       BannerTemplate.bannerHtml +
       UpcomingEventsTemplate.allElementsHtml +
       MediaGalleryTemplate.allElementsHtml +
-      MediaGalleryTemplate.galleryModalHtml+   UabOfferAnnouncementWrapper.allElementsHtml.replace(
-      "__KEY__ARROW__RIGHT__ICON__",
-      arrowIconUrl) +
+      MediaGalleryTemplate.galleryModalHtml+   AnnouncementOffer.allElementsHtml +
       QuickLinks.allElementsHtml +
       Birthday.allElementsHtml+
       SocialMedia.allElementsHtml;
@@ -251,13 +248,9 @@ private setupSocialMediaTutorialLinkObserver(): void {
 
 
  
-    this.domElement.querySelector("#announcement")!.innerHTML =
-      UabAnnouncements.allElementsHtml;
 
-    this.domElement.querySelector("#offers")!.innerHTML =
-      UabOffers.allElementsHtml;
 
-    this.setupViewAllLink();
+    this.setupViewAllLink(arrowIconUrl);
 
     const AnnouncementApiUrl =
       `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
@@ -1857,38 +1850,56 @@ private setupSocialMediaTutorialLinkObserver(): void {
     }
 
   }
-  private setupViewAllLink(): void {
-  const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
-
-  const viewAllLink =
-    this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
-
-  if (!viewAllLink) {
-    console.error('View All link not found');
+ private setupViewAllLink(arrowIconUrl: string): void {
+ 
+  const baseUrl = this.context.pageContext.web.absoluteUrl;
+ 
+  const arrowImage =
+    this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
+    if (!arrowImage) {
+    console.error('arrow image element not found');
     return;
   }
-
-  // Set the initial URL for the default Announcements tab
+ 
+  // Set arrow image
+  arrowImage.src = arrowIconUrl;
+  const viewAllLink =
+    this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
+ 
+  if (!viewAllLink) {
+    console.error('View All elements not found');
+    return;
+  }
+ 
   viewAllLink.href =
-    `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
-
+    `${baseUrl}/SitePages/Announcement.aspx`;
+ 
+  const tabs =
+    this.domElement.querySelectorAll('[data-tab-ao]');
+ 
+ 
+ 
+  // Set default URL
+  // Change URL when tab changes
   tabs.forEach((tab) => {
+ 
     tab.addEventListener('click', () => {
-
+ 
       const selectedTab = tab.getAttribute('data-tab-ao');
-
+ 
       if (selectedTab === 'announcement') {
         viewAllLink.href =
-          `${this.context.pageContext.web.absoluteUrl}/SitePages/Announcement.aspx`;
+          `${baseUrl}/SitePages/Announcement.aspx`;
       }
-
-      if (selectedTab === 'offers') {
+      else if (selectedTab === 'offers') {
         viewAllLink.href =
-          `${this.context.pageContext.web.absoluteUrl}/SitePages/Offer-List.aspx`;
+          `${baseUrl}/SitePages/Offer-List.aspx`;
       }
     });
+ 
   });
 }
+ 
   /*
    * ==========================================================
    * RENDER ANNOUNCEMENTS
@@ -1899,73 +1910,71 @@ private setupSocialMediaTutorialLinkObserver(): void {
    */
   private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
 
+   try {
     const data: IAnnouncement[] =
       await this._getAnnouncementsData(apiUrl);
-
+ 
     console.log("Announcements data", data);
-
+ 
     let allElementsHtml: string = "";
-
-    try {
-
-      data.forEach((item, index) => {
-
+ 
+   
+ 
+      data.forEach((item) => {
+ 
         let imageUrl = '';
-
+ 
         /*
          * The Icon column contains JSON data.
          * Extract the file name from the JSON and construct
          * the SharePoint attachment URL.
          */
         if (item.Icon) {
-
+ 
           const imageData = JSON.parse(item.Icon);
-
+ 
           // console.log(imageData);
-
+ 
           const fileName = imageData.fileName;
-
+ 
           // Build the image URL using the fileName
           imageUrl =
             `${this.context.pageContext.web.absoluteUrl}/Lists/Announcements/Attachments/${item.Id}/${fileName}`;
-
+ 
           // console.log(imageUrl);
         }
-
+ 
         /*
          * Convert the SharePoint Created date into the
          * required display format.
          */
         let createddate = this.formatDates(item.Created);
-
+ 
         /*
          * Replace the placeholders in the Announcement
          * HTML template with actual SharePoint data.
          */
-        let singleElementHtml = UabAnnouncements.singleElementHtml
-          .replace("__KEY__ANNOUNCEMENT__ICON__", imageUrl)
-          .replace("__KEY__ANNOUNCEMENT__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENT__DESCRIPTION__", item.ShortDescription)
-          .replace("__KEY__ANNOUNCEMENT__DATE__", createddate);
-
+        let singleElementHtml = AnnouncementOffer.singleElementHtml
+          .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
+          .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
+ 
         /*
          * Add the generated Announcement HTML to the
          * complete HTML string.
          */
         allElementsHtml += singleElementHtml;
       })
-
+        /*
+     * Insert all generated Announcement HTML into the
+     * Announcement container.
+     */
+this.domElement.querySelector("#announcement-container")!.innerHTML =allElementsHtml;
     }
     catch (error) {
       console.error('Error rendering QuickList:', error);
     }
-
-    /*
-     * Insert all generated Announcement HTML into the
-     * Announcement container.
-     */
-    this.domElement.querySelector("#announcement-container")!.innerHTML =
-      allElementsHtml;
   }
 
 
@@ -1979,73 +1988,72 @@ private setupSocialMediaTutorialLinkObserver(): void {
    */
   private async _renderOffersAsync(apiUrl: string): Promise<void> {
 
+    try{
     const data: IOffer[] =
       await this._getOffersData(apiUrl);
-
+ 
     console.log("Offers data", data);
-
+ 
     let allElementsHtml: string = "";
-
-    try {
-
-      data.forEach((item, index) => {
-
+ 
+ 
+ 
+      data.forEach((item) => {
+ 
         let imageUrl = '';
-
+ 
         /*
          * The OfferImage column contains JSON data.
          * Extract the file name and construct the
          * SharePoint attachment URL.
          */
         if (item.OfferImage) {
-
+ 
           const imageData = JSON.parse(item.OfferImage);
-
+ 
           // console.log(imageData);
-
+ 
           const fileName = imageData.fileName;
-
+ 
           // Build the image URL using the fileName
           imageUrl =
             `${this.context.pageContext.web.absoluteUrl}/Lists/Offers/Attachments/${item.Id}/${fileName}`;
-
+ 
           // console.log(imageUrl);
         }
-
+ 
         /*
          * Convert the SharePoint Created date into the
          * required display format.
          */
         let createddate = this.formatDates(item.Created);
-
+ 
         /*
          * Replace the placeholders in the Offer HTML template
          * with actual SharePoint data.
          */
-        let singleElementHtml = UabOffers.singleElementHtml
-          .replace("__KEY__OFFER__ICON__", imageUrl)
-          .replace("__KEY__OFFER__TITLE__", item.Title)
-          .replace("__KEY__OFFER__DESCRIPTION__", item.Description)
-          .replace("__KEY__OFFER__DATE__", createddate);
-
+        let singleElementHtml = AnnouncementOffer.singleElementHtml
+          .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
+          .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
+ 
         /*
          * Add the generated Offer HTML to the complete
          * HTML string.
          */
         allElementsHtml += singleElementHtml;
-
+ 
       })
-
+          /*
+     * Insert all generated Offer HTML into the Offer container.
+     */
+   this.domElement.querySelector("#offer-container")!.innerHTML =
+      allElementsHtml;
     }
     catch (error) {
       console.error('Error rendering QuickList:', error);
     }
-
-    /*
-     * Insert all generated Offer HTML into the Offer container.
-     */
-    this.domElement.querySelector("#offer-container")!.innerHTML =
-      allElementsHtml;
   }
 
 
@@ -2062,35 +2070,35 @@ private setupSocialMediaTutorialLinkObserver(): void {
   ): Promise<IAnnouncement[]> {
 
     try {
-
+ 
       const response: SPHttpClientResponse =
         await this.context.spHttpClient.get(
           apiUrl,
           SPHttpClient.configurations.v1
         );
-
+ 
       if (response.ok) {
-
+ 
         const data = await response.json();
-
+ 
         return data.value;
-
+ 
       } else {
-
+ 
         console.error(
           `Request failed with status ${response.status}: ${response.statusText}`
         );
-
+ 
         throw new Error(
           `Request failed with status ${response.status}: ${response.statusText}`
         );
       }
-
+ 
     }
     catch (error) {
-
+ 
       console.log("error occured", error);
-
+ 
       throw error;
     }
   }
@@ -2109,37 +2117,38 @@ private setupSocialMediaTutorialLinkObserver(): void {
   ): Promise<IOffer[]> {
 
     try {
-
+ 
       const response: SPHttpClientResponse =
         await this.context.spHttpClient.get(
           apiUrl,
           SPHttpClient.configurations.v1
         );
-
+ 
       if (response.ok) {
-
+ 
         const data = await response.json();
-
+ 
         return data.value;
-
+ 
       } else {
-
+ 
         console.error(
           `Request failed with status ${response.status}: ${response.statusText}`
         );
-
+ 
         throw new Error(
           `Request failed with status ${response.status}: ${response.statusText}`
         );
       }
-
+ 
     }
     catch (error) {
-
+ 
       console.log("error occured", error);
-
+ 
       throw error;
     }
+ 
   }
 
 
