@@ -5,7 +5,7 @@ import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 
 
 
-import UabAnnouncementOffer from './UabAnnouncementOffer';
+import AnnouncementOffer from './AnnouncementOffer';
 
 
 /*
@@ -92,7 +92,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
  
 
   this.domElement.innerHTML =
-    UabAnnouncementOffer.allElementsHtml;
+    AnnouncementOffer.allElementsHtml;
      const arrowIconUrl =
     `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
     this.setupViewAllLink(arrowIconUrl);
@@ -299,7 +299,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
          * Replace the placeholders in the Announcement
          * HTML template with actual SharePoint data.
          */
-        let singleElementHtml = UabAnnouncementOffer.singleElementHtml
+        let singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
           .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
@@ -379,7 +379,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
          * Replace the placeholders in the Offer HTML template
          * with actual SharePoint data.
          */
-        let singleElementHtml = UabAnnouncementOffer.singleElementHtml
+        let singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
           .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)

@@ -1,4 +1,4 @@
-export default class UabAnnouncementOffer {
+export default class AnnouncementOffer {
     public static allElementsHtml:string=`
            <div class="col-12 col-lg-6">
 
