@@ -368,6 +368,11 @@ export default class WpHomePageWebPart
       this.newsCentreRenderCategory(
         'Announcements'
       );
+      this.newsCentreRenderCategory('Events');
+
+      this.newsCentreRenderCategory('News');
+
+      this.newsCentreRenderCategory('Circulars');
 
     }
     catch (error) {
@@ -401,330 +406,428 @@ export default class WpHomePageWebPart
    */
 
   private newsCentreRenderCategory(
-    category: string
-  ): void {
+  category: string
+): void {
 
 
-    /*
-     * ==========================================================
-     * 1. DETERMINE THE PANEL
-     * ==========================================================
-     */
+  /*
+   * ==========================================================
+   * 1. DETERMINE THE PANEL
+   * ==========================================================
+   */
 
-    let panel: HTMLElement | null = null;
-
-
-    /*
-     * All
-     */
-
-    if (category === 'All') {
-
-      panel =
-        this.domElement.querySelector(
-          '#news-panel-all'
-        ) as HTMLElement | null;
-    }
+  let panel: HTMLElement | null = null;
 
 
-    /*
-     * Announcements
-     */
+  /*
+   * ----------------------------------------------------------
+   * All
+   * ----------------------------------------------------------
+   */
 
-    else if (
-      category === 'Announcements'
-    ) {
+  if (category === 'All') {
 
-      panel =
-        this.domElement.querySelector(
-          '#news-panel-announcements'
-        ) as HTMLElement | null;
-    }
-
-
-    /*
-     * Events / News / Circulars
-     *
-     * These reuse the All panel.
-     */
-
-    else if (
-      category === 'Events' ||
-      category === 'News' ||
-      category === 'Circulars'
-    ) {
-
-      panel =
-        this.domElement.querySelector(
-          '#news-panel-all'
-        ) as HTMLElement | null;
-    }
-
-
-    /*
-     * If the required panel cannot be found,
-     * stop safely.
-     */
-
-    if (!panel) {
-
-      console.error(
-        `News panel not found for category: ${category}`
-      );
-
-      return;
-    }
-
-
-    /*
-     * ==========================================================
-     * 2. FIND NEWS CONTAINER
-     * ==========================================================
-     *
-     * This is the container into which the generated
-     * single News item HTML will be inserted.
-     */
-
-    const container =
-      panel.querySelector(
-        '.panel-card-news'
+    panel =
+      this.domElement.querySelector(
+        '#news-panel-all'
       ) as HTMLElement | null;
 
-
-    if (!container) {
-
-      console.error(
-        `News container not found for category: ${category}`
-      );
-
-      return;
-    }
+  }
 
 
-    /*
-     * ==========================================================
-     * 3. FILTER ITEMS
-     * ==========================================================
-     */
+  /*
+   * ----------------------------------------------------------
+   * Announcements
+   * ----------------------------------------------------------
+   */
 
-    let items: INewsItem[];
+  else if (category === 'Announcements') {
 
+    panel =
+      this.domElement.querySelector(
+        '#news-panel-announcements'
+      ) as HTMLElement | null;
 
-    if (category === 'All') {
-
-      /*
-       * All News items.
-       */
-
-      items =
-        this.newsCentreItems;
-    }
-    else {
-
-      /*
-       * Only the selected category.
-       */
-
-      items =
-        this.newsCentreItems.filter(
-          (item) =>
-            this.newsCentreNormalizeValue(
-              item.Category
-            ) ===
-            this.newsCentreNormalizeValue(
-              category
-            )
-        );
-    }
+  }
 
 
-    /*
-     * ==========================================================
-     * 4. START COMPLETE HTML STRING
-     * ==========================================================
-     */
+  /*
+   * ----------------------------------------------------------
+   * Events
+   * ----------------------------------------------------------
+   */
 
-    let allElementsHtml: string = "";
+  else if (category === 'Events') {
 
+    panel =
+      this.domElement.querySelector(
+        '#news-panel-events'
+      ) as HTMLElement | null;
 
-    /*
-     * ==========================================================
-     * 5. LOOP THROUGH SHAREPOINT ITEMS
-     * ==========================================================
-     */
-
-    items.forEach(
-      (item) => {
+  }
 
 
-        /*
-         * ======================================================
-         * IMAGE URL
-         * ======================================================
-         *
-         * Use the helper method here.
-         *
-         * This means newsCentreGetImageUrl() is no longer
-         * an unused method.
-         */
+  /*
+   * ----------------------------------------------------------
+   * News
+   * ----------------------------------------------------------
+   */
 
-        const imageUrl =
-          this.newsCentreGetImageUrl(
-            item
-          );
+  else if (category === 'News') {
 
+    panel =
+      this.domElement.querySelector(
+        '#news-panel-news'
+      ) as HTMLElement | null;
 
-        /*
-         * ======================================================
-         * DATE
-         * ======================================================
-         */
-
-        const createddate =
-          this.newsCentreFormatDate(
-            item.PublishedDate
-          );
+  }
 
 
-        /*
-         * ======================================================
-         * DETAILS URL
-         * ======================================================
-         */
+  /*
+   * ----------------------------------------------------------
+   * Circulars
+   * ----------------------------------------------------------
+   */
 
-        const detailsUrl =
-          `${this.context.pageContext.web.absoluteUrl}` +
-          `/Lists/News/DispForm.aspx?ID=${item.Id}`;
+  else if (category === 'Circulars') {
 
+    panel =
+      this.domElement.querySelector(
+        '#news-panel-circulars'
+      ) as HTMLElement | null;
 
-        /*
-         * ======================================================
-         * TAKE SINGLE ELEMENT TEMPLATE
-         * ======================================================
-         *
-         * THIS is the important part.
-         */
-
-        let singleElementHtml =
-          NewsCentre.singleElementHtml;
+  }
 
 
-        /*
-         * ======================================================
-         * REPLACE PLACEHOLDERS
-         * ======================================================
-         */
+  /*
+   * ----------------------------------------------------------
+   * Invalid category
+   * ----------------------------------------------------------
+   */
 
-        singleElementHtml =
-          singleElementHtml
+  else {
 
-            /*
-             * News icon
-             */
-
-            .replace(
-              /__KEY_URL_IMGICON__/g,
-              imageUrl
-            )
-
-            /*
-             * News title
-             */
-
-            .replace(
-              /__KEY_DATA_TITLE__/g,
-              this.newsCentreEscapeHtml(
-                item.Title || ''
-              )
-            )
-
-            /*
-             * Short description
-             */
-
-            .replace(
-              /__KEY_DATA_DESCRIPTION__/g,
-              this.newsCentreEscapeHtml(
-                item.ShortDescription || ''
-              )
-            )
-
-            /*
-             * Category
-             */
-
-            .replace(
-              /__KEY_DATA_CATEGORY__/g,
-              this.newsCentreEscapeHtml(
-                item.Category || ''
-              )
-            )
-
-            /*
-             * Published date
-             */
-
-            .replace(
-              /__KEY_DATA_DATE__/g,
-              createddate
-            )
-
-            /*
-             * News details link
-             */
-
-            .replace(
-              /__KEY_URL_LINK__/g,
-              detailsUrl
-            )
-
-            /*
-             * Arrow image
-             */
-
-            .replace(
-              /__KEY_URL_ARROW__/g,
-              this.newsCentreGetArrowImageUrl()
-            );
-
-
-        /*
-         * ======================================================
-         * ADD GENERATED ITEM TO COMPLETE HTML
-         * ======================================================
-         */
-
-        allElementsHtml +=
-          singleElementHtml;
-
-      }
+    console.error(
+      `Unknown News category: ${category}`
     );
 
+    return;
 
-    /*
-     * ==========================================================
-     * 6. NO DATA
-     * ==========================================================
-     */
-
-    if (!items.length) {
-
-      allElementsHtml =
-        NewsCentre.noElementHtml;
-    }
-
-
-    /*
-     * ==========================================================
-     * 7. INSERT GENERATED HTML INTO CONTAINER
-     * ==========================================================
-     *
-     * Same basic pattern as AnnouncementOffer.
-     */
-
-    container.innerHTML =
-      allElementsHtml;
   }
+
+
+  /*
+   * ==========================================================
+   * 2. CHECK WHETHER PANEL EXISTS
+   * ==========================================================
+   */
+
+  if (!panel) {
+
+    console.error(
+      `News panel not found for category: ${category}`
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * ==========================================================
+   * 3. FIND NEWS CONTAINER
+   * ==========================================================
+   *
+   * Every category panel contains:
+   *
+   * <div class="panel-card-news">
+   *
+   * This is where the generated News item HTML
+   * will be inserted.
+   *
+   */
+
+  const container =
+    panel.querySelector(
+      '.panel-card-news'
+    ) as HTMLElement | null;
+
+
+  /*
+   * Container not found
+   */
+
+  if (!container) {
+
+    console.error(
+      `News container not found for category: ${category}`
+    );
+
+    return;
+
+  }
+
+
+  /*
+   * ==========================================================
+   * 4. FILTER NEWS ITEMS
+   * ==========================================================
+   */
+
+  let items: INewsItem[];
+
+
+  /*
+   * ----------------------------------------------------------
+   * All category
+   * ----------------------------------------------------------
+   *
+   * Show every News item.
+   *
+   */
+
+  if (category === 'All') {
+
+    items =
+      this.newsCentreItems;
+
+  }
+
+
+  /*
+   * ----------------------------------------------------------
+   * Specific category
+   * ----------------------------------------------------------
+   *
+   * Only show items whose Category matches
+   * the selected tab.
+   *
+   */
+
+  else {
+
+    items =
+      this.newsCentreItems.filter(
+        (item) =>
+
+          this.newsCentreNormalizeValue(
+            item.Category
+          ) ===
+
+          this.newsCentreNormalizeValue(
+            category
+          )
+      );
+
+  }
+
+
+  /*
+   * ==========================================================
+   * 5. START COMPLETE HTML STRING
+   * ==========================================================
+   *
+   * This will contain all News items for
+   * the selected category.
+   *
+   */
+
+  let allElementsHtml: string = '';
+
+
+  /*
+   * ==========================================================
+   * 6. LOOP THROUGH NEWS ITEMS
+   * ==========================================================
+   */
+
+  items.forEach(
+    (item) => {
+
+
+      /*
+       * ======================================================
+       * IMAGE URL
+       * ======================================================
+       */
+
+      const imageUrl =
+        this.newsCentreGetImageUrl(
+          item
+        );
+
+
+      /*
+       * ======================================================
+       * DATE
+       * ======================================================
+       */
+
+      const createddate =
+        this.newsCentreFormatDate(
+          item.PublishedDate
+        );
+
+
+      /*
+       * ======================================================
+       * DETAILS URL
+       * ======================================================
+       */
+
+      const detailsUrl =
+        `${this.context.pageContext.web.absoluteUrl}` +
+        `/Lists/News/DispForm.aspx?ID=${item.Id}`;
+
+
+      /*
+       * ======================================================
+       * TAKE SINGLE ELEMENT TEMPLATE
+       * ======================================================
+       */
+
+      let singleElementHtml =
+        NewsCentre.singleElementHtml;
+
+
+      /*
+       * ======================================================
+       * REPLACE NEWS ICON
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_URL_IMGICON__/g,
+          imageUrl
+        );
+
+
+      /*
+       * ======================================================
+       * REPLACE TITLE
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_DATA_TITLE__/g,
+          this.newsCentreEscapeHtml(
+            item.Title || ''
+          )
+        );
+
+
+      /*
+       * ======================================================
+       * REPLACE DESCRIPTION
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_DATA_DESCRIPTION__/g,
+          this.newsCentreEscapeHtml(
+            item.ShortDescription || ''
+          )
+        );
+
+
+      /*
+       * ======================================================
+       * REPLACE CATEGORY
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_DATA_CATEGORY__/g,
+          this.newsCentreEscapeHtml(
+            item.Category || ''
+          )
+        );
+
+
+      /*
+       * ======================================================
+       * REPLACE DATE
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_DATA_DATE__/g,
+          createddate
+        );
+
+
+      /*
+       * ======================================================
+       * REPLACE DETAILS LINK
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_URL_LINK__/g,
+          detailsUrl
+        );
+
+
+      /*
+       * ======================================================
+       * REPLACE ARROW IMAGE
+       * ======================================================
+       */
+
+      singleElementHtml =
+        singleElementHtml.replace(
+          /__KEY_URL_ARROW__/g,
+          this.newsCentreGetArrowImageUrl()
+        );
+
+
+      /*
+       * ======================================================
+       * ADD ITEM TO COMPLETE HTML
+       * ======================================================
+       */
+
+      allElementsHtml +=
+        singleElementHtml;
+
+    }
+  );
+
+
+  /*
+   * ==========================================================
+   * 7. NO DATA
+   * ==========================================================
+   *
+   * If the selected category has no items,
+   * show the "No records found." message.
+   *
+   */
+
+  if (!items.length) {
+
+    allElementsHtml =
+      NewsCentre.noElementHtml;
+
+  }
+
+
+  /*
+   * ==========================================================
+   * 8. INSERT HTML INTO CATEGORY CONTAINER
+   * ==========================================================
+   */
+
+  container.innerHTML =
+    allElementsHtml;
+
+}
 
 
   /*
@@ -899,276 +1002,312 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private newsCentreAttachTabEvents(): void {
+  /*
+ * ============================================================
+ * TAB FUNCTIONALITY
+ * ============================================================
+ */
+
+private newsCentreAttachTabEvents(): void {
+
+  /*
+   * ==========================================================
+   * 1. FIND ALL TABS
+   * ==========================================================
+   */
+
+  const tabs =
+    this.domElement.querySelectorAll(
+      '#news-tabs .tab-title-pill'
+    );
 
 
-    /*
-     * Find all News tabs.
-     */
+  /*
+   * ==========================================================
+   * 2. FIND ALL NEWS PANELS
+   * ==========================================================
+   */
 
-    const tabs =
-      this.domElement.querySelectorAll(
-        '#news-tabs .tab-title-pill'
-      );
-
-
-    /*
-     * Find All panel.
-     */
-
-    const allPanel =
-      this.domElement.querySelector(
-        '#news-panel-all'
-      ) as HTMLElement | null;
+  const panels =
+    this.domElement.querySelectorAll(
+      '#news-tabs .news-panel-tab-view'
+    );
 
 
-    /*
-     * Find Announcements panel.
-     */
+  /*
+   * ==========================================================
+   * 3. CHECK WHETHER TABS EXIST
+   * ==========================================================
+   */
 
-    const announcementPanel =
-      this.domElement.querySelector(
-        '#news-panel-announcements'
-      ) as HTMLElement | null;
+  if (!tabs.length) {
 
+    console.warn(
+      'News tabs not found.'
+    );
 
-    /*
-     * No tabs found.
-     */
-
-    if (!tabs.length) {
-
-      console.warn(
-        'News tabs not found.'
-      );
-
-      return;
-    }
+    return;
+  }
 
 
-    /*
-     * ==========================================================
-     * ADD CLICK EVENT
-     * ==========================================================
-     */
+  /*
+   * ==========================================================
+   * 4. ADD CLICK EVENT TO EACH TAB
+   * ==========================================================
+   */
 
-    tabs.forEach(
-      (tab) => {
+  tabs.forEach(
+    (tab) => {
 
-        tab.addEventListener(
-          'click',
-          () => {
+      tab.addEventListener(
+        'click',
+        () => {
 
+          /*
+           * ==================================================
+           * GET TARGET PANEL ID
+           * ==================================================
+           *
+           * Example:
+           *
+           * data-tab-news-id="news-panel-events"
+           *
+           */
 
-            /*
-             * Get the target panel ID.
-             */
-
-            const targetId =
-              tab.getAttribute(
-                'data-tab-news-id'
-              );
-
-
-            if (!targetId) {
-
-              return;
-            }
-
-
-            /*
-             * ==================================================
-             * REMOVE ACTIVE CLASS
-             * ==================================================
-             */
-
-            tabs.forEach(
-              (otherTab) => {
-
-                otherTab.classList.remove(
-                  'tab-title-pill-active'
-                );
-              }
+          const targetId =
+            tab.getAttribute(
+              'data-tab-news-id'
             );
 
 
-            /*
-             * Add active class to clicked tab.
-             */
+          /*
+           * No target ID
+           */
 
-            tab.classList.add(
-              'tab-title-pill-active'
-            );
+          if (!targetId) {
 
-
-            /*
-             * ==================================================
-             * ALL TAB
-             * ==================================================
-             */
-
-            if (
-              targetId ===
-              'news-panel-all'
-            ) {
-
-              if (allPanel) {
-
-                allPanel.style.display =
-                  'block';
-              }
+            return;
+          }
 
 
-              if (announcementPanel) {
+          /*
+           * ==================================================
+           * REMOVE ACTIVE CLASS FROM ALL TABS
+           * ==================================================
+           */
 
-                announcementPanel.style.display =
-                  'none';
-              }
+          tabs.forEach(
+            (otherTab) => {
 
-
-              /*
-               * Generate All News HTML.
-               */
-
-              this.newsCentreRenderCategory(
-                'All'
+              otherTab.classList.remove(
+                'tab-title-pill-active'
               );
 
-
-              return;
             }
+          );
 
 
-            /*
-             * ==================================================
-             * ANNOUNCEMENTS TAB
-             * ==================================================
-             */
+          /*
+           * ==================================================
+           * ADD ACTIVE CLASS TO CLICKED TAB
+           * ==================================================
+           */
 
-            if (
-              targetId ===
-              'news-panel-announcements'
-            ) {
-
-              if (allPanel) {
-
-                allPanel.style.display =
-                  'none';
-              }
+          tab.classList.add(
+            'tab-title-pill-active'
+          );
 
 
-              if (announcementPanel) {
+          /*
+           * ==================================================
+           * HIDE ALL PANELS
+           * ==================================================
+           */
 
-                announcementPanel.style.display =
-                  'block';
-              }
+          panels.forEach(
+            (panel) => {
 
-
-              /*
-               * Generate Announcements HTML.
-               */
-
-              this.newsCentreRenderCategory(
-                'Announcements'
-              );
-
-
-              return;
-            }
-
-
-            /*
-             * ==================================================
-             * EVENTS / NEWS / CIRCULARS
-             * ==================================================
-             *
-             * Reuse the All panel.
-             */
-
-            if (allPanel) {
-
-              allPanel.style.display =
-                'block';
-            }
-
-
-            if (announcementPanel) {
-
-              announcementPanel.style.display =
+              (panel as HTMLElement).style.display =
                 'none';
+
             }
+          );
 
 
-            /*
-             * Determine selected category.
-             */
+          /*
+           * ==================================================
+           * SHOW SELECTED PANEL
+           * ==================================================
+           */
 
-            let category = '';
-
-
-            if (
-              targetId ===
-              'news-panel-events'
-            ) {
-
-              category =
-                'Events';
-            }
+          const targetPanel =
+            this.domElement.querySelector(
+              `#${targetId}`
+            ) as HTMLElement | null;
 
 
-            if (
-              targetId ===
-              'news-panel-news'
-            ) {
+          if (targetPanel) {
 
-              category =
-                'News';
-            }
+            targetPanel.style.display =
+              'block';
 
+          }
+          else {
 
-            if (
-              targetId ===
-              'news-panel-circulars'
-            ) {
+            console.warn(
+              `News panel not found: ${targetId}`
+            );
 
-              category =
-                'Circulars';
-            }
+            return;
+          }
 
 
-            /*
-             * Generate HTML using
-             * NewsCentre.singleElementHtml.
-             */
+          /*
+           * ==================================================
+           * DETERMINE CATEGORY
+           * ==================================================
+           */
+
+          let category = '';
+
+
+          if (
+            targetId ===
+            'news-panel-all'
+          ) {
+
+            category = 'All';
+
+          }
+          else if (
+            targetId ===
+            'news-panel-announcements'
+          ) {
+
+            category = 'Announcements';
+
+          }
+          else if (
+            targetId ===
+            'news-panel-events'
+          ) {
+
+            category = 'Events';
+
+          }
+          else if (
+            targetId ===
+            'news-panel-news'
+          ) {
+
+            category = 'News';
+
+          }
+          else if (
+            targetId ===
+            'news-panel-circulars'
+          ) {
+
+            category = 'Circulars';
+
+          }
+
+
+          /*
+           * ==================================================
+           * RENDER SELECTED CATEGORY
+           * ==================================================
+           */
+
+          if (category) {
 
             this.newsCentreRenderCategory(
               category
             );
+
           }
-        );
-      }
+
+        }
+      );
+
+    }
+  );
+
+
+  /*
+   * ==========================================================
+   * DEFAULT TAB STATE
+   * ==========================================================
+   *
+   * All tab should be active when the page loads.
+   *
+   */
+
+  tabs.forEach(
+    (tab) => {
+
+      tab.classList.remove(
+        'tab-title-pill-active'
+      );
+
+    }
+  );
+
+
+  const defaultTab =
+    this.domElement.querySelector(
+      '[data-tab-news-id="news-panel-all"]'
+    ) as HTMLElement | null;
+
+
+  if (defaultTab) {
+
+    defaultTab.classList.add(
+      'tab-title-pill-active'
     );
 
-
-    /*
-     * ==========================================================
-     * DEFAULT TAB STATE
-     * ==========================================================
-     */
-
-    if (allPanel) {
-
-      allPanel.style.display =
-        'block';
-    }
-
-
-    if (announcementPanel) {
-
-      announcementPanel.style.display =
-        'none';
-    }
   }
+
+
+  /*
+   * ==========================================================
+   * DEFAULT PANEL STATE
+   * ==========================================================
+   *
+   * Hide every panel first.
+   *
+   */
+
+  panels.forEach(
+    (panel) => {
+
+      (panel as HTMLElement).style.display =
+        'none';
+
+    }
+  );
+
+
+  /*
+   * ==========================================================
+   * SHOW ALL PANEL
+   * ==========================================================
+   */
+
+  const allPanel =
+    this.domElement.querySelector(
+      '#news-panel-all'
+    ) as HTMLElement | null;
+
+
+  if (allPanel) {
+
+    allPanel.style.display =
+      'block';
+
+  }
+
+}
 
 
   /*

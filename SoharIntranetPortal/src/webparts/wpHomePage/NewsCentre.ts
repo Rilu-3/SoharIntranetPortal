@@ -4,7 +4,7 @@ export default class NewsCentre {
    * ============================================================
    * SINGLE NEWS ITEM
    * ============================================================
-  
+
    */
   public static singleElementHtml: string = `
     <div class="news-item flex-column flex-sm-row">
@@ -30,7 +30,7 @@ export default class NewsCentre {
    * ============================================================
    * COMPLETE NEWS CENTRE HTML
    * ============================================================
-  
+
    */
   public static allElementsHtml: string = `
 <div class="col-12 col-lg-6">
@@ -72,6 +72,24 @@ export default class NewsCentre {
         </div>
       </div>
 
+      <div id="news-panel-events" class="w-100 float-start news-panel-tab-view flex-grow-1">
+        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+          __KEY_EVENTS_ITEMS__
+        </div>
+      </div>
+
+      <div id="news-panel-news" class="w-100 float-start news-panel-tab-view flex-grow-1">
+        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+          __KEY_NEWS_ITEMS__
+        </div>
+      </div>
+
+      <div id="news-panel-circulars" class="w-100 float-start news-panel-tab-view flex-grow-1">
+        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+          __KEY_CIRCULARS_ITEMS__
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -82,7 +100,7 @@ export default class NewsCentre {
    * ============================================================
    * NO ELEMENT HTML
    * ============================================================
- 
+
    */
   public static noElementHtml: string = `
     <div class="news-item">
