@@ -37,7 +37,7 @@ export default class WpHomePageWebPart
 
   private newsCentre!: NewsCentre;
 
-  private newsItems: INewsItem[] = [];
+  private newsCentreItems: INewsItem[] = [];
 
 
   public async onInit(): Promise<void> {
@@ -50,106 +50,28 @@ export default class WpHomePageWebPart
   }
 
 
-
-  
-
+  /*
+   * ============================================================
+   * RENDER — kept minimal. Just orchestrates the section.
+   * ============================================================
+   */
 
   public async render(): Promise<void> {
-
-
-
 
     const workbenchContent = document.getElementById('workbenchPageContent');
     if (workbenchContent) {
       workbenchContent.style.maxWidth = 'none';
     }
- 
 
+    this.newsCentre = new NewsCentre();
 
-    
+    await this.newsCentreLoadItems();
 
-    /*
-     * ==========================================================
-     * CREATE NEWS CENTRE TEMPLATE
-     * ==========================================================
-     */
+    const html = this.newsCentreBuildHtml();
 
-    this.newsCentre =
-      new NewsCentre();
+    this.domElement.innerHTML = html;
 
-
-    /*
-     * ==========================================================
-     * LOAD SHAREPOINT NEWS
-     * ==========================================================
-     */
-
-    await this.loadNews();
-
-
-    /*
-     * ==========================================================
-     * BUILD DYNAMIC HTML
-     * ==========================================================
-     */
-
-    const allItemsHtml =
-      this.buildCategoryHtml('All');
-
-
-    const announcementItemsHtml =
-      this.buildCategoryHtml('Announcements');
-
-
-    let html =
-      this.newsCentre.allElementsHtml;
-
-
-    html =
-      html.replace(
-        /__KEY_ALL_ITEMS__/g,
-        allItemsHtml
-      );
-
-
-    html =
-      html.replace(
-        /__KEY_ANNOUNCEMENT_ITEMS__/g,
-        announcementItemsHtml
-      );
-
-
-    html =
-      html.replace(
-        /__KEY_URL_ARROW__/g,
-        this.getArrowImageUrl()
-      );
-
-
-    html =
-      html.replace(
-        /__KEY_URL_VIEW_ALL__/g,
-        `${this.context.pageContext.web.absoluteUrl}/SitePages/News-List.aspx`
-      );
-
-
-    /*
-     * ==========================================================
-     * INSERT INTO WEBPART
-     * ==========================================================
-     */
-
-    this.domElement.innerHTML =
-      html;
-
-
-    /*
-     * ==========================================================
-     * TAB FUNCTIONALITY
-     * ==========================================================
-     */
-
-    this.attachTabEvents();
+    this.newsCentreAttachTabEvents();
   }
 
 
@@ -159,18 +81,15 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private async loadNews(): Promise<void> {
+  private async newsCentreLoadItems(): Promise<void> {
 
-    const webUrl =
-      this.context.pageContext.web.absoluteUrl;
-
+    const webUrl = this.context.pageContext.web.absoluteUrl;
 
     const apiUrl =
       `${webUrl}/_api/web/lists/getbytitle('News')/items` +
       `?$select=Id,Title,NewsIcon,ShortDescription,Category,MainContent,PublishedDate,Status` +
       `&$filter=Status eq 'Active'` +
       `&$orderby=PublishedDate desc`;
-
 
     try {
 
@@ -180,44 +99,54 @@ export default class WpHomePageWebPart
           SPHttpClient.configurations.v1,
           {
             headers: {
-              'Accept':
-                'application/json;odata=nometadata'
+              'Accept': 'application/json;odata=nometadata'
             }
           }
         );
 
-
       if (!response.ok) {
-
-        throw new Error(
-          `News API failed: ${response.status}`
-        );
+        throw new Error(`News API failed: ${response.status}`);
       }
 
+      const data = await response.json();
 
-      const data =
-        await response.json();
+      this.newsCentreItems = data.value || [];
 
-
-      this.newsItems =
-        data.value || [];
-
-
-      console.log(
-        'News items loaded:',
-        this.newsItems
-      );
+      console.log('News items loaded:', this.newsCentreItems);
 
     } catch (error) {
 
-      console.error(
-        'Error loading News list:',
-        error
-      );
+      console.error('Error loading News list:', error);
 
-
-      this.newsItems = [];
+      this.newsCentreItems = [];
     }
+  }
+
+
+  /*
+   * ============================================================
+   * BUILD FULL HTML (template + tokens replaced)
+   * ============================================================
+   */
+
+  private newsCentreBuildHtml(): string {
+
+    const webUrl = this.context.pageContext.web.absoluteUrl;
+
+    const allItemsHtml = this.newsCentreBuildCategoryHtml('All');
+    const announcementItemsHtml = this.newsCentreBuildCategoryHtml('Announcements');
+
+    let html = this.newsCentre.allElementsHtml;
+
+    html = html.replace(/__KEY_ALL_ITEMS__/g, allItemsHtml);
+    html = html.replace(/__KEY_ANNOUNCEMENT_ITEMS__/g, announcementItemsHtml);
+    html = html.replace(/__KEY_URL_ARROW__/g, this.newsCentreGetArrowImageUrl());
+    html = html.replace(
+      /__KEY_URL_VIEW_ALL__/g,
+      `${webUrl}/SitePages/News-List.aspx`
+    );
+
+    return html;
   }
 
 
@@ -227,45 +156,26 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private buildCategoryHtml(
-    category: string
-  ): string {
-
+  private newsCentreBuildCategoryHtml(category: string): string {
 
     let items: INewsItem[];
 
-
     if (category === 'All') {
-
-      items =
-        this.newsItems;
-
+      items = this.newsCentreItems;
     } else {
-
-      items =
-        this.newsItems.filter(
-          item =>
-            this.normalizeValue(
-              item.Category
-            ) ===
-            this.normalizeValue(
-              category
-            )
-        );
+      items = this.newsCentreItems.filter(
+        item =>
+          this.newsCentreNormalizeValue(item.Category) ===
+          this.newsCentreNormalizeValue(category)
+      );
     }
 
-
     if (!items.length) {
-
       return this.newsCentre.noElementHtml;
     }
 
-
     return items
-      .map(
-        item =>
-          this.buildSingleNewsItem(item)
-      )
+      .map(item => this.newsCentreBuildSingleItem(item))
       .join('');
   }
 
@@ -276,80 +186,27 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private buildSingleNewsItem(
-    item: INewsItem
-  ): string {
+  private newsCentreBuildSingleItem(item: INewsItem): string {
 
+    const webUrl = this.context.pageContext.web.absoluteUrl;
 
-    const title =
-      this.escapeHtml(
-        item.Title || ''
-      );
-
-
-    const description =
-      this.escapeHtml(
-        item.ShortDescription || ''
-      );
-
-
-    const category =
-      this.escapeHtml(
-        item.Category || ''
-      );
-
-
-    const date =
-      this.formatDate(
-        item.PublishedDate
-      );
-
-
-    const imageUrl =
-      this.getNewsImageUrl(item);
-
+    const title = this.newsCentreEscapeHtml(item.Title || '');
+    const description = this.newsCentreEscapeHtml(item.ShortDescription || '');
+    const category = this.newsCentreEscapeHtml(item.Category || '');
+    const date = this.newsCentreFormatDate(item.PublishedDate);
+    const imageUrl = this.newsCentreGetImageUrl(item);
 
     const detailsUrl =
-      `${this.context.pageContext.web.absoluteUrl}` +
-      `/Lists/News/DispForm.aspx?ID=${item.Id}`;
-
+      `${webUrl}/Lists/News/DispForm.aspx?ID=${item.Id}`;
 
     return this.newsCentre.singleElementHtml
-
-      .replace(
-        /__KEY_URL_IMGICON__/g,
-        imageUrl
-      )
-
-      .replace(
-        /__KEY_DATA_TITLE__/g,
-        title
-      )
-
-      .replace(
-        /__KEY_DATA_DESCRIPTION__/g,
-        description
-      )
-
-      .replace(
-        /__KEY_DATA_CATEGORY__/g,
-        category
-      )
-
-      .replace(
-        /__KEY_DATA_DATE__/g,
-        date
-      )
-
-      .replace(
-        /__KEY_URL_LINK__/g,
-        detailsUrl
-      )
-
-      .replace(
-        /__KEY_URL_ARROW__/g,
-        this.getArrowImageUrl()
-      );
+      .replace(/__KEY_URL_IMGICON__/g, imageUrl)
+      .replace(/__KEY_DATA_TITLE__/g, title)
+      .replace(/__KEY_DATA_DESCRIPTION__/g, description)
+      .replace(/__KEY_DATA_CATEGORY__/g, category)
+      .replace(/__KEY_DATA_DATE__/g, date)
+      .replace(/__KEY_URL_LINK__/g, detailsUrl)
+      .replace(/__KEY_URL_ARROW__/g, this.newsCentreGetArrowImageUrl());
   }
 
 
@@ -359,16 +216,11 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private getNewsImageUrl(
-    item: INewsItem
-  ): string {
-
+  private newsCentreGetImageUrl(item: INewsItem): string {
 
     if (!item.NewsIcon) {
-
       return '';
     }
-
 
     try {
 
@@ -377,32 +229,22 @@ export default class WpHomePageWebPart
           ? JSON.parse(item.NewsIcon)
           : item.NewsIcon;
 
-
       const fileName =
         imageData?.fileName ||
         imageData?.FileName ||
         '';
 
-
       if (!fileName) {
-
         return '';
       }
 
+      const webUrl = this.context.pageContext.web.absoluteUrl;
 
-      return (
-        `${this.context.pageContext.web.absoluteUrl}` +
-        `/Lists/News/Attachments/` +
-        `${item.Id}/${fileName}`
-      );
+      return `${webUrl}/Lists/News/Attachments/${item.Id}/${fileName}`;
 
     } catch (error) {
 
-      console.error(
-        'Error parsing NewsIcon:',
-        error
-      );
-
+      console.error('Error parsing NewsIcon:', error);
 
       return '';
     }
@@ -415,12 +257,11 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private getArrowImageUrl(): string {
+  private newsCentreGetArrowImageUrl(): string {
 
-    return (
-      `${this.context.pageContext.web.absoluteUrl}` +
-      `/SiteAssets/resources/images/icons/arrow-right-short.svg`
-    );
+    const webUrl = this.context.pageContext.web.absoluteUrl;
+
+    return `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
   }
 
 
@@ -428,269 +269,103 @@ export default class WpHomePageWebPart
    * ============================================================
    * TAB FUNCTIONALITY
    * ============================================================
-   *
-   * The ORIGINAL tab markup is not modified.
-   *
-   * The WebPart owns the behaviour.
-   * ============================================================
    */
 
-  private attachTabEvents(): void {
+  private newsCentreAttachTabEvents(): void {
 
-
-    const tabs =
-      this.domElement.querySelectorAll(
-        '#news-tabs .tab-title-pill'
-      );
-
+    const tabs = this.domElement.querySelectorAll('#news-tabs .tab-title-pill');
 
     const allPanel =
-      this.domElement.querySelector(
-        '#news-panel-all'
-      ) as HTMLElement | null;
-
+      this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
 
     const announcementPanel =
-      this.domElement.querySelector(
-        '#news-panel-announcements'
-      ) as HTMLElement | null;
-
+      this.domElement.querySelector('#news-panel-announcements') as HTMLElement | null;
 
     if (!tabs.length) {
-
       return;
     }
 
+    tabs.forEach(tab => {
 
-    tabs.forEach(
-      tab => {
+      tab.addEventListener('click', () => {
 
-        tab.addEventListener(
-          'click',
-          () => {
+        const targetId = tab.getAttribute('data-tab-news-id');
 
-            const targetId =
-              tab.getAttribute(
-                'data-tab-news-id'
-              );
+        if (!targetId) {
+          return;
+        }
 
+        tabs.forEach(otherTab => {
+          otherTab.classList.remove('tab-title-pill-active');
+        });
 
-            if (!targetId) {
+        tab.classList.add('tab-title-pill-active');
 
-              return;
-            }
+        if (targetId === 'news-panel-all') {
 
+          if (allPanel) { allPanel.style.display = 'block'; }
+          if (announcementPanel) { announcementPanel.style.display = 'none'; }
 
-            /*
-             * Remove active class from every tab.
-             */
+          this.newsCentreRenderIntoPanel(allPanel, this.newsCentreBuildCategoryHtml('All'));
 
-            tabs.forEach(
-              otherTab => {
+          return;
+        }
 
-                otherTab.classList.remove(
-                  'tab-title-pill-active'
-                );
-              }
-            );
+        if (targetId === 'news-panel-announcements') {
 
+          if (allPanel) { allPanel.style.display = 'none'; }
+          if (announcementPanel) { announcementPanel.style.display = 'block'; }
 
-            /*
-             * Activate clicked tab.
-             */
+          this.newsCentreRenderIntoPanel(
+            announcementPanel,
+            this.newsCentreBuildCategoryHtml('Announcements')
+          );
 
-            tab.classList.add(
-              'tab-title-pill-active'
-            );
+          return;
+        }
 
+        /*
+         * Events / News / Circulars — reuse the "All" panel
+         * structure, same as the original.
+         */
 
-            /*
-             * Original HTML only provides actual
-             * panel markup for All and Announcements.
-             *
-             * We therefore keep that original HTML
-             * untouched and dynamically change the
-             * existing content for the remaining
-             * category tabs.
-             */
+        if (allPanel) { allPanel.style.display = 'block'; }
+        if (announcementPanel) { announcementPanel.style.display = 'none'; }
 
-            if (
-              targetId ===
-              'news-panel-all'
-            ) {
+        let category = '';
 
-              if (allPanel) {
+        if (targetId === 'news-panel-events') { category = 'Events'; }
+        if (targetId === 'news-panel-news') { category = 'News'; }
+        if (targetId === 'news-panel-circulars') { category = 'Circulars'; }
 
-                allPanel.style.display =
-                  'block';
-              }
+        this.newsCentreRenderIntoPanel(allPanel, this.newsCentreBuildCategoryHtml(category));
+      });
+    });
 
-
-              if (announcementPanel) {
-
-                announcementPanel.style.display =
-                  'none';
-              }
-
-
-              this.renderIntoExistingPanel(
-                allPanel,
-                this.buildCategoryHtml('All')
-              );
-
-
-              return;
-            }
-
-
-            if (
-              targetId ===
-              'news-panel-announcements'
-            ) {
-
-              if (allPanel) {
-
-                allPanel.style.display =
-                  'none';
-              }
-
-
-              if (announcementPanel) {
-
-                announcementPanel.style.display =
-                  'block';
-              }
-
-
-              this.renderIntoExistingPanel(
-                announcementPanel,
-                this.buildCategoryHtml(
-                  'Announcements'
-                )
-              );
-
-
-              return;
-            }
-
-
-            /*
-             * Events / News / Circulars.
-             *
-             * The original supplied HTML has no
-             * corresponding panel elements.
-             *
-             * We therefore reuse the existing panel
-             * structure rather than changing the
-             * original HTML template.
-             */
-
-            if (allPanel) {
-
-              allPanel.style.display =
-                'block';
-            }
-
-
-            if (announcementPanel) {
-
-              announcementPanel.style.display =
-                'none';
-            }
-
-
-            let category =
-              '';
-
-
-            if (
-              targetId ===
-              'news-panel-events'
-            ) {
-
-              category = 'Events';
-            }
-
-
-            if (
-              targetId ===
-              'news-panel-news'
-            ) {
-
-              category = 'News';
-            }
-
-
-            if (
-              targetId ===
-              'news-panel-circulars'
-            ) {
-
-              category = 'Circulars';
-            }
-
-
-            this.renderIntoExistingPanel(
-              allPanel,
-              this.buildCategoryHtml(category)
-            );
-          }
-        );
-      }
-    );
-
-
-    /*
-     * Initial state.
-     */
-
-    if (allPanel) {
-
-      allPanel.style.display =
-        'block';
-    }
-
-
-    if (announcementPanel) {
-
-      announcementPanel.style.display =
-        'none';
-    }
+    if (allPanel) { allPanel.style.display = 'block'; }
+    if (announcementPanel) { announcementPanel.style.display = 'none'; }
   }
 
 
   /*
    * ============================================================
-   * RENDER INTO EXISTING ORIGINAL PANEL
+   * RENDER INTO EXISTING PANEL
    * ============================================================
    */
 
-  private renderIntoExistingPanel(
-    panel: HTMLElement | null,
-    html: string
-  ): void {
-
+  private newsCentreRenderIntoPanel(panel: HTMLElement | null, html: string): void {
 
     if (!panel) {
-
       return;
     }
 
-
-    const container =
-      panel.querySelector(
-        '.panel-card-news'
-      ) as HTMLElement | null;
-
+    const container = panel.querySelector('.panel-card-news') as HTMLElement | null;
 
     if (!container) {
-
       return;
     }
 
-
-    container.innerHTML =
-      html;
+    container.innerHTML = html;
   }
 
 
@@ -700,35 +375,23 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private formatDate(
-    value?: string
-  ): string {
-
+  private newsCentreFormatDate(value?: string): string {
 
     if (!value) {
-
       return '';
     }
 
-
-    const date =
-      new Date(value);
-
+    const date = new Date(value);
 
     if (isNaN(date.getTime())) {
-
       return '';
     }
 
-
-    return date.toLocaleDateString(
-      'en-US',
-      {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }
-    );
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   }
 
 
@@ -738,15 +401,8 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private normalizeValue(
-    value?: string
-  ): string {
-
-    return (
-      value || ''
-    )
-      .trim()
-      .toLowerCase();
+  private newsCentreNormalizeValue(value?: string): string {
+    return (value || '').trim().toLowerCase();
   }
 
 
@@ -756,31 +412,13 @@ export default class WpHomePageWebPart
    * ============================================================
    */
 
-  private escapeHtml(
-    value: string
-  ): string {
-
+  private newsCentreEscapeHtml(value: string): string {
     return value
-      .replace(
-        /&/g,
-        '&amp;'
-      )
-      .replace(
-        /</g,
-        '&lt;'
-      )
-      .replace(
-        />/g,
-        '&gt;'
-      )
-      .replace(
-        /"/g,
-        '&quot;'
-      )
-      .replace(
-        /'/g,
-        '&#039;'
-      );
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
 
@@ -792,9 +430,7 @@ export default class WpHomePageWebPart
 
   private async loadCSS(): Promise<void> {
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
-
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
 
     const cssFiles = [
       'bootstrap.min.css',
@@ -807,26 +443,13 @@ export default class WpHomePageWebPart
       'variable.css'
     ];
 
-
     for (const file of cssFiles) {
 
       try {
-
-        SPComponentLoader.loadCss(
-          `${baseUrl}/SiteAssets/resources/css/${file}`
-        );
-
-
-        console.log(
-          `CSS loaded: ${file}`
-        );
-
+        SPComponentLoader.loadCss(`${baseUrl}/SiteAssets/resources/css/${file}`);
+        console.log(`CSS loaded: ${file}`);
       } catch (error) {
-
-        console.error(
-          `CSS failed: ${file}`,
-          error
-        );
+        console.error(`CSS failed: ${file}`, error);
       }
     }
   }
@@ -840,13 +463,9 @@ export default class WpHomePageWebPart
 
   private async loadJS(): Promise<void> {
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
 
-
-    const jsBaseUrl =
-      `${baseUrl}/SiteAssets/resources/js`;
-
+    const jsBaseUrl = `${baseUrl}/SiteAssets/resources/js`;
 
     const scripts = [
       'jquery-3.6.0.js',
@@ -858,26 +477,13 @@ export default class WpHomePageWebPart
       'home.js'
     ];
 
-
     for (const script of scripts) {
 
       try {
-
-        await SPComponentLoader.loadScript(
-          `${jsBaseUrl}/${script}`
-        );
-
-
-        console.log(
-          `JS loaded: ${script}`
-        );
-
+        await SPComponentLoader.loadScript(`${jsBaseUrl}/${script}`);
+        console.log(`JS loaded: ${script}`);
       } catch (error) {
-
-        console.error(
-          `JS failed: ${script}`,
-          error
-        );
+        console.error(`JS failed: ${script}`, error);
       }
     }
   }
