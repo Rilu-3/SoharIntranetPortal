@@ -2,10 +2,10 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 
 import { SPComponentLoader } from '@microsoft/sp-loader';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
-import UabAnnouncements from './UabAnnouncements';
-import UabOffers from './UabOffers';
 
-import UabOfferAnnouncementWrapper from './UabOfferAnnouncementWrapper';
+
+
+import UabAnnouncementOffer from './UabAnnouncementOffer';
 
 
 /*
@@ -89,22 +89,13 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     if (workbenchContent) {
       workbenchContent.style.maxWidth = 'none';
     }
-      const arrowIconUrl =
-    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+ 
 
   this.domElement.innerHTML =
-    UabOfferAnnouncementWrapper.allElementsHtml.replace(
-      "__KEY__ARROW__RIGHT__ICON__",
-      arrowIconUrl
-    );
-
-    this.domElement.querySelector("#announcement")!.innerHTML =
-      UabAnnouncements.allElementsHtml;
-
-    this.domElement.querySelector("#offers")!.innerHTML =
-      UabOffers.allElementsHtml;
-
-    this.setupViewAllLink();
+    UabAnnouncementOffer.allElementsHtml;
+     const arrowIconUrl =
+    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    this.setupViewAllLink(arrowIconUrl);
 
     const AnnouncementApiUrl =
       `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
@@ -211,9 +202,21 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
    * When the user clicks a tab, the URL of the View All
    * link is changed according to the selected tab.
    */
-  private setupViewAllLink(): void {
+  private setupViewAllLink(arrowIconUrl: string): void {
+    
   const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
+  const arrowImage =
+    this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
 
+
+
+  if (!arrowImage) {
+    console.error('View All arrow image not found');
+    return;
+  }
+
+  // Set the arrow image URL
+  arrowImage.src = arrowIconUrl;
   const viewAllLink =
     this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
 
@@ -296,11 +299,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
          * Replace the placeholders in the Announcement
          * HTML template with actual SharePoint data.
          */
-        let singleElementHtml = UabAnnouncements.singleElementHtml
-          .replace("__KEY__ANNOUNCEMENT__ICON__", imageUrl)
-          .replace("__KEY__ANNOUNCEMENT__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENT__DESCRIPTION__", item.ShortDescription)
-          .replace("__KEY__ANNOUNCEMENT__DATE__", createddate);
+        let singleElementHtml = UabAnnouncementOffer.singleElementHtml
+          .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
+          .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         /*
          * Add the generated Announcement HTML to the
@@ -376,11 +379,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
          * Replace the placeholders in the Offer HTML template
          * with actual SharePoint data.
          */
-        let singleElementHtml = UabOffers.singleElementHtml
-          .replace("__KEY__OFFER__ICON__", imageUrl)
-          .replace("__KEY__OFFER__TITLE__", item.Title)
-          .replace("__KEY__OFFER__DESCRIPTION__", item.Description)
-          .replace("__KEY__OFFER__DATE__", createddate);
+        let singleElementHtml = UabAnnouncementOffer.singleElementHtml
+          .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
+          .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         /*
          * Add the generated Offer HTML to the complete
