@@ -6,7 +6,7 @@ export default class NewsCentre {
    * ============================================================
   
    */
-  public readonly singleElementHtml: string = `
+  public static singleElementHtml: string = `
     <div class="news-item flex-column flex-sm-row">
       <div class="d-flex flex-grow-1 align-items-center gap-3">
         <div class="news-icon">
@@ -32,7 +32,7 @@ export default class NewsCentre {
    * ============================================================
   
    */
-  public readonly allElementsHtml: string = `
+  public static allElementsHtml: string = `
 <div class="col-12 col-lg-6">
   <div class="panel-card px-2 py-4 d-flex flex-column">
     <div class="panel-header px-2 w-100 float-start mb-4">
@@ -84,7 +84,7 @@ export default class NewsCentre {
    * ============================================================
  
    */
-  public readonly noElementHtml: string = `
+  public static noElementHtml: string = `
     <div class="news-item">
       <div class="flex-grow-1">
         <p class="news-desc">No records found.</p>

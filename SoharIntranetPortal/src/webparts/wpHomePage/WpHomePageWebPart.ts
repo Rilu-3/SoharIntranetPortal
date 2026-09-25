@@ -35,8 +35,6 @@ export default class WpHomePageWebPart
   extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
 
-  private newsCentre!: NewsCentre;
-
   private newsCentreItems: INewsItem[] = [];
 
 
@@ -62,8 +60,6 @@ export default class WpHomePageWebPart
     if (workbenchContent) {
       workbenchContent.style.maxWidth = 'none';
     }
-
-    this.newsCentre = new NewsCentre();
 
     await this.newsCentreLoadItems();
 
@@ -136,7 +132,7 @@ export default class WpHomePageWebPart
     const allItemsHtml = this.newsCentreBuildCategoryHtml('All');
     const announcementItemsHtml = this.newsCentreBuildCategoryHtml('Announcements');
 
-    let html = this.newsCentre.allElementsHtml;
+    let html = NewsCentre.allElementsHtml;
 
     html = html.replace(/__KEY_ALL_ITEMS__/g, allItemsHtml);
     html = html.replace(/__KEY_ANNOUNCEMENT_ITEMS__/g, announcementItemsHtml);
@@ -171,7 +167,7 @@ export default class WpHomePageWebPart
     }
 
     if (!items.length) {
-      return this.newsCentre.noElementHtml;
+      return NewsCentre.noElementHtml;
     }
 
     return items
@@ -199,7 +195,7 @@ export default class WpHomePageWebPart
     const detailsUrl =
       `${webUrl}/Lists/News/DispForm.aspx?ID=${item.Id}`;
 
-    return this.newsCentre.singleElementHtml
+    return NewsCentre.singleElementHtml
       .replace(/__KEY_URL_IMGICON__/g, imageUrl)
       .replace(/__KEY_DATA_TITLE__/g, title)
       .replace(/__KEY_DATA_DESCRIPTION__/g, description)
