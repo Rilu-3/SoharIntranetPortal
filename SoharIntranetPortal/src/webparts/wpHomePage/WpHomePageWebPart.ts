@@ -65,19 +65,34 @@ interface IMediaGalleryItem {
 // and SharePoint Organizational Events
 export interface IEventItem {
   Id: number;
-
   Title: string;
-
   EventDate: string;
-
   StartTime: string;
-
   EndTime: string;
-
   Location: string;
-
   Status: string;
+  Link?: string;
+  TeamsUrl?: string;
 }
+
+interface IOutlookEvent {
+  id?: string;
+  subject?: string;
+  start?: {
+    dateTime?: string;
+  };
+  end?: {
+    dateTime?: string;
+  };
+  location?: {
+    displayName?: string;
+  };
+  onlineMeeting?: {
+    joinUrl?: string;
+  };
+}
+
+
 interface IAnnouncement {
   Id: number;
   Title: string;
@@ -135,34 +150,52 @@ export default class WpHomePageWebPart
 
   // Stores Organizational Events
   // fetched from the SharePoint Upcoming Events list
-  private events: IEventItem[] = [];
-
-
+  
+  
   // Stores My Events
   // fetched from the logged-in user's Outlook calendar
+  private events: IEventItem[] = [];
   private myEvents: IEventItem[] = [];
+  private organizationalEventDates: string[] = [];
+  private myEventDates: string[] = [];
 
-   private socialMediaObserver: MutationObserver | null = null;
+    private organizationalEventTitles: {
+    [key: string]: string
+  } = {};
 
-    private hideSocialMediaTutorialLinks(): void {
-  const tutorialLinks =
-    document.querySelectorAll('.tutorial_link');
+  private myEventTitles: {
+    [key: string]: string
+  } = {};
 
-  tutorialLinks.forEach((link) => {
-    (link as HTMLElement).style.display = 'none';
+
+
+
+
+  private socialMediaObserver: MutationObserver | null = null;
+ 
+private hideSocialMediaTutorialLinks(
+  root: Document | ShadowRoot = document
+): void {
+  root.querySelectorAll<HTMLElement>('a.tutorial_link').forEach((link) => {
+    link.style.setProperty('display', 'none', 'important');
+  });
+ 
+  root.querySelectorAll<HTMLElement>('*').forEach((element) => {
+    if (element.shadowRoot) {
+      this.hideSocialMediaTutorialLinks(element.shadowRoot);
+    }
   });
 }
-
+ 
 private setupSocialMediaTutorialLinkObserver(): void {
-
-  // Hide links that already exist
+  this.socialMediaObserver?.disconnect();
+ 
   this.hideSocialMediaTutorialLinks();
-
-  // Watch for SociableKIT to add links dynamically
+ 
   this.socialMediaObserver = new MutationObserver(() => {
     this.hideSocialMediaTutorialLinks();
   });
-
+ 
   this.socialMediaObserver.observe(document.body, {
     childList: true,
     subtree: true
@@ -238,20 +271,27 @@ private setupSocialMediaTutorialLinkObserver(): void {
 
     // Load both event sources at the same time
     await Promise.all([
-
-      // Load Organizational Events from SharePoint
       this.loadEvents(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      ),
+      this.loadMyEvents(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      ),
+      this.loadOrganizationalEventDates(
         today.getFullYear(),
         today.getMonth()
       ),
-
-      // Load My Events from Outlook Calendar
-      this.loadMyEvents(
+      this.loadMyEventDates(
         today.getFullYear(),
         today.getMonth()
       )
-
     ]);
+
+  
 
     const arrowIconUrl =
     `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
@@ -312,17 +352,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
     
 
 
-    // Create Upcoming Events inside its existing containers
-    this.renderUpcomingEvents();
-
-
-    // Initialize My Events / Organizational Events tabs
-    this.initializeUpcomingEvents();
-
-    
-    // Initialize both calendars
-    this.initializeCalendar();
-
+  
 
 
 
@@ -361,6 +391,10 @@ private setupSocialMediaTutorialLinkObserver(): void {
       newsApiUrl
     );
    this.newsCentreAttachTabEvents();
+
+    this.renderUpcomingEvents();
+    this.initializeUpcomingEvents();
+    this.initializeCalendar();
 
     // Load home.js only after the HTML is available
     this.loadHomeJS();
@@ -1740,61 +1774,42 @@ private newsCentreFormatDate(
 
   // ==================== LOAD EVENTS ====================
 
-  private async loadEvents(
+ private async loadEvents(
     year: number,
-    month: number
+    month: number,
+    day: number
   ): Promise<void> {
-
-    // Get the current SharePoint site URL
     const siteUrl =
       this.context.pageContext.web.absoluteUrl;
 
-
-    /*
-     * First day of selected month
-     */
     const startDate =
       new Date(
         year,
         month,
-        1
+        day,
+        0,
+        0,
+        0
       );
 
-
-    /*
-     * First day of next month
-     */
     const endDate =
       new Date(
         year,
-        month + 1,
-        1
+        month,
+        day + 1,
+        0,
+        0,
+        0
       );
 
-
-    // Convert the dates into ISO format
-    // for the SharePoint REST API
-    const startDateString =
-      startDate.toISOString();
-
-
-    const endDateString =
-      endDate.toISOString();
-
-
-    // SharePoint REST API URL
     const url =
       `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
-      `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status` +
-      `&$filter=EventDate ge datetime'${startDateString}' and EventDate lt datetime'${endDateString}'` +
+      `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link` +
+      `&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'` +
       `&$orderby=EventDate asc`;
 
-
     try {
-
-      // Send GET request to the SharePoint REST API
-      const response:
-        SPHttpClientResponse =
+      const response: SPHttpClientResponse =
         await this.context.spHttpClient.get(
           url,
           SPHttpClient.configurations.v1,
@@ -1806,76 +1821,153 @@ private newsCentreFormatDate(
           }
         );
 
-
-      // Check whether the API request was successful
       if (!response.ok) {
-
         console.error(
           'Upcoming Events list error:',
           response.status,
           response.statusText
         );
 
-
-        // Clear events if the request fails
         this.events = [];
-
-
         return;
-
       }
 
+      const data = await response.json();
 
-      // Convert API response into JSON
-      const data =
-        await response.json();
-
-
-      // Store SharePoint events
       this.events =
         data.value || [];
-
-
-      // Display the fetched events in the console
-      console.log(
-        'Organizational Events:',
-        this.events
-      );
-
-
     } catch (error) {
-
-      // Handle SharePoint API errors
       console.error(
         'Error loading Upcoming Events:',
         error
       );
 
-
-      // Clear events when an error occurs
       this.events = [];
-
     }
-
   }
 
 
-  // ==================== LOAD MY EVENTS ====================
-
-  private async loadMyEvents(
+  private async loadOrganizationalEventDates(
     year: number,
     month: number
   ): Promise<void> {
+    const siteUrl =
+      this.context.pageContext.web.absoluteUrl;
+
+    const startDate =
+      new Date(
+        year,
+        month,
+        1,
+        0,
+        0,
+        0
+      );
+
+    const endDate =
+      new Date(
+        year,
+        month + 1,
+        1,
+        0,
+        0,
+        0
+      );
+
+    const url =
+      `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
+      `?$select=EventDate,Status,Title` +
+      `&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}' and Status eq 'Active'`;
 
     try {
+      const response: SPHttpClientResponse =
+        await this.context.spHttpClient.get(
+          url,
+          SPHttpClient.configurations.v1,
+          {
+            headers: {
+              Accept:
+                'application/json;odata=nometadata'
+            }
+          }
+        );
 
-      // Create Microsoft Graph client
-      const client:
-        MSGraphClientV3 =
-        await this.context.msGraphClientFactory.getClient('3');
+      if (!response.ok) {
+        this.organizationalEventDates = [];
+        this.organizationalEventTitles = {};
+        return;
+      }
 
+      const data = await response.json();
 
-      // First day of selected month
+      this.organizationalEventDates = [];
+      this.organizationalEventTitles = {};
+
+      (data.value || []).forEach(
+        (item: {
+          EventDate: string;
+          Status: string;
+          Title: string;
+        }) => {
+
+          const dateKey =
+            this.getDateKey(
+              item.EventDate
+            );
+
+          if (!dateKey) {
+            return;
+          }
+
+          if (
+            this.organizationalEventDates
+              .indexOf(dateKey) === -1
+          ) {
+            this.organizationalEventDates.push(
+              dateKey
+            );
+          }
+
+          const title =
+            item.Title || '';
+
+          if (title) {
+            if (
+              this.organizationalEventTitles[
+                dateKey
+              ]
+            ) {
+              this.organizationalEventTitles[
+                dateKey
+              ] += `, ${title}`;
+            } else {
+              this.organizationalEventTitles[
+                dateKey
+              ] = title;
+            }
+          }
+        }
+      );
+    } catch (error) {
+      console.error(
+        'Error loading organizational event dates:',
+        error
+      );
+
+      this.organizationalEventDates = [];
+      this.organizationalEventTitles = {};
+    }
+  }
+
+  private async loadMyEventDates(
+    year: number,
+    month: number
+  ): Promise<void> {
+    try {
+      const client: MSGraphClientV3 =
+        await this.context.msGraphClientFactory
+          .getClient('3');
+
       const startDate =
         new Date(
           year,
@@ -1886,8 +1978,6 @@ private newsCentreFormatDate(
           0
         );
 
-
-      // First day of next month
       const endDate =
         new Date(
           year,
@@ -1898,290 +1988,247 @@ private newsCentreFormatDate(
           0
         );
 
-
-      // Call Microsoft Graph Calendar API
       const response =
         await client
           .api('/me/calendar/calendarView')
-
           .query({
             startDateTime:
               startDate.toISOString(),
-
             endDateTime:
               endDate.toISOString()
           })
-
-          .select(
-            'id,subject,start,end,location'
-          )
-
-          .orderby(
-            'start/dateTime'
-          )
-
+          .select('start,subject')
+          .orderby('start/dateTime')
           .get();
 
+      this.myEventDates = [];
+      this.myEventTitles = {};
 
-      // Display Outlook events in the browser console
-      console.log(
-        'Outlook Calendar Events:',
-        response.value
+      (response.value || []).forEach(
+        (event: IOutlookEvent) => {
+
+          if (!event.start?.dateTime) {
+            return;
+          }
+
+          const dateKey =
+            this.getDateKey(
+              event.start.dateTime
+            );
+
+          if (!dateKey) {
+            return;
+          }
+
+          if (
+            this.myEventDates.indexOf(
+              dateKey
+            ) === -1
+          ) {
+            this.myEventDates.push(
+              dateKey
+            );
+          }
+
+          const title =
+            event.subject || '';
+
+          if (title) {
+            if (
+              this.myEventTitles[
+                dateKey
+              ]
+            ) {
+              this.myEventTitles[
+                dateKey
+              ] += `, ${title}`;
+            } else {
+              this.myEventTitles[
+                dateKey
+              ] = title;
+            }
+          }
+        }
+      );
+    } catch (error) {
+      console.error(
+        'Error loading Outlook event dates:',
+        error
       );
 
+      this.myEventDates = [];
+      this.myEventTitles = {};
+    }
+  }
 
-      // Convert Outlook events into the
-      // common IEventItem format
+    private getDateKey(
+    dateValue: string
+  ): string {
+    const date =
+      new Date(dateValue);
+
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+
+    return (
+      date.getFullYear() +
+      '-' +
+      date.getMonth() +
+      '-' +
+      date.getDate()
+    );
+  }
+
+  // ==================== LOAD MY EVENTS ====================
+
+   private async loadMyEvents(
+    year: number,
+    month: number,
+    day: number
+  ): Promise<void> {
+    try {
+      const client: MSGraphClientV3 =
+        await this.context.msGraphClientFactory
+          .getClient('3');
+
+      const startDate =
+        new Date(
+          year,
+          month,
+          day,
+          0,
+          0,
+          0
+        );
+
+      const endDate =
+        new Date(
+          year,
+          month,
+          day + 1,
+          0,
+          0,
+          0
+        );
+
+      const response =
+        await client
+          .api('/me/calendar/calendarView')
+          .query({
+            startDateTime:
+              startDate.toISOString(),
+            endDateTime:
+              endDate.toISOString()
+          })
+          .select(
+            'id,subject,start,end,location,onlineMeeting'
+          )
+          .orderby('start/dateTime')
+          .get();
+
       this.myEvents =
         (response.value || []).map(
           (
-            event: any,
+            event: IOutlookEvent,
             index: number
           ): IEventItem => {
-
             return {
-
-              Id:
-                index + 1,
-
-              Title:
-                event.subject || '',
-
+              Id: index + 1,
+              Title: event.subject || '',
               EventDate:
                 event.start?.dateTime || '',
-
               StartTime:
                 event.start?.dateTime || '',
-
               EndTime:
                 event.end?.dateTime || '',
-
               Location:
                 event.location?.displayName || '',
-
-              Status:
-                'Active'
-
+              Status: 'Active',
+              TeamsUrl:
+                event.onlineMeeting?.joinUrl || ''
             };
-
           }
         );
-
-
     } catch (error) {
-
-      // Handle Microsoft Graph errors
       console.error(
         'Error loading Outlook Calendar events:',
         error
       );
 
-
-      // Clear Outlook events if an error occurs
       this.myEvents = [];
-
     }
-
   }
 
 
   // ==================== RENDER UPCOMING EVENTS ====================
 
-  private renderUpcomingEvents(): void {
-
-    // Get the SharePoint site URL
+    private renderUpcomingEvents(): void {
     const baseUrl =
       this.context.pageContext.web.absoluteUrl;
 
-
-    // Image used for the event arrow
     const rightArrow =
       `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
 
-
-    // Image used for the short arrow
     const arrowRightShort =
       `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-
-    // Get future My Events
     const myEvents =
       this.getMyEvents();
 
-
-    // Get future Organizational Events
     const organizationalEvents =
       this.getOrganizationalEvents();
 
+    let html =
+      UpcomingEventsTemplate.allElementsHtml;
 
-    // Generate HTML for My Events
+    html = html.replace(
+      /__KEY_ARROW_RIGHT_SHORT__/g,
+      arrowRightShort
+    );
+
     const myEventsHtml =
       this.renderEventElements(
         myEvents,
-        rightArrow
+        rightArrow,
+        true
       );
 
-
-    // Generate HTML for Organizational Events
     const organizationalEventsHtml =
       this.renderEventElements(
         organizationalEvents,
-        rightArrow
+        rightArrow,
+        false
       );
 
-
-    /*
-     * Insert My Events into the existing
-     * Upcoming Events container.
-     */
-    const myEventsList =
-      this.domElement.querySelector(
-        '#events-list-my'
-      );
-
-
-    if (myEventsList) {
-
-      myEventsList.innerHTML =
-        myEventsHtml;
-
-    }
-
-
-    /*
-     * Insert Organizational Events into
-     * the existing Upcoming Events container.
-     */
-    const organizationalEventsList =
-      this.domElement.querySelector(
-        '#events-list-org'
-      );
-
-
-    if (organizationalEventsList) {
-
-      organizationalEventsList.innerHTML =
-        organizationalEventsHtml;
-
-    }
-
-
-    /*
-     * Replace arrow placeholder without
-     * replacing the complete page HTML.
-     */
-    const eventCalendarViews =
-      this.domElement.querySelectorAll(
-        '.event-calendar-view'
-      );
-
-
-    eventCalendarViews.forEach(
-      (view: Element) => {
-
-        view.innerHTML =
-          view.innerHTML.replace(
-            /__KEY_ARROW_RIGHT_SHORT__/g,
-            arrowRightShort
-          );
-
-      }
+    html = html.replace(
+      'id="events-list-my">',
+      `id="events-list-my">${myEventsHtml}`
     );
 
+    html = html.replace(
+      'id="events-list-org">',
+      `id="events-list-org">${organizationalEventsHtml}`
+    );
+
+    this.domElement.querySelector('#upcoming-events-container')!.innerHTML =html;
   }
 
 
   // ==================== GET MY EVENTS ====================
 
   private getMyEvents(): IEventItem[] {
-
-    // Get today's date
-    const today = new Date();
-
-
-    // Remove the current time
-    today.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-
-    // Filter Outlook events
-    return this.myEvents.filter(
-      (event: IEventItem) => {
-
-        // Convert event date into JavaScript Date
-        const eventDate =
-          new Date(event.EventDate);
-
-
-        // Remove the time from the event date
-        eventDate.setHours(
-          0,
-          0,
-          0,
-          0
-        );
-
-
-        // Keep today's and future events
-        return eventDate >= today;
-
-      }
-    );
-
+    return this.myEvents;
   }
 
 
   // ==================== GET ORGANIZATIONAL EVENTS ====================
 
-  private getOrganizationalEvents(): IEventItem[] {
-
-    // Get today's date
-    const today = new Date();
-
-
-    // Remove the current time
-    today.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-
-    // Filter SharePoint events
+    private getOrganizationalEvents(): IEventItem[] {
     return this.events.filter(
-      (event: IEventItem) => {
-
-        // Ignore events that are not Active
-        if (event.Status !== 'Active') {
-          return false;
-        }
-
-
-        // Convert event date into JavaScript Date
-        const eventDate =
-          new Date(event.EventDate);
-
-
-        // Remove the time from the event date
-        eventDate.setHours(
-          0,
-          0,
-          0,
-          0
-        );
-
-
-        // Keep today's and future events
-        return eventDate >= today;
-
-      }
+      (event: IEventItem) =>
+        event.Status === 'Active'
     );
-
   }
 
 
@@ -2189,101 +2236,86 @@ private newsCentreFormatDate(
 
   private renderEventElements(
     events: IEventItem[],
-    rightArrow: string
+    rightArrow: string,
+    isMyEvent: boolean
   ): string {
-
-    /*
-     * No records.
-     */
     if (!events.length) {
-
       return UpcomingEventsTemplate.noRecord;
-
     }
 
-
-    /*
-     * Show maximum 2 events.
-     */
     return events
-      .slice(0, 2)
       .map(
         (event: IEventItem) => {
-
-          // Format the event date
           const date =
             this.formatDate(
               event.EventDate
             );
 
-
-          // Format the event time
           const time =
             this.formatTime(
               event.StartTime,
               event.EndTime
             );
 
-
-          // Get the individual event HTML template
           let html =
             UpcomingEventsTemplate.singleElementHtml;
 
+          html = html.replace(
+            '__KEY_EVENT_MONTH__',
+            escape(date.month)
+          );
 
-          // Replace event month
-          html =
-            html.replace(
-              '__KEY_EVENT_MONTH__',
-              escape(date.month)
-            );
+          html = html.replace(
+            '__KEY_EVENT_DAY__',
+            escape(date.day)
+          );
 
+          html = html.replace(
+            '__KEY_EVENT_TITLE__',
+            escape(
+              event.Title || ''
+            )
+          );
 
-          // Replace event day
-          html =
-            html.replace(
-              '__KEY_EVENT_DAY__',
-              escape(date.day)
-            );
+          html = html.replace(
+            '__KEY_EVENT_TIME__',
+            escape(time)
+          );
 
+          html = html.replace(
+            '__KEY_EVENT_LOCATION__',
+            escape(
+              event.Location || ''
+            )
+          );
 
-          // Replace event title
-          html =
-            html.replace(
-              '__KEY_EVENT_TITLE__',
-              escape(event.Title || '')
-            );
+          let arrowHtml = '';
 
+          if (isMyEvent) {
+            const teamsUrl =
+              event.TeamsUrl ||
+              'https://teams.microsoft.com/';
 
-          // Replace event time
-          html =
-            html.replace(
-              '__KEY_EVENT_TIME__',
-              escape(time)
-            );
+            arrowHtml =
+              `<a href="${escape(teamsUrl)}" target="_blank" data-interception="off" rel="noopener noreferrer">
+                <img src="${rightArrow}" />
+              </a>`;
+          } else if (event.Link) {
+            arrowHtml =
+              `<a href="${escape(event.Link)}" target="_blank" data-interception="off" rel="noopener noreferrer">
+                <img src="${rightArrow}" />
+              </a>`;
+          }
 
-
-          // Replace event location
-          html =
-            html.replace(
-              '__KEY_EVENT_LOCATION__',
-              escape(event.Location || '')
-            );
-
-
-          // Replace event arrow image
-          html =
-            html.replace(
-              '__KEY_EVENT_ARROW__',
-              rightArrow
-            );
-
+          html = html.replace(
+            '__KEY_EVENT_ARROW__',
+            arrowHtml
+          );
 
           return html;
-
         }
       )
       .join('');
-
   }
 
 
@@ -2295,117 +2327,75 @@ private newsCentreFormatDate(
     month: string;
     day: string;
   } {
-
-    // Convert string into Date object
     const date =
       new Date(eventDate);
 
-
-    // Check whether the date is valid
     if (isNaN(date.getTime())) {
-
       return {
         month: '',
         day: ''
       };
-
     }
 
-
     return {
-
-      // Get short month name
       month:
-        date
-          .toLocaleString(
-            'en-US',
-            {
-              month: 'short'
-            }
-          )
-          .toUpperCase(),
+        date.toLocaleString(
+          'en-US',
+          {
+            month: 'short'
+          }
+        ).toUpperCase(),
 
-
-      // Get day number
       day:
-        date
-          .getDate()
-          .toString()
-
+        date.getDate().toString()
     };
-
   }
 
 
   // ==================== FORMAT TIME ====================
 
-  private formatTime(
+ private formatTime(
     startTime: string,
     endTime: string
   ): string {
-
-    // Convert start time
     const start =
       this.parseSharePointTime(
         startTime
       );
 
-
-    // Convert end time
     const end =
       this.parseSharePointTime(
         endTime
       );
 
-
-    // If both times are empty
     if (!start && !end) {
-
       return '';
-
     }
 
-
-    // If only start time exists
     if (!end) {
-
       return start;
-
     }
 
-
-    // Display start and end time together
     return `${start} – ${end}`;
-
   }
 
 
   // ==================== PARSE TIME ====================
 
-  private parseSharePointTime(
+ private parseSharePointTime(
     timeValue: string
   ): string {
-
-    // Return empty value if no time is provided
     if (!timeValue) {
-
       return '';
-
     }
 
-
-    // Check whether the value is an ISO date/time
-    if (timeValue.indexOf('T') !== -1) {
-
-      // Convert ISO value into Date object
+    if (
+      timeValue.indexOf('T') !== -1
+    ) {
       const date =
         new Date(timeValue);
 
-
-      // Check whether the date is valid
       if (!isNaN(date.getTime())) {
-
-        // Convert into 12-hour time
         return date.toLocaleTimeString(
           'en-US',
           {
@@ -2414,322 +2404,370 @@ private newsCentreFormatDate(
             hour12: true
           }
         );
-
       }
-
     }
 
-
-    /*
-     * Handle HH:mm or HH:mm:ss.
-     */
     const match =
       timeValue.match(
         /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
       );
 
-
     if (match) {
-
-      // Extract hour
       const hours =
         parseInt(
           match[1],
           10
         );
 
-
-      // Extract minutes
       const minutes =
         parseInt(
           match[2],
           10
         );
 
-
-      // Validate hour and minute values
       if (
         hours >= 0 &&
         hours <= 23 &&
         minutes >= 0 &&
         minutes <= 59
       ) {
-
-        // Decide AM or PM
         const period =
           hours >= 12
             ? 'PM'
             : 'AM';
 
-
-        // Convert 24-hour hour into 12-hour hour
         const displayHour =
           hours % 12 === 0
             ? 12
             : hours % 12;
 
-
-        // Return formatted time
         return (
           `${('0' + displayHour).slice(-2)}:` +
           `${('0' + minutes).slice(-2)} ` +
           `${period}`
         );
-
       }
-
     }
 
-
-    // Return original value if it cannot be parsed
     return timeValue;
-
   }
 
 
   // ==================== INITIALIZE TABS ====================
 
   private initializeUpcomingEvents(): void {
-
-    // Find all event tabs
     const tabs =
       this.domElement.querySelectorAll(
         '.events-tabs-list .etab'
       );
 
-
-    // Find all event panels
     const panels =
       this.domElement.querySelectorAll(
         '.event-calendar-view'
       );
 
-
-    // Add click event to each tab
     tabs.forEach(
       (tab: Element) => {
-
         tab.addEventListener(
           'click',
           () => {
-
-            // Get the panel ID connected to the clicked tab
             const targetId =
               tab.getAttribute(
                 'data-tab-event-id'
               );
 
-
-            /*
-             * Remove active class
-             * from all tabs.
-             */
             tabs.forEach(
               (item: Element) => {
-
                 item.classList.remove(
                   'etab-active'
                 );
-
               }
             );
-
 
             panels.forEach(
               (panel: Element) => {
-
                 (
                   panel as HTMLElement
-                ).style.display = 'none';
-
+                ).style.display =
+                  'none';
               }
             );
 
-
-            /*
-             * Activate selected tab.
-             */
             tab.classList.add(
               'etab-active'
             );
 
-
-            /*
-             * Show selected panel.
-             */
             if (targetId) {
-
-              // Find the selected panel
               const selectedPanel =
                 this.domElement.querySelector(
                   `#${targetId}`
                 );
 
-
               if (selectedPanel) {
-
-                // Display the selected panel
                 (
                   selectedPanel as HTMLElement
-                ).style.display = 'block';
-
+                ).style.display =
+                  'block';
               }
-
             }
-
           }
         );
-
       }
     );
-
   }
 
 
   // ==================== INITIALIZE CALENDAR ====================
 
-  private initializeCalendar(): void {
+ private initializeCalendar(): void {
+    const $ = (window as Window & {
+      jQuery?: any;
+    }).jQuery;
 
-    // Get jQuery from the global window object
-    const $ =
-      (window as any).jQuery;
-
-
-    // Check whether jQuery UI Datepicker is available
     if (
       !$ ||
       !$.fn ||
       !$.fn.datepicker
     ) {
-
       console.warn(
         'jQuery UI Datepicker is not available.'
       );
-
-
       return;
-
     }
 
-
-    // Store current web part instance
-    // so it can be accessed inside callback functions
-    const self = this;
-
-
-    /*
-     * My Events
-     */
+    // MY EVENTS CALENDAR
     $('#events-calendar-my').datepicker({
-
-      // Date display format
       dateFormat: 'dd M yy',
 
-
-      // Runs when the user changes the calendar month
-      onChangeMonthYear:
-        async function (
-          year: number,
-          month: number
-        ): Promise<void> {
-
-          // Reload Outlook events for selected month
-          await self.loadMyEvents(
-            year,
-            month - 1
-          );
-
-
-          // Get event arrow image
-          const rightArrow =
-            `${self.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
-
-
-          // Rebuild My Events HTML
-          const myEventsHtml =
-            self.renderEventElements(
-              self.getMyEvents(),
-              rightArrow
+      beforeShowDay:
+        (date: Date): [
+          boolean,
+          string,
+          string
+        ] => {
+          const dateKey =
+            this.getDateKey(
+              date.toISOString()
             );
 
+          const hasEvent =
+            this.myEventDates.indexOf(
+              dateKey
+            ) !== -1;
 
-          // Find My Events list container
+          return hasEvent
+            ? [
+                true,
+                'has-event',
+                this.myEventTitles[dateKey] ||
+                  'Special Event'
+              ]
+            : [
+                true,
+                '',
+                ''
+              ];
+        },
+
+      onSelect:
+        async (
+          dateText: string
+        ): Promise<void> => {
+          const selectedDate =
+            this.parseCalendarDate(
+              dateText
+            );
+
+          if (!selectedDate) {
+            return;
+          }
+
+          await this.loadMyEvents(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth(),
+            selectedDate.getDate()
+          );
+
+          const rightArrow =
+            `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
           const myEventsList =
-            self.domElement.querySelector(
+            this.domElement.querySelector(
               '#events-list-my'
             );
 
-
-          // Replace old events with new events
           if (myEventsList) {
-
             myEventsList.innerHTML =
-              myEventsHtml;
-
+              this.renderEventElements(
+                this.getMyEvents(),
+                rightArrow,
+                true
+              );
           }
+        },
 
-        }
-
-    });
-
-
-    /*
-     * Organizational Events
-     */
-    $('#events-calendar-org').datepicker({
-
-      // Date display format
-      dateFormat: 'dd M yy',
-
-
-      // Runs when the user changes the calendar month
       onChangeMonthYear:
-        async function (
+        async (
           year: number,
           month: number
-        ): Promise<void> {
-
-          // Reload SharePoint events for selected month
-          await self.loadEvents(
+        ): Promise<void> => {
+          await this.loadMyEventDates(
             year,
             month - 1
           );
 
+          $('#events-calendar-my')
+            .datepicker(
+              'refresh'
+            );
+        }
+    });
 
-          // Get event arrow image
-          const rightArrow =
-            `${self.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+    // ORGANIZATIONAL EVENTS CALENDAR
+    $('#events-calendar-org').datepicker({
+      dateFormat: 'dd M yy',
 
-
-          // Rebuild Organizational Events HTML
-          const organizationalEventsHtml =
-            self.renderEventElements(
-              self.getOrganizationalEvents(),
-              rightArrow
+      beforeShowDay:
+        (date: Date): [
+          boolean,
+          string,
+          string
+        ] => {
+          const dateKey =
+            this.getDateKey(
+              date.toISOString()
             );
 
+          const hasEvent =
+            this.organizationalEventDates
+              .indexOf(dateKey) !== -1;
 
-          // Find Organizational Events list container
+          return hasEvent
+            ? [
+                true,
+                'has-event',
+                this.organizationalEventTitles[
+                  dateKey
+                ] || 'Special Event'
+              ]
+            : [
+                true,
+                '',
+                ''
+              ];
+        },
+
+      onSelect:
+        async (
+          dateText: string
+        ): Promise<void> => {
+          const selectedDate =
+            this.parseCalendarDate(
+              dateText
+            );
+
+          if (!selectedDate) {
+            return;
+          }
+
+          await this.loadEvents(
+            selectedDate.getFullYear(),
+            selectedDate.getMonth(),
+            selectedDate.getDate()
+          );
+
+          const rightArrow =
+            `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+
           const organizationalEventsList =
-            self.domElement.querySelector(
+            this.domElement.querySelector(
               '#events-list-org'
             );
 
-
-          // Replace old events with new events
           if (organizationalEventsList) {
-
             organizationalEventsList.innerHTML =
-              organizationalEventsHtml;
-
+              this.renderEventElements(
+                this.getOrganizationalEvents(),
+                rightArrow,
+                false
+              );
           }
+        },
 
+      onChangeMonthYear:
+        async (
+          year: number,
+          month: number
+        ): Promise<void> => {
+          await this.loadOrganizationalEventDates(
+            year,
+            month - 1
+          );
+
+          $('#events-calendar-org')
+            .datepicker(
+              'refresh'
+            );
         }
-
     });
-
   }
 
+   private parseCalendarDate(
+    dateText: string
+  ): Date | null {
+    const parts =
+      dateText.split(' ');
+
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    const day =
+      parseInt(
+        parts[0],
+        10
+      );
+
+    const year =
+      parseInt(
+        parts[2],
+        10
+      );
+
+    const months: string[] = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+
+    const month =
+      months.indexOf(
+        parts[1]
+      );
+
+    if (
+      isNaN(day) ||
+      isNaN(year) ||
+      month === -1
+    ) {
+      return null;
+    }
+
+    return new Date(
+      year,
+      month,
+      day
+    );
+  }
 
   // ==================== GET BANNER ITEMS ====================
 
@@ -3212,7 +3250,9 @@ private newsCentreFormatDate(
  
     let allElementsHtml: string = "";
  
-   
+   if(!data||data.length===0){
+    document.querySelector('#announcement-container')!.innerHTML=AnnouncementOffer.noElementHtml;
+   }
  
       data.forEach((item) => {
  
@@ -3290,7 +3330,9 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
  
     let allElementsHtml: string = "";
  
- 
+         if(!data||data.length===0){
+    document.querySelector('#offer-container')!.innerHTML=AnnouncementOffer.noElementHtml;
+   }
  
       data.forEach((item) => {
  

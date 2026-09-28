@@ -58,5 +58,12 @@ export default class AnnouncementOffer {
                   </div>
                   <span class="announcement-date">__KEY__ANNOUNCEMENTOFFER__DATE__</span>
                 </div>`;
+
+    public static noElementHtml: string = `
+    <div class="news-item">
+      <div class="flex-grow-1">
+        <p class="news-desc">No records found.</p>
+      </div>
+    </div>`
  
 }
