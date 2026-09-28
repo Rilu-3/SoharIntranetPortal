@@ -64,7 +64,40 @@ export interface IBirthdayList {
 export default class WpHomePageWebPart
   extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
+    // =========================================================
+// SociableKIT Branding Link Handler
+// =========================================================
 
+private socialMediaObserver: MutationObserver | null = null;
+
+private hideSocialMediaTutorialLinks(
+  root: Document | ShadowRoot = document
+): void {
+  root.querySelectorAll<HTMLElement>('a.tutorial_link').forEach((link) => {
+    link.style.setProperty('display', 'none', 'important');
+  });
+
+  root.querySelectorAll<HTMLElement>('*').forEach((element) => {
+    if (element.shadowRoot) {
+      this.hideSocialMediaTutorialLinks(element.shadowRoot);
+    }
+  });
+}
+
+private setupSocialMediaTutorialLinkObserver(): void {
+  this.socialMediaObserver?.disconnect();
+
+  this.hideSocialMediaTutorialLinks();
+
+  this.socialMediaObserver = new MutationObserver(() => {
+    this.hideSocialMediaTutorialLinks();
+  });
+
+  this.socialMediaObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
   // =========================================================
   // Render
   // =========================================================
@@ -1584,6 +1617,7 @@ export default class WpHomePageWebPart
 
 private async initializeSocialMedia(): Promise<void> {
 
+  // Instagram
   const instagramContainer =
     this.domElement.querySelector(
       '#social-instagram'
@@ -1591,15 +1625,22 @@ private async initializeSocialMedia(): Promise<void> {
 
   if (instagramContainer) {
     instagramContainer.innerHTML = `
-      <iframe
-        src="https://widgets.sociablekit.com/instagram-feed/iframe/25716225"
-        frameborder="0"
-        width="100%"
-        height="387.984px">
-      </iframe>
+      <div
+        class="sk-instagram-feed"
+        data-embed-id="25716225">
+      </div>
     `;
+
+    const script = document.createElement('script');
+    script.src =
+      'https://widgets.sociablekit.com/instagram-feed/widget.js';
+    script.defer = true;
+
+    instagramContainer.appendChild(script);
   }
 
+
+  // X (Twitter)
   const twitterContainer =
     this.domElement.querySelector(
       '#social-twitter'
@@ -1607,29 +1648,90 @@ private async initializeSocialMedia(): Promise<void> {
 
   if (twitterContainer) {
     twitterContainer.innerHTML = `
-      <iframe
-        src="https://widgets.sociablekit.com/twitter-feed/iframe/25716230"
-        frameborder="0"
-        width="100%"
-        height="387.984px">
-      </iframe>
+      <div
+        class="sk-ww-twitter-feed"
+        data-embed-id="25716230">
+      </div>
     `;
+
+    const script = document.createElement('script');
+    script.src =
+      'https://widgets.sociablekit.com/twitter-feed/widget.js';
+    script.defer = true;
+
+    twitterContainer.appendChild(script);
   }
-    const linkedinContainer =
+
+
+  // LinkedIn
+  const linkedinContainer =
     this.domElement.querySelector(
       '#social-linkedin'
     ) as HTMLElement;
 
   if (linkedinContainer) {
     linkedinContainer.innerHTML = `
-      <iframe
-        src="https://widgets.sociablekit.com/linkedin-page-posts/iframe/25716233"
-        frameborder="0"
-        width="100%"
-        height="387.984px">
-      </iframe>
+      <div
+        class="sk-ww-linkedin-page-post"
+        data-embed-id="25716233">
+      </div>
     `;
+
+    const script = document.createElement('script');
+    script.src =
+      'https://widgets.sociablekit.com/linkedin-page-posts/widget.js';
+    script.defer = true;
+
+    linkedinContainer.appendChild(script);
   }
+
+
+  // Facebook
+  const facebookContainer =
+    this.domElement.querySelector(
+      '#social-facebook'
+    ) as HTMLElement;
+
+  if (facebookContainer) {
+    facebookContainer.innerHTML = `
+      <div
+        class="sk-ww-facebook-page-posts"
+        data-embed-id="25716238">
+      </div>
+    `;
+
+    const script = document.createElement('script');
+    script.src =
+      'https://widgets.sociablekit.com/facebook-page-posts/widget.js';
+    script.defer = true;
+
+    facebookContainer.appendChild(script);
+  }
+
+
+  // YouTube
+  const youtubeContainer =
+    this.domElement.querySelector(
+      '#social-youtube'
+    ) as HTMLElement;
+
+  if (youtubeContainer) {
+    youtubeContainer.innerHTML = `
+      <div
+        class="sk-ww-youtube-channel-videos"
+        data-embed-id="25716248">
+      </div>
+    `;
+
+    const script = document.createElement('script');
+    script.src =
+      'https://widgets.sociablekit.com/youtube-channel-videos/widget.js';
+    script.defer = true;
+
+    youtubeContainer.appendChild(script);
+  }
+
+  this.setupSocialMediaTutorialLinkObserver();
 }
 
 private async loadCSS(): Promise<void> {
