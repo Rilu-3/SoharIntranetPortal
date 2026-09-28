@@ -18,9 +18,9 @@ import {
   MSGraphClientV3
 } from '@microsoft/sp-http';
 
-import {
-  SPComponentLoader
-} from '@microsoft/sp-loader';
+// import {
+//   SPComponentLoader
+// } from '@microsoft/sp-loader';
 
 import { escape } from '@microsoft/sp-lodash-subset';
 
@@ -310,8 +310,8 @@ private setupSocialMediaTutorialLinkObserver(): void {
     this.domElement.querySelector('#news-container')!.innerHTML = NewsCentre.allElementsHtml;
     this.domElement.querySelector('#upcoming-events-container')!.innerHTML = UpcomingEventsTemplate.allElementsHtml;
     this.domElement.querySelector('#social-media-container')!.innerHTML = SocialMedia.allElementsHtml;
-     this.domElement.querySelector('#birthday-container')!.innerHTML = Birthday.allElementsHtml;
-     this.domElement.querySelector('#media-gallery-container')!.innerHTML = MediaGalleryTemplate.allElementsHtml;
+    this.domElement.querySelector('#birthday-container')!.innerHTML = Birthday.allElementsHtml;
+    this.domElement.querySelector('#media-gallery-container')!.innerHTML = MediaGalleryTemplate.allElementsHtml;
     
       // BannerTemplate.bannerHtml +
       // UpcomingEventsTemplate.allElementsHtml +
@@ -397,7 +397,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
     this.initializeCalendar();
 
     // Load home.js only after the HTML is available
-    this.loadHomeJS();
+    // this.loadHomeJS();
 
   }
 
@@ -1087,6 +1087,8 @@ private newsCentreSetupViewAll(
       const data =
         await response.json();
 
+        console.log("api data",data)
+
 
       /*
        * Return SharePoint items.
@@ -1116,77 +1118,34 @@ private newsCentreSetupViewAll(
    * attachment.
    */
 
-  private newsCentreGetImageUrl(
-    item: INewsItem
-  ): string {
+  private newsCentreGetImageUrl(item: INewsItem): string {
 
-    /*
-     * No NewsIcon.
-     */
-
-    if (!item.NewsIcon) {
-
-      return '';
-    }
-
-
-    try {
-
-      /*
-       * NewsIcon may already be an object or may be
-       * returned from SharePoint as a JSON string.
-       */
-
-      const imageData =
-        typeof item.NewsIcon === 'string'
-          ? JSON.parse(item.NewsIcon)
-          : item.NewsIcon;
-
-
-      /*
-       * Get file name.
-       */
-
-      const fileName =
-        imageData?.fileName ||
-        imageData?.FileName ||
-        '';
-
-
-      /*
-       * No file name.
-       */
-
-      if (!fileName) {
-
-        return '';
-      }
-
-
-      /*
-       * Build SharePoint attachment URL.
-       */
-
-      const webUrl =
-        this.context.pageContext.web.absoluteUrl;
-
-
-      return (
-        `${webUrl}/Lists/News/Attachments/` +
-        `${item.Id}/${fileName}`
-      );
-
-    }
-    catch (error) {
-
-      console.error(
-        'Error parsing NewsIcon:',
-        error
-      );
-
-      return '';
-    }
+  if (!item.NewsIcon) {
+    return '';
   }
+
+  try {
+    const imageData =
+      typeof item.NewsIcon === 'string'
+        ? JSON.parse(item.NewsIcon)
+        : item.NewsIcon;
+
+    // SharePoint stores the real location of the image here
+    if (imageData?.serverRelativeUrl) {
+      const serverUrl =
+        imageData.serverUrl ||
+        new URL(this.context.pageContext.web.absoluteUrl).origin;
+
+      return `${serverUrl}${imageData.serverRelativeUrl}`;
+    }
+
+    return '';
+
+  } catch (error) {
+    console.error('Error parsing NewsIcon:', error);
+    return '';
+  }
+}
 
 
   /*
@@ -1616,160 +1575,155 @@ private newsCentreFormatDate(
 
   // ==================== LOAD CSS ====================
 
-  private loadCSS(): void {
+  // private loadCSS(): void {
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-    );
+  //   const baseUrl =
+  //     this.context.pageContext.web.absoluteUrl;
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/variable.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/font-size.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/custom.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/home.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-    );
-
-  }
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/home.css`
+  //   );
 
 
-  // ==================== LOAD JS ====================
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
+  //   );
 
-  private async loadJS(): Promise<void> {
+  // }
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
+  // private async loadJS(): Promise<void> {
 
-
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-    );
-
-
-    await this.loadBootstrap();
+  //   const baseUrl =
+  //     this.context.pageContext.web.absoluteUrl;
 
 
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-    );
+  //   await SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+  //   );
 
 
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-    );
+  //   await this.loadBootstrap();
 
 
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
-    );
+  //   await SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+  //   );
 
 
-    await SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/common.js`
-    );
-
-  }
+  //   await SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+  //   );
 
 
+  //   await SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+  //   );
+
+
+  //   await SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/common.js`
+  //   );
+
+  // }
   // ==================== LOAD BOOTSTRAP ====================
 
-  private async loadBootstrap(): Promise<void> {
+  // private async loadBootstrap(): Promise<void> {
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    if (
-      typeof (window as any).bootstrap !== 'undefined'
-    ) {
-
-      return;
-
-    }
+  //   const baseUrl =
+  //     this.context.pageContext.web.absoluteUrl;
 
 
-    const bootstrapModule =
-      await SPComponentLoader.loadScript<any>(
-        `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-      );
+  //   if (
+  //     typeof (window as any).bootstrap !== 'undefined'
+  //   ) {
+
+  //     return;
+
+  //   }
 
 
-    if (bootstrapModule) {
-
-      (window as any).bootstrap =
-        bootstrapModule;
-
-    }
+  //   const bootstrapModule =
+  //     await SPComponentLoader.loadScript<any>(
+  //       `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  //     );
 
 
-    console.log(
-      'Bootstrap loaded:',
-      typeof (window as any).bootstrap
-    );
+  //   if (bootstrapModule) {
 
-  }
+  //     (window as any).bootstrap =
+  //       bootstrapModule;
+
+  //   }
+
+
+  //   console.log(
+  //     'Bootstrap loaded:',
+  //     typeof (window as any).bootstrap
+  //   );
+
+  // }
 
 
   // ==================== LOAD HOME JS ====================
 
-  private async loadHomeJS(): Promise<void> {
+  // private async loadHomeJS(): Promise<void> {
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    try {
-
-      await SPComponentLoader.loadScript(
-        `${baseUrl}/SiteAssets/resources/js/home.js`
-      );
+  //   const baseUrl =
+  //     this.context.pageContext.web.absoluteUrl;
 
 
-      console.log(
-        'home.js loaded'
-      );
+  //   try {
 
-    } catch (error) {
+  //     await SPComponentLoader.loadScript(
+  //       `${baseUrl}/SiteAssets/resources/js/home.js`
+  //     );
 
-      console.error(
-        'Error loading home.js:',
-        error
-      );
 
-    }
+  //     console.log(
+  //       'home.js loaded'
+  //     );
 
-  }
+  //   } catch (error) {
+
+  //     console.error(
+  //       'Error loading home.js:',
+  //       error
+  //     );
+
+  //   }
+
+  // }
 
 
   // ==================== LOAD EVENTS ====================
@@ -3243,6 +3197,7 @@ private newsCentreFormatDate(
   private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
 
    try {
+    let imageUrl:string=''
     const data: IAnnouncement[] =
       await this._getAnnouncementsData(apiUrl);
  
@@ -3251,31 +3206,23 @@ private newsCentreFormatDate(
     let allElementsHtml: string = "";
  
    if(!data||data.length===0){
-    document.querySelector('#announcement-container')!.innerHTML=AnnouncementOffer.noElementHtml;
+    this.domElement.querySelector('#announcement-container')!.innerHTML=AnnouncementOffer.noElementHtml;
+    return;
    }
  
       data.forEach((item) => {
  
-        let imageUrl = '';
- 
-        /*
-         * The Icon column contains JSON data.
-         * Extract the file name from the JSON and construct
-         * the SharePoint attachment URL.
-         */
-        if (item.Icon) {
- 
-          const imageData = JSON.parse(item.Icon);
- 
-          // console.log(imageData);
- 
-          const fileName = imageData.fileName;
- 
-          // Build the image URL using the fileName
-          imageUrl =
-            `${this.context.pageContext.web.absoluteUrl}/Lists/Announcements/Attachments/${item.Id}/${fileName}`;
- 
-          // console.log(imageUrl);
+       const imageData =
+      typeof item.Icon === 'string'
+        ? JSON.parse(item.Icon)
+        : item.Icon;
+
+    // SharePoint stores the real location of the image here
+    if (imageData?.serverRelativeUrl) {
+      const serverUrl =
+        imageData.serverUrl ||
+        new URL(this.context.pageContext.web.absoluteUrl).origin;
+        imageUrl=`${serverUrl}${imageData.serverRelativeUrl}`
         }
  
         /*
@@ -3323,6 +3270,7 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
   private async _renderOffersAsync(apiUrl: string): Promise<void> {
 
     try{
+      let imageUrl='';
     const data: IOffer[] =
       await this._getOffersData(apiUrl);
  
@@ -3331,32 +3279,25 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
     let allElementsHtml: string = "";
  
          if(!data||data.length===0){
-    document.querySelector('#offer-container')!.innerHTML=AnnouncementOffer.noElementHtml;
+    this.domElement.querySelector('#offer-container')!.innerHTML=AnnouncementOffer.noElementHtml;
+    return;
    }
  
       data.forEach((item) => {
  
-        let imageUrl = '';
- 
-        /*
-         * The OfferImage column contains JSON data.
-         * Extract the file name and construct the
-         * SharePoint attachment URL.
-         */
-        if (item.OfferImage) {
- 
-          const imageData = JSON.parse(item.OfferImage);
- 
-          // console.log(imageData);
- 
-          const fileName = imageData.fileName;
- 
-          // Build the image URL using the fileName
-          imageUrl =
-            `${this.context.pageContext.web.absoluteUrl}/Lists/Offers/Attachments/${item.Id}/${fileName}`;
- 
-          // console.log(imageUrl);
+             const imageData =
+      typeof item.OfferImage === 'string'
+        ? JSON.parse(item.OfferImage)
+        : item.OfferImage;
+
+    // SharePoint stores the real location of the image here
+    if (imageData?.serverRelativeUrl) {
+      const serverUrl =
+        imageData.serverUrl ||
+        new URL(this.context.pageContext.web.absoluteUrl).origin;
+        imageUrl=`${serverUrl}${imageData.serverRelativeUrl}`
         }
+ 
  
         /*
          * Convert the SharePoint Created date into the
@@ -5116,10 +5057,10 @@ private async initializeSocialMedia(): Promise<void> {
 
   protected async onInit(): Promise<void> {
 
-    this.loadCSS();
+    // this.loadCSS();
 
 
-    await this.loadJS();
+    // await this.loadJS();
 
 
     return super.onInit();

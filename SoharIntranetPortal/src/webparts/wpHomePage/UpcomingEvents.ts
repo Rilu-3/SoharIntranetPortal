@@ -155,7 +155,7 @@ export default class UpcomingEvents {
       <div class="flex-grow-1">
  
         <p class="event-title">
-          No upcoming events
+          No events for this day
         </p>
  
       </div>
