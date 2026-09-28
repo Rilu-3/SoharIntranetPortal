@@ -42,118 +42,102 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 
   @override
-  public async onInit(): Promise<void> {
-
-    Log.info(
-      LOG_SOURCE,
-      `Initialized ${strings.Title}`
-    );
-
-    this._loadCSS();
-
-    this._loadJS();
-
-    await this._renderHeader();
-
-    await this._renderFooter();
-
-    return Promise.resolve();
-  }
-  // ============================================================
-  // CSS
-  // ============================================================
-  private _loadCSS(): void {
-
-    const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/custom.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/font-size.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/home.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-    );
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/variable.css`
-    );
-  }
-
-
-  // ============================================================
-  // JavaScript
-  // ============================================================
-
-private _loadJS(): void {
-
-  const baseUrl: string =
-    this.context.pageContext.web.absoluteUrl;
-
-  // jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+public async onInit(): Promise<void> {
+  Log.info(
+    LOG_SOURCE,
+    `Initialized ${strings.Title}`
   );
 
-  // jQuery UI - depends on jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+  this._loadCSS();
+
+  await this._loadJS();
+
+  await this._renderHeader();
+
+  await this._renderFooter();
+}
+
+// Loading CSS and JS
+
+private _loadCSS(): void {
+  const baseUrl: string = this.context.pageContext.web.absoluteUrl;
+
+  // CSS variables
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/variable.css`
   );
 
-  // Bootstrap - depends on jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  // Bootstrap CSS
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
   );
 
-  // jQuery Marquee - depends on jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+  // jQuery UI CSS
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
   );
 
-  // Swiper
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+  // Swiper CSS
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
   );
 
-  // Common project JS
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/common.js`
+  // Project CSS
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/font-size.css`
   );
 
-  // Home page JS
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/home.js`
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/custom.css`
+  );
+
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
+  );
+
+  SPComponentLoader.loadCss(
+    `${baseUrl}/SiteAssets/resources/css/home.css`
   );
 }
 
+private async _loadJS(): Promise<void> {
+  const baseUrl: string = this.context.pageContext.web.absoluteUrl;
+
+  // 1. jQuery
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+  );
+
+  // 2. jQuery UI - depends on jQuery
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+  );
+
+  // 3. Bootstrap - depends on jQuery
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  );
+
+  // 4. jQuery Marquee - depends on jQuery
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+  );
+
+  // 5. Swiper
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+  );
+
+  // 6. Common project JavaScript
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/common.js`
+  );
+
+  // 7. Home page JavaScript
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/home.js`
+  );
+}
 // ============================================================
 // USER DESIGNATION FROM MICROSOFT ENTRA ID
 // ============================================================
@@ -361,38 +345,52 @@ const designation: string =
 
   }
 
-  private _setupSearchFunctionality(): void {
-
+private _setupSearchFunctionality(): void {
   if (!this._topPlaceholder || !this._topPlaceholder.domElement) {
     return;
   }
 
-  const inputMainSearchBox =
-    this._topPlaceholder.domElement.querySelector(
-      '#inputGlobalSearchBox'
-    ) as HTMLInputElement;
+  const searchBox = this._topPlaceholder.domElement.querySelector(
+    '#inputGlobalSearchBox'
+  ) as HTMLInputElement;
 
-  if (inputMainSearchBox) {
+  const searchButton = this._topPlaceholder.domElement.querySelector(
+    '.search-icon-btn'
+  ) as HTMLButtonElement;
 
-    inputMainSearchBox.addEventListener(
-      'keydown',
-      (event: KeyboardEvent) => {
+  if (!searchBox) {
+    return;
+  }
 
-        if (event.key === 'Enter') {
+  const performSearch = (): void => {
+    const searchKey: string = searchBox.value.trim();
 
-          const searchKey =
-            inputMainSearchBox.value;
+    if (searchKey) {
+      window.open(
+        `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+        '_blank'
+      );
+    }
+  };
 
-          if (searchKey) {
+  // Search when Enter is pressed
+  searchBox.addEventListener(
+    'keydown',
+    (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        performSearch();
+      }
+    }
+  );
 
-            window.open(
-              `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-              '_blank'
-            );
-          }
-
-          event.preventDefault();
-        }
+  // Search when search icon is clicked
+  if (searchButton) {
+    searchButton.addEventListener(
+      'click',
+      (event: MouseEvent) => {
+        event.preventDefault();
+        performSearch();
       }
     );
   }
