@@ -16,7 +16,7 @@ export default class AnnouncementOffer {
  
               </div>
  
-              <a href="#" id="ao-view-all" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
+              <a href="#"  target="_blank" data-interception="off" id="ao-view-all" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
  
                 </span><img id="ao-view-all-arrow" src="__KEY__ARROW__RIGHT__ICON__" /></a>
  
