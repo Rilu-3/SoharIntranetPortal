@@ -453,21 +453,17 @@ export default class WpHomePageWebPart
           }
         );
 
-
         modalWrapper.innerHTML =
           modalElementsHtml;
 
       }
 
-
-
-      const galleryElement =
+   const galleryElement =
         this.domElement.querySelector(
           '.gallery-swiper'
         ) as HTMLElement & {
           swiper?: any;
         };
-
 
       if (
         galleryElement &&
