@@ -19,7 +19,9 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand"   href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+  target="_blank"
+  data-interception="off">
 
               <img
                 class="logo-desktop"

@@ -248,10 +248,12 @@ private async loadBootstrap(): Promise<void> {
             return `
               <li>
                 <a
-                  class="dropdown-item text-sm"
-                  href="${link}">
-                  ${department.Title}
-                </a>
+              class="dropdown-item text-sm"
+              href="${link}"
+              target="_blank"
+              data-interception="off">
+              ${department.Title}
+            </a>
               </li>
             `;
           }
