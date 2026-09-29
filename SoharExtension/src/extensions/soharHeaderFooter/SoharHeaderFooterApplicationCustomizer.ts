@@ -154,8 +154,6 @@ export default class SoharHeaderFooterApplicationCustomizer
   //     `${baseUrl}/SiteAssets/resources/js/home.js`
   //   );
   // }
-
-
   private _loadHome(): void {
     const baseUrl: string =
       this.context.pageContext.web.absoluteUrl;

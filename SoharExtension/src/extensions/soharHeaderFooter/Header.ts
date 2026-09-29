@@ -134,47 +134,41 @@ export default class Header {
                   </a>
 
                 </li>
+<li class="nav-item d-lg-flex dropdown">
 
-                <li class="nav-item d-lg-flex dropdown">
+  <a
+    class="nav-link dropdown-toggle d-flex align-items-center gap-2"
+    href="#"
+    id="navbarScrollingDropdown"
+    role="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false">
 
-                  <a 
-                      class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-  href="#"
-  id="navbarScrollingDropdown"
-  role="button"
-  aria-expanded="false"> 
-                      
-                    
+    <img
+      class="nav-menu-icon"
+      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+      alt=""
+    />
 
-                    <img
-                      class="nav-menu-icon"
-                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
-                      alt=""
-                    />
+    <span>Departments</span>
 
-                    <span>Departments</span>
+    <img
+      class="dropdown-arrow-nav"
+      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
+      alt=""
+    />
 
-                    <img
-                      class="dropdown-arrow-nav"
-                      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
-                      alt=""
-                      data-bs-toggle="dropdown" 
-                    />
+  </a>
 
-                  </a>
+  <ul
+    class="dropdown-menu"
+    aria-labelledby="navbarScrollingDropdown">
 
-                  <ul
-                    class="dropdown-menu"
-                    aria-labelledby="navbarScrollingDropdown">
+    ${this.departmentItems}
 
-                    ${this.departmentItems}
+  </ul>
 
-                  </ul>
-
-                </li>
-
-              </ul>
-
+</li>
             </div>
 
           </div>
