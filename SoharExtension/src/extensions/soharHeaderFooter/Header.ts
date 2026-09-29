@@ -6,7 +6,7 @@ export default class Header {
     private designation: string,
     private profilePhoto: string,
     private departmentItems: string
-  ) {}
+  ) { }
 
   public render(): string {
 
@@ -38,7 +38,7 @@ export default class Header {
               <input
                 type="text"
                 class="form-control"
-                placeholder="Search people, documents, pages..."
+                placeholder="Search..."
               >
 
               <button
@@ -139,14 +139,12 @@ export default class Header {
 
                   <a 
                       class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-  href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-  target="_blank"
-  data-interception="off"
+  href="#"
   id="navbarScrollingDropdown"
   role="button"
   aria-expanded="false"> 
                       
-                    >
+                    
 
                     <img
                       class="nav-menu-icon"
