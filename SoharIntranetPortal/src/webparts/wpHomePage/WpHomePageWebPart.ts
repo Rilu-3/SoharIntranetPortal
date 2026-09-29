@@ -107,7 +107,6 @@ interface IOffer {
   Id: number;
   Title: string;
   Description: string;
-  OfferImage: string;
   Created: string;
 }
 export interface IQuickLinksList {
@@ -133,7 +132,6 @@ export interface IBirthdayList {
 interface INewsItem {
   Id: number;
   Title: string;
-  NewsIcon?: any;
   ShortDescription?: string;
   Category?: string;
   MainContent?: string;
@@ -232,6 +230,8 @@ private setupSocialMediaTutorialLinkObserver(): void {
     const newsarrowIconUrl =
       `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
+    
+
   
 
 
@@ -243,7 +243,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
 
     const newsApiUrl =
       `${baseUrl}/_api/web/lists/getbytitle('News')/items` +
-      `?$select=Id,Title,NewsIcon,ShortDescription,Category,MainContent,PublishedDate,Status` +
+      `?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status` +
       `&$filter=Status eq 'Active'` +
       `&$orderby=PublishedDate desc`;
 
@@ -365,7 +365,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
       `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     const OfferApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,OfferImage,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     await this._renderAnnouncementsAsync(AnnouncementApiUrl);
 
@@ -851,6 +851,8 @@ private newsCentreSetupViewAll(
    * 6. LOOP THROUGH NEWS ITEMS
    * ==========================================================
    */
+  const newsIconImg=
+    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/quick-links/quick-link-1.png`;
 
   items.forEach(
     (item) => {
@@ -862,10 +864,7 @@ private newsCentreSetupViewAll(
        * ======================================================
        */
 
-      const imageUrl =
-        this.newsCentreGetImageUrl(
-          item
-        );
+    
 
 
       /*
@@ -910,7 +909,7 @@ private newsCentreSetupViewAll(
       singleElementHtml =
         singleElementHtml.replace(
           /__KEY_URL_IMGICON__/g,
-          imageUrl
+          newsIconImg
         );
 
 
@@ -1118,34 +1117,7 @@ private newsCentreSetupViewAll(
    * attachment.
    */
 
-  private newsCentreGetImageUrl(item: INewsItem): string {
 
-  if (!item.NewsIcon) {
-    return '';
-  }
-
-  try {
-    const imageData =
-      typeof item.NewsIcon === 'string'
-        ? JSON.parse(item.NewsIcon)
-        : item.NewsIcon;
-
-    // SharePoint stores the real location of the image here
-    if (imageData?.serverRelativeUrl) {
-      const serverUrl =
-        imageData.serverUrl ||
-        new URL(this.context.pageContext.web.absoluteUrl).origin;
-
-      return `${serverUrl}${imageData.serverRelativeUrl}`;
-    }
-
-    return '';
-
-  } catch (error) {
-    console.error('Error parsing NewsIcon:', error);
-    return '';
-  }
-}
 
 
   /*
@@ -3270,7 +3242,7 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
   private async _renderOffersAsync(apiUrl: string): Promise<void> {
 
     try{
-      let imageUrl='';
+      const imageUrl=`${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/announcement-3.png`;
     const data: IOffer[] =
       await this._getOffersData(apiUrl);
  
@@ -3284,19 +3256,6 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
    }
  
       data.forEach((item) => {
- 
-             const imageData =
-      typeof item.OfferImage === 'string'
-        ? JSON.parse(item.OfferImage)
-        : item.OfferImage;
-
-    // SharePoint stores the real location of the image here
-    if (imageData?.serverRelativeUrl) {
-      const serverUrl =
-        imageData.serverUrl ||
-        new URL(this.context.pageContext.web.absoluteUrl).origin;
-        imageUrl=`${serverUrl}${imageData.serverRelativeUrl}`
-        }
  
  
         /*
