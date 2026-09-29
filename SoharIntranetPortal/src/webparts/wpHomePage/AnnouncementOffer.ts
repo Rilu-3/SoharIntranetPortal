@@ -54,7 +54,7 @@ export default class AnnouncementOffer {
                   </div>
                   <div class="flex-grow-1">
                     <p class="announcement-title mb-1">__KEY__ANNOUNCEMENTOFFER__TITLE__</p>
-                    <p class="announcement-desc">__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__</p>
+                    <p class="announcement-desc line-clamp-2">__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__</p>
                   </div>
                   <span class="announcement-date">__KEY__ANNOUNCEMENTOFFER__DATE__</span>
                 </div>`;

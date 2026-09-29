@@ -14,7 +14,7 @@ export default class NewsCentre {
         </div>
         <div class="flex-grow-1">
           <p class="news-title">__KEY_DATA_TITLE__</p>
-          <p class="news-desc">__KEY_DATA_DESCRIPTION__</p>
+          <p class="news-desc line-clamp-2">__KEY_DATA_DESCRIPTION__</p>
           <p class="news-meta mt-1"><span class="tag">__KEY_DATA_CATEGORY__</span> &nbsp;•&nbsp; __KEY_DATA_DATE__</p>
         </div>
       </div>
