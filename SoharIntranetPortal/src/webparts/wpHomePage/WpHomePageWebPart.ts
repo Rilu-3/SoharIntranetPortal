@@ -3714,45 +3714,46 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
   // Get Quick Link Image URL
   // =========================================================
 
-  private getQuickLinkImageUrl(
-    context: WebPartContext,
-    item: IQuickLinksList
-  ): string {
+private getQuickLinkImageUrl(
 
-    if (!item.Icon) {
+  item: IQuickLinksList
 
-      return '';
+): string {
+ 
+  if (!item.Icon) {
 
-    }
-
-
-    try {
-
-      const imgData =
-        JSON.parse(
-          item.Icon
-        );
-
-
-      return (
-        `${context.pageContext.web.absoluteUrl}` +
-        `/Lists/Quick_Links/Attachments/` +
-        `${item.Id}/` +
-        `${imgData.fileName}`
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Error parsing Quick Link Icon:',
-        error
-      );
-
-      return '';
-
-    }
+    return '';
 
   }
+ 
+  try {
+ 
+    const imgData =
+
+      typeof item.Icon === 'string'
+
+        ? JSON.parse(item.Icon)
+
+        : item.Icon;
+ 
+    return imgData.serverRelativeUrl || '';
+ 
+  } catch (error) {
+ 
+    console.error(
+
+      'Error parsing Quick Link Icon:',
+
+      error
+
+    );
+ 
+    return '';
+ 
+  }
+ 
+}
+ 
 
 
   // =========================================================
@@ -3796,11 +3797,8 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
     activeItems.forEach(
       (item) => {
 
-        const imageUrl =
-          this.getQuickLinkImageUrl(
-            context,
-            item
-          );
+       const imageUrl =
+  this.getQuickLinkImageUrl(item);
 
 
         const isFavourite =
