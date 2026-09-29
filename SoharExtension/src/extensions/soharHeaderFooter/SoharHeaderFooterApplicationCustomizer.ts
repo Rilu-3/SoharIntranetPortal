@@ -52,108 +52,17 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 
     // this._loadJS();
-
+     await this.loadBootstrap();
     await this._renderHeader();
 
     await this._renderFooter();
 
     return Promise.resolve();
+    
+    
   }
 
-  // ============================================================
-  // CSS
-  // ============================================================
-  // private _loadCSS(): void {
 
-  //   const baseUrl: string =
-  //     this.context.pageContext.web.absoluteUrl;
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/home.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
-  //   );
-  // }
-
-
-  // ============================================================
-  // JavaScript
-  // ============================================================
-
-  // private _loadJS(): void {
-
-  //   const baseUrl: string =
-  //     this.context.pageContext.web.absoluteUrl;
-
-  //   // jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  //   );
-
-  //   // jQuery UI - depends on jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  //   );
-
-  //   // Bootstrap - depends on jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  //   );
-
-  //   // jQuery Marquee - depends on jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
-  //   );
-
-  //   // Swiper
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  //   );
-
-  //   // Common project JS
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/common.js`
-  //   );
-
-  //   // Home page JS
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/home.js`
-  //   );
-  // }
   private _loadHome(): void {
     const baseUrl: string =
       this.context.pageContext.web.absoluteUrl;
@@ -167,8 +76,31 @@ export default class SoharHeaderFooterApplicationCustomizer
         )
       );
   }
+private async loadBootstrap(): Promise<void> {
+ 
+  const baseUrl = this.context.pageContext.web.absoluteUrl;
+  const win: any = window;
+ 
+  const bootstrap = await SPComponentLoader.loadScript<any>(
+    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  );
+ 
+  if (bootstrap?.Modal) {
+    win.bootstrap = bootstrap;
+ 
+    const original = bootstrap.Modal.getOrCreateInstance;
+ 
+    if (typeof original === 'function') {
+      bootstrap.Modal.getOrCreateInstance = function (
+        element: Element,
+        config?: any
+      ) {
+        return original.call(bootstrap.Modal, element, config);
+      };
+    }
+  }
 
-
+}
   private _loadCSS(): void {
     const baseUrl: string =
       this.context.pageContext.web.absoluteUrl;
@@ -228,6 +160,7 @@ export default class SoharHeaderFooterApplicationCustomizer
       )
       .then(() => this._loadHome());
   }
+
 
 
   // ============================================================
