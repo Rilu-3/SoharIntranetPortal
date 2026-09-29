@@ -2492,6 +2492,7 @@ private newsCentreFormatDate(
     // MY EVENTS CALENDAR
     $('#events-calendar-my').datepicker({
       dateFormat: 'dd M yy',
+      
 
       beforeShowDay:
         (date: Date): [
@@ -2576,6 +2577,11 @@ private newsCentreFormatDate(
             );
         }
     });
+    $('#events-calendar-my')
+  .find('.ui-datepicker-current-day')
+  .removeClass('ui-datepicker-current-day')
+  .find('.ui-state-active')
+  .removeClass('ui-state-active');
 
     // ORGANIZATIONAL EVENTS CALENDAR
     $('#events-calendar-org').datepicker({
@@ -2664,7 +2670,11 @@ private newsCentreFormatDate(
             );
         }
     });
-  }
+$('#events-calendar-org')
+  .find('.ui-datepicker-current-day')
+  .removeClass('ui-datepicker-current-day')
+  .find('.ui-state-active')
+  .removeClass('ui-state-active');  }
 
    private parseCalendarDate(
     dateText: string
@@ -2837,13 +2847,8 @@ private newsCentreFormatDate(
         }
 
 
-        const fileName =
-          imageData.fileName || '';
-
-
-        const imageUrl =
-          `${this.context.pageContext.web.absoluteUrl}/Lists/Banner/Attachments/${item.Id}/${fileName}`;
-
+       const imageUrl =
+  imageData.serverRelativeUrl || '';
 
         const singleElementHtml =
           BannerTemplate.singleElementHtml
@@ -3006,14 +3011,8 @@ private newsCentreFormatDate(
         }
 
 
-        const fileName =
-          imageData.fileName || '';
-
-
-        const imageUrl =
-          `${this.context.pageContext.web.absoluteUrl}/Lists/Media_Gallery/Attachments/${item.Id}/${fileName}`;
-
-
+const imageUrl =
+  imageData.serverRelativeUrl || '';
         console.log(
           'Gallery Image URL:',
           imageUrl
@@ -4655,61 +4654,23 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
   // =========================================================
   // Get Employee Photo URL
   // =========================================================
-
-  private getBirthdayImageUrl(
-    context: WebPartContext,
-    photo: any,
-    itemId: number
-  ): string {
-
-    if (!photo) {
-
-      return '';
-
-    }
-
-
-    try {
-
-      if (typeof photo === 'string') {
-
-        photo =
-          JSON.parse(
-            photo
-          );
-
-      }
-
-
-      if (!photo.fileName) {
-
-        return '';
-
-      }
-
-
-      return (
-        context.pageContext.web.absoluteUrl +
-        '/Lists/Birthday/Attachments/' +
-        itemId +
-        '/' +
-        encodeURIComponent(
-          photo.fileName
-        )
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Error parsing employee photo:',
-        error
-      );
-
-      return '';
-
-    }
-
+private getBirthdayImageUrl(photo: any): string {
+  if (!photo) {
+    return '';
   }
+ 
+  try {
+    if (typeof photo === 'string') {
+      photo = JSON.parse(photo);
+    }
+ 
+    return photo.serverRelativeUrl || '';
+ 
+  } catch (error) {
+    console.error('Error parsing employee photo:', error);
+    return '';
+  }
+}
 
 
   // =========================================================
@@ -4876,12 +4837,9 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
             .toString();
 
 
-        const imageUrl =
-          this.getBirthdayImageUrl(
-            this.context,
-            item.EmployeePhoto,
-            item.Id
-          );
+     const imageUrl = this.getBirthdayImageUrl(
+  item.EmployeePhoto
+);
 
 
         html +=
