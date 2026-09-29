@@ -396,45 +396,35 @@ private setupSocialMediaTutorialLinkObserver(): void {
   // Get Quick Link Image URL
   // =========================================================
 
-  private getQuickLinkImageUrl(
-    context: WebPartContext,
-    item: IQuickLinksList
-  ): string {
+ private getQuickLinkImageUrl(
+  item: IQuickLinksList
+): string {
 
-    if (!item.Icon) {
+  if (!item.Icon) {
+    return '';
+  }
 
-      return '';
+  try {
 
-    }
+    const imgData =
+      typeof item.Icon === 'string'
+        ? JSON.parse(item.Icon)
+        : item.Icon;
 
+    return imgData.serverRelativeUrl || '';
 
-    try {
+  } catch (error) {
 
-      const imgData =
-        JSON.parse(
-          item.Icon
-        );
+    console.error(
+      'Error parsing Quick Link Icon:',
+      error
+    );
 
-
-      return (
-        `${context.pageContext.web.absoluteUrl}` +
-        `/Lists/Quick_Links/Attachments/` +
-        `${item.Id}/` +
-        `${imgData.fileName}`
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Error parsing Quick Link Icon:',
-        error
-      );
-
-      return '';
-
-    }
+    return '';
 
   }
+
+}
 
 
   // =========================================================
@@ -479,10 +469,7 @@ private setupSocialMediaTutorialLinkObserver(): void {
       (item) => {
 
         const imageUrl =
-          this.getQuickLinkImageUrl(
-            context,
-            item
-          );
+          this.getQuickLinkImageUrl(item);
 
 
         const isFavourite =
@@ -1337,60 +1324,23 @@ private setupSocialMediaTutorialLinkObserver(): void {
   // Get Employee Photo URL
   // =========================================================
 
-  private getBirthdayImageUrl(
-    context: WebPartContext,
-    photo: any,
-    itemId: number
-  ): string {
-
-    if (!photo) {
-
-      return '';
-
-    }
-
-
-    try {
-
-      if (typeof photo === 'string') {
-
-        photo =
-          JSON.parse(
-            photo
-          );
-
-      }
-
-
-      if (!photo.fileName) {
-
-        return '';
-
-      }
-
-
-      return (
-        context.pageContext.web.absoluteUrl +
-        '/Lists/Birthday/Attachments/' +
-        itemId +
-        '/' +
-        encodeURIComponent(
-          photo.fileName
-        )
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Error parsing employee photo:',
-        error
-      );
-
-      return '';
-
-    }
-
+private getBirthdayImageUrl(photo: any): string {
+  if (!photo) {
+    return '';
   }
+
+  try {
+    if (typeof photo === 'string') {
+      photo = JSON.parse(photo);
+    }
+
+    return photo.serverRelativeUrl || '';
+
+  } catch (error) {
+    console.error('Error parsing employee photo:', error);
+    return '';
+  }
+}
 
 
   // =========================================================
@@ -1557,12 +1507,9 @@ private setupSocialMediaTutorialLinkObserver(): void {
             .toString();
 
 
-        const imageUrl =
-          this.getBirthdayImageUrl(
-            this.context,
-            item.EmployeePhoto,
-            item.Id
-          );
+        const imageUrl = this.getBirthdayImageUrl(
+          item.EmployeePhoto
+        );
 
 
         html +=
