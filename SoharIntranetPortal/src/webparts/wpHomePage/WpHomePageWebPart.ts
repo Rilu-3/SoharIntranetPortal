@@ -2846,9 +2846,11 @@ $('#events-calendar-org')
 
         }
 
-
-       const imageUrl =
-  imageData.serverRelativeUrl || '';
+const defaultImageUrl =
+  '/sites/DevPortal/SiteAssets/resources/images/bannerDefault/banner-1.png';
+ 
+const imageUrl =
+  imageData?.serverRelativeUrl || defaultImageUrl;
 
         const singleElementHtml =
           BannerTemplate.singleElementHtml
