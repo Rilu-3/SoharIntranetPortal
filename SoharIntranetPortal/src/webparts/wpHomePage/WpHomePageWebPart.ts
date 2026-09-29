@@ -551,10 +551,7 @@ private newsCentreSetupViewAll(
         data;
 
 
-      console.log(
-        'News items loaded:',
-        this.newsCentreItems
-      );
+    
 
 
       /*
@@ -1086,7 +1083,7 @@ private newsCentreSetupViewAll(
       const data =
         await response.json();
 
-        console.log("api data",data)
+      
 
 
       /*
@@ -2757,10 +2754,7 @@ $('#events-calendar-org')
           );
 
 
-      console.log(
-        'Banner Items:',
-        bannerItems
-      );
+   
 
 
       this._renderBanner(
@@ -2923,10 +2917,7 @@ const imageUrl =
           );
 
 
-      console.log(
-        'Media Gallery Items:',
-        galleryItems
-      );
+  
 
 
       this._renderMediaGallery(
@@ -2987,11 +2978,7 @@ const imageUrl =
 
 const imageUrl =
   imageData.serverRelativeUrl || '';
-
-        console.log(
-          'Gallery Image URL:',
-          imageUrl
-        );
+       
 
 
         const singleElementHtml =
@@ -3170,7 +3157,6 @@ const imageUrl =
     const data: IAnnouncement[] =
       await this._getAnnouncementsData(apiUrl);
  
-    console.log("Announcements data", data);
  
     let allElementsHtml: string = "";
  
@@ -3243,7 +3229,6 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
     const data: IOffer[] =
       await this._getOffersData(apiUrl);
  
-    console.log("Offers data", data);
  
     let allElementsHtml: string = "";
  
@@ -3330,7 +3315,6 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
     }
     catch (error) {
  
-      console.log("error occured", error);
  
       throw error;
     }
@@ -3377,7 +3361,6 @@ this.domElement.querySelector("#announcement-container")!.innerHTML =allElements
     }
     catch (error) {
  
-      console.log("error occured", error);
  
       throw error;
     }
