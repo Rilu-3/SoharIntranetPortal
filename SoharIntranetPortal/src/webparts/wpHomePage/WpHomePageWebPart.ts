@@ -984,6 +984,11 @@ export default class WpHomePageWebPart
             );
         }
     });
+    $('#events-calendar-my')
+  .find('.ui-datepicker-current-day')
+  .removeClass('ui-datepicker-current-day')
+  .find('.ui-state-active')
+  .removeClass('ui-state-active');
 
     // ORGANIZATIONAL EVENTS CALENDAR
     $('#events-calendar-org').datepicker({
@@ -1072,6 +1077,11 @@ export default class WpHomePageWebPart
             );
         }
     });
+    $('#events-calendar-org')
+  .find('.ui-datepicker-current-day')
+  .removeClass('ui-datepicker-current-day')
+  .find('.ui-state-active')
+  .removeClass('ui-state-active');
   }
 
   private parseCalendarDate(
