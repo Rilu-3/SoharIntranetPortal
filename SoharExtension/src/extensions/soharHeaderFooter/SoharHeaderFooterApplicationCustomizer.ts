@@ -6,7 +6,7 @@ import {
   BaseApplicationCustomizer,
   PlaceholderContent,
   PlaceholderName,
-  
+
 } from '@microsoft/sp-application-base';
 
 import {
@@ -43,15 +43,15 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   @override
   public async onInit(): Promise<void> {
+    this._loadCSS();
 
     Log.info(
       LOG_SOURCE,
       `Initialized ${strings.Title}`
     );
 
-    this._loadCSS();
 
-    this._loadJS();
+    // this._loadJS();
 
     await this._renderHeader();
 
@@ -59,142 +59,213 @@ export default class SoharHeaderFooterApplicationCustomizer
 
     return Promise.resolve();
   }
+
   // ============================================================
   // CSS
   // ============================================================
-  private _loadCSS(): void {
+  // private _loadCSS(): void {
 
-    const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-    );
+  //   const baseUrl: string =
+  //     this.context.pageContext.web.absoluteUrl;
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/custom.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/font-size.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/home.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/home.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-    );
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
+  //   );
 
 
-    SPComponentLoader.loadCss(
-      `${baseUrl}/SiteAssets/resources/css/variable.css`
-    );
-  }
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
+  //   );
+
+
+  //   SPComponentLoader.loadCss(
+  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
+  //   );
+  // }
 
 
   // ============================================================
   // JavaScript
   // ============================================================
 
-private _loadJS(): void {
+  // private _loadJS(): void {
 
-  const baseUrl: string =
-    this.context.pageContext.web.absoluteUrl;
+  //   const baseUrl: string =
+  //     this.context.pageContext.web.absoluteUrl;
 
-  // jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  );
+  //   // jQuery
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+  //   );
 
-  // jQuery UI - depends on jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  );
+  //   // jQuery UI - depends on jQuery
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+  //   );
 
-  // Bootstrap - depends on jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  );
+  //   // Bootstrap - depends on jQuery
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  //   );
 
-  // jQuery Marquee - depends on jQuery
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
-  );
+  //   // jQuery Marquee - depends on jQuery
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
+  //   );
 
-  // Swiper
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  );
+  //   // Swiper
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+  //   );
 
-  // Common project JS
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/common.js`
-  );
+  //   // Common project JS
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/common.js`
+  //   );
 
-  // Home page JS
-  SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/home.js`
-  );
-}
+  //   // Home page JS
+  //   SPComponentLoader.loadScript(
+  //     `${baseUrl}/SiteAssets/resources/js/home.js`
+  //   );
+  // }
 
-// ============================================================
-// USER DESIGNATION FROM MICROSOFT ENTRA ID
-// ============================================================
 
-private async _getUserDesignation(): Promise<string> {
+  private _loadHome(): void {
+    const baseUrl: string =
+      this.context.pageContext.web.absoluteUrl;
 
-  try {
-
-    const client: MSGraphClientV3 =
-      await this.context.msGraphClientFactory.getClient('3');
-
-    const user =
-      await client
-        .api('/me')
-        .select('jobTitle')
-        .get();
-
-    console.log(
-      'Microsoft Entra user designation:',
-      user.jobTitle
-    );
-
-    return user.jobTitle || '';
-
-  } catch (error) {
-
-    console.error(
-      'Microsoft Entra designation loading error:',
-      error
-    );
-
-    Log.error(
-      LOG_SOURCE,
-      error instanceof Error
-        ? error
-        : new Error(String(error))
-    );
-
-    return '';
+    SPComponentLoader.loadScript(
+      `${baseUrl}/SiteAssets/resources/js/common.js`
+    )
+      .then(() =>
+        SPComponentLoader.loadScript(
+          `${baseUrl}/SiteAssets/resources/js/home.js`
+        )
+      );
   }
-}
+
+
+  private _loadCSS(): void {
+    const baseUrl: string =
+      this.context.pageContext.web.absoluteUrl;
+
+    // Load all CSS files in parallel
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/variable.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/font-size.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/custom.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
+    );
+
+    SPComponentLoader.loadCss(
+      `${baseUrl}/SiteAssets/resources/css/home.css`
+    );
+
+    // Load scripts sequentially with proper dependency handling
+    SPComponentLoader.loadScript(
+      `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
+    )
+      .then(() =>
+        SPComponentLoader.loadScript(
+          `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
+        )
+      )
+      .then(() =>
+        SPComponentLoader.loadScript(
+          `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+        )
+      )
+      //.then(() => SPComponentLoader.loadScript(`${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`))
+      .then(() =>
+        SPComponentLoader.loadScript(
+          `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
+        )
+      )
+      .then(() => this._loadHome());
+  }
+
+
+  // ============================================================
+  // USER DESIGNATION FROM MICROSOFT ENTRA ID
+  // ============================================================
+
+  private async _getUserDesignation(): Promise<string> {
+
+    try {
+
+      const client: MSGraphClientV3 =
+        await this.context.msGraphClientFactory.getClient('3');
+
+      const user =
+        await client
+          .api('/me')
+          .select('jobTitle')
+          .get();
+
+
+      return user.jobTitle || '';
+
+    } catch (error) {
+
+      Log.error(
+        LOG_SOURCE,
+        error instanceof Error
+          ? error
+          : new Error(String(error))
+      );
+
+      return '';
+    }
+  }
+
+
   // ============================================================
   // DEPARTMENTS
   // ============================================================
@@ -235,12 +306,6 @@ private async _getUserDesignation(): Promise<string> {
         await response.json();
 
 
-      console.log(
-        'Departments data:',
-        data.value
-      );
-
-
       const departmentItems =
         data.value.map(
           (department: any) => {
@@ -266,19 +331,12 @@ private async _getUserDesignation(): Promise<string> {
 
     } catch (error) {
 
-      console.error(
-        'Department list error:',
-        error
-      );
-
-
       Log.error(
         LOG_SOURCE,
         error instanceof Error
           ? error
           : new Error(String(error))
       );
-
 
       return '';
     }
@@ -337,8 +395,9 @@ private async _getUserDesignation(): Promise<string> {
       `${siteUrl}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
 
-const designation: string =
-  await this._getUserDesignation();
+    const designation: string =
+      await this._getUserDesignation();
+
 
     const departmentItems: string =
       await this._getDepartments();
@@ -356,300 +415,296 @@ const designation: string =
 
     this._topPlaceholder.domElement.innerHTML =
       header.render();
-      this._setupSearchFunctionality();
+
+    this._setupSearchFunctionality();
 
   }
+
 
   private _setupSearchFunctionality(): void {
 
-  if (!this._topPlaceholder || !this._topPlaceholder.domElement) {
-    return;
-  }
+    if (
+      !this._topPlaceholder ||
+      !this._topPlaceholder.domElement
+    ) {
+      return;
+    }
 
-  const inputMainSearchBox =
-    this._topPlaceholder.domElement.querySelector(
-      '#inputGlobalSearchBox'
-    ) as HTMLInputElement;
 
-  if (inputMainSearchBox) {
+    const inputMainSearchBox =
+      this._topPlaceholder.domElement.querySelector(
+        '#inputGlobalSearchBox'
+      ) as HTMLInputElement;
 
-    inputMainSearchBox.addEventListener(
-      'keydown',
-      (event: KeyboardEvent) => {
 
-        if (event.key === 'Enter') {
+    if (inputMainSearchBox) {
 
-          const searchKey =
-            inputMainSearchBox.value;
+      inputMainSearchBox.addEventListener(
+        'keydown',
+        (event: KeyboardEvent) => {
 
-          if (searchKey) {
+          if (event.key === 'Enter') {
 
-            window.open(
-              `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-              '_blank'
-            );
+            const searchKey =
+              inputMainSearchBox.value;
+
+
+            if (searchKey) {
+
+              window.open(
+                `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+                '_blank'
+              );
+            }
+
+
+            event.preventDefault();
           }
-
-          event.preventDefault();
         }
-      }
-    );
+      );
+    }
   }
-}
+
+
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================
 
-private async _getFooterItems(): Promise<any[]> {
+  private async _getFooterItems(): Promise<any[]> {
 
-  const siteUrl =
-    this.context.pageContext.web.absoluteUrl;
+    const siteUrl =
+      this.context.pageContext.web.absoluteUrl;
 
-  const url =
-    `${siteUrl}/_api/web/lists/getbytitle('Footer')/items` +
-    `?$select=Id,ContactDetails,Category,Status,Icon` +
-    `&$orderby=Id asc`;
 
-  console.log(
-    'Footer API URL:',
-    url
-  );
+    const url =
+      `${siteUrl}/_api/web/lists/getbytitle('Footer')/items` +
+      `?$select=Id,ContactDetails,Category,Status,Icon` +
+      `&$orderby=Id asc`;
 
-  try {
 
-    const response =
-      await this.context.spHttpClient.get(
-        url,
-        SPHttpClient.configurations.v1,
-        {
-          headers: {
-            'Accept':
-              'application/json;odata=nometadata'
+    try {
+
+      const response =
+        await this.context.spHttpClient.get(
+          url,
+          SPHttpClient.configurations.v1,
+          {
+            headers: {
+              'Accept':
+                'application/json;odata=nometadata'
+            }
           }
-        }
-      );
+        );
 
-    if (!response.ok) {
 
-      const errorText =
-        await response.text();
+      if (!response.ok) {
 
-      console.error(
-        'Footer API Error:',
-        errorText
-      );
+        throw new Error(
+          `Failed to load Footer: ${response.status}`
+        );
+      }
 
-      throw new Error(
-        `Failed to load Footer: ${response.status}`
-      );
+
+      const data =
+        await response.json();
+
+
+      return data.value || [];
+
+
+    } catch (error) {
+
+      return [];
     }
-
-    const data =
-      await response.json();
-
-    console.log(
-      'COMPLETE FOOTER DATA:',
-      JSON.stringify(
-        data.value,
-        null,
-        2
-      )
-    );
-
-    return data.value || [];
-
-  } catch (error) {
-
-    console.error(
-      'Footer loading error:',
-      error
-    );
-
-    return [];
   }
-}
+
 
   // ============================================================
   // RENDER FOOTER ITEMS
   // ============================================================
 
-private _renderFooterItems(items: any[]): string {
+  private _renderFooterItems(items: any[]): string {
 
-  return items.map((item: any) => {
+    return items.map((item: any) => {
 
-    const contactDetails =
-      item.ContactDetails || '';
+      const contactDetails =
+        item.ContactDetails || '';
 
-    let imageUrl = '';
 
-    if (item.Icon) {
+      let imageUrl = '';
 
-      const imgData = JSON.parse(item.Icon);
 
-      imageUrl =
-        `${this.context.pageContext.web.absoluteUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
+      if (item.Icon) {
 
-    }
+        const imgData =
+          JSON.parse(item.Icon);
 
-    return Footer.itemTemplate
-      .replace(
-        '__ICON_URL__',
-        imageUrl
-      )
-      .replace(
-        '__CONTACT_DETAILS__',
-        contactDetails
-      );
 
-  }).join('');
-}
+        imageUrl =
+          `${this.context.pageContext.web.absoluteUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
+
+      }
+
+
+      return Footer.itemTemplate
+        .replace(
+          '__ICON_URL__',
+          imageUrl
+        )
+        .replace(
+          '__CONTACT_DETAILS__',
+          contactDetails
+        );
+
+    }).join('');
+  }
+
+
   // ============================================================
   // RENDER FOOTER
   // ============================================================
 
-private async _renderFooter(): Promise<void> {
+  private async _renderFooter(): Promise<void> {
 
-  // Create Bottom Placeholder
-  if (!this._bottomPlaceholder) {
+    // Create Bottom Placeholder
+    if (!this._bottomPlaceholder) {
 
-    this._bottomPlaceholder =
-      this.context.placeholderProvider.tryCreateContent(
-        PlaceholderName.Bottom,
-        {
-          onDispose: () => {
-            Log.info(
-              LOG_SOURCE,
-              'Bottom placeholder disposed'
-            );
+      this._bottomPlaceholder =
+        this.context.placeholderProvider.tryCreateContent(
+          PlaceholderName.Bottom,
+          {
+            onDispose: () => {
+
+              Log.info(
+                LOG_SOURCE,
+                'Bottom placeholder disposed'
+              );
+
+            }
           }
+        );
+    }
+
+
+    // Check Bottom Placeholder
+    if (!this._bottomPlaceholder) {
+
+      Log.error(
+        LOG_SOURCE,
+        new Error('Bottom placeholder was not created')
+      );
+
+      return;
+    }
+
+
+    // Get Footer Items from SharePoint
+    const footerItems =
+      await this._getFooterItems();
+
+
+    // Get only Active items
+    const activeItems =
+      footerItems.filter(
+        (item: any) =>
+          String(item.Status || '')
+            .trim()
+            .toLowerCase() === 'active'
+      );
+
+
+    // Important Contacts
+    const importantContacts =
+      activeItems.filter(
+        (item: any) =>
+          String(item.Category || '')
+            .trim()
+            .toLowerCase() ===
+          'important contacts'
+      );
+
+
+    // Medical Services
+    const medicalServices =
+      activeItems.filter(
+        (item: any) =>
+          String(item.Category || '')
+            .trim()
+            .toLowerCase() ===
+          'medical services'
+      );
+
+
+    // Render Important Contacts Items
+    const importantContactsHtml =
+      this._renderFooterItems(
+        importantContacts
+      );
+
+
+    // Render Medical Services Items
+    const medicalServicesHtml =
+      this._renderFooterItems(
+        medicalServices
+      );
+
+
+    // Render Footer Template
+    this._bottomPlaceholder.domElement.innerHTML =
+      Footer.html
+        .replace(
+          '__IMPORTANT_CONTACTS__',
+          importantContactsHtml
+        )
+        .replace(
+          '__MEDICAL_SERVICES__',
+          medicalServicesHtml
+        )
+        .replace(
+          '__CURRENT_YEAR__',
+          new Date().getFullYear().toString()
+        );
+
+
+    // Move the existing footer placeholder into SharePoint Canvas
+    const spCanvasElement =
+      document.querySelector('.SPCanvas div');
+
+
+    if (spCanvasElement) {
+
+      // Remove duplicate footer placeholders already inside Canvas
+      const existingFooters =
+        spCanvasElement.querySelectorAll(
+          '#bottomPlaceholder'
+        );
+
+
+      existingFooters.forEach(
+        (footer: Element) => {
+
+          if (
+            footer !==
+            this._bottomPlaceholder!.domElement
+          ) {
+            footer.remove();
+          }
+
         }
       );
-  }
 
-  // Check Bottom Placeholder
-  if (!this._bottomPlaceholder) {
 
-    Log.error(
-      LOG_SOURCE,
-      new Error('Bottom placeholder was not created')
-    );
+      // Move the actual Bottom Placeholder
+      if (
+        this._bottomPlaceholder.domElement.parentElement !==
+        spCanvasElement
+      ) {
 
-    return;
-  }
+        spCanvasElement.appendChild(
+          this._bottomPlaceholder.domElement
+        );
 
-  // Get Footer Items from SharePoint
-  const footerItems =
-    await this._getFooterItems();
-
-  console.log(
-    'Footer Items:',
-    footerItems
-  );
-
-  // Get only Active items
-  const activeItems =
-    footerItems.filter(
-      (item: any) =>
-        String(item.Status || '')
-          .trim()
-          .toLowerCase() === 'active'
-    );
-
-  console.log(
-    'Active Footer Items:',
-    activeItems
-  );
-
-  // Important Contacts
-  const importantContacts =
-    activeItems.filter(
-      (item: any) =>
-        String(item.Category || '')
-          .trim()
-          .toLowerCase() ===
-        'important contacts'
-    );
-
-  // Medical Services
-  const medicalServices =
-    activeItems.filter(
-      (item: any) =>
-        String(item.Category || '')
-          .trim()
-          .toLowerCase() ===
-        'medical services'
-    );
-
-  console.log(
-    'Important Contacts:',
-    importantContacts
-  );
-
-  console.log(
-    'Medical Services:',
-    medicalServices
-  );
-
-  // Render Important Contacts Items
-  const importantContactsHtml =
-    this._renderFooterItems(
-      importantContacts
-    );
-
-  // Render Medical Services Items
-  const medicalServicesHtml =
-    this._renderFooterItems(
-      medicalServices
-    );
-
-  // Render Footer Template
-  this._bottomPlaceholder.domElement.innerHTML =
-    Footer.html
-      .replace(
-        '__IMPORTANT_CONTACTS__',
-        importantContactsHtml
-      )
-      .replace(
-        '__MEDICAL_SERVICES__',
-        medicalServicesHtml
-      )
-      .replace(
-        '__CURRENT_YEAR__',
-        new Date().getFullYear().toString()
-      );
-
-  // Move the existing footer placeholder into SharePoint Canvas
-  const spCanvasElement =
-    document.querySelector('.SPCanvas div');
-
-  if (spCanvasElement) {
-
-    // Remove duplicate footer placeholders already inside Canvas
-    const existingFooters =
-      spCanvasElement.querySelectorAll(
-        '#bottomPlaceholder'
-      );
-
-    existingFooters.forEach(
-      (footer: Element) => {
-        if (
-          footer !==
-          this._bottomPlaceholder!.domElement
-        ) {
-          footer.remove();
-        }
       }
-    );
-
-    // Move the actual Bottom Placeholder
-    if (
-      this._bottomPlaceholder.domElement.parentElement !==
-      spCanvasElement
-    ) {
-      spCanvasElement.appendChild(
-        this._bottomPlaceholder.domElement
-      );
     }
   }
-}
 }

@@ -2987,6 +2987,7 @@ const imageUrl =
 
 const imageUrl =
   imageData.serverRelativeUrl || '';
+
         console.log(
           'Gallery Image URL:',
           imageUrl
@@ -3062,14 +3063,9 @@ const imageUrl =
             }
 
 
-            const fileName =
-              imageData.fileName || '';
-
-
             const imageUrl =
-              `${this.context.pageContext.web.absoluteUrl}/Lists/Media_Gallery/Attachments/${item.Id}/${fileName}`;
-
-
+  imageData.serverRelativeUrl || '';
+  
             modalElementsHtml += `
               <div class="swiper-slide gallery-swiper-slide">
                 <img
