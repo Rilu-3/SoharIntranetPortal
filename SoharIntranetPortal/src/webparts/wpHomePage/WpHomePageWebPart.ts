@@ -21,6 +21,10 @@ import {
 // import {
 //   SPComponentLoader
 // } from '@microsoft/sp-loader';
+import Swiper from 'swiper';
+import { Navigation, Pagination, FreeMode, Mousewheel } from 'swiper/modules';
+
+
 
 import { escape } from '@microsoft/sp-lodash-subset';
 
@@ -47,8 +51,7 @@ interface IBannerItem {
   Description: string;
   Status: string;
   SortOrder: number;
-  Image: any;
-}
+Image: string | ISharePointImage | undefined;}
 
 
 interface IMediaGalleryItem {
@@ -57,8 +60,7 @@ interface IMediaGalleryItem {
   Caption: string;
   Status: string;
   SortOrder: number;
-  Image: any;
-}
+Image: string | ISharePointImage | undefined;}
 
 
 // Interface used for both Outlook My Events
@@ -92,6 +94,13 @@ interface IOutlookEvent {
   };
 }
 
+interface ISharePointImage {
+  serverRelativeUrl?: string;
+  serverUrl?: string;
+  fileName?: string;
+  [key: string]: unknown;
+
+}
 
 interface IAnnouncement {
   Id: number;
@@ -124,7 +133,7 @@ export interface IQuickLinksList {
 export interface IBirthdayList {
   Id: number;
   Title: string;
-  EmployeePhoto?: any;
+  EmployeePhoto?: string | ISharePointImage | undefined;
   BirthDate: string;
   Status: string;
 }
@@ -157,6 +166,128 @@ export default class WpHomePageWebPart
   private organizationalEventDates: string[] = [];
   private myEventDates: string[] = [];
 
+private _initializeSwipers(): void {
+ 
+  // 1. ANNOUNCEMENT
+  this.domElement.querySelectorAll<HTMLElement>('.announcement-swiper')
+    .forEach((element) => {
+ 
+      if ((element as any).swiper) {
+        (element as any).swiper.destroy(true, true);
+      }
+ 
+      new Swiper(element, {
+        modules: [Navigation],
+        slidesPerView: 1,
+        spaceBetween: 10,
+        breakpoints: {
+          768: {
+            slidesPerView: 2,
+            spaceBetween: 16
+          },
+          1200: {
+            slidesPerView: 2,
+            spaceBetween: 32
+          }
+        },
+        navigation: {
+          nextEl: this.domElement.querySelector('.announcement-button-next') as HTMLElement,
+          prevEl: this.domElement.querySelector('.announcement-button-prev') as HTMLElement
+        }
+      });
+    });
+ 
+  // 2. BANNER
+  this.domElement.querySelectorAll<HTMLElement>('.banner-swiper')
+    .forEach((element) => {
+ 
+      if ((element as any).swiper) {
+        (element as any).swiper.destroy(true, true);
+      }
+ 
+      new Swiper(element, {
+        modules: [Navigation, Pagination],
+      pagination: {
+  el: (
+    element.querySelector('.swiper-pagination') ||
+    this.domElement.querySelector('.swiper-pagination')
+  ) as HTMLElement,
+  clickable: true
+},
+        navigation: {
+          nextEl: this.domElement.querySelector('.banner-slide-next') as HTMLElement,
+          prevEl: this.domElement.querySelector('.banner-slide-prev') as HTMLElement
+        }
+      });
+    });
+ 
+  // 3. SOCIAL MEDIA
+document.querySelectorAll<HTMLElement>('.social-swiper').forEach((element) => {
+  const panel = element.closest<HTMLElement>('[id^="social-panel-"]');
+
+  new Swiper(element, {
+    modules: [Navigation, FreeMode, Mousewheel],
+
+    slidesPerView: 'auto',
+    spaceBetween: 12,
+
+    freeMode: {
+      enabled: true,
+      momentum: true
+    },
+
+    grabCursor: true,
+
+    mousewheel: {
+      forceToAxis: true
+    },
+
+    navigation: {
+      prevEl: panel
+        ? panel.querySelector<HTMLElement>('.social-swiper-prev')
+        : undefined,
+
+      nextEl: panel
+        ? panel.querySelector<HTMLElement>('.social-swiper-next')
+        : undefined
+    }
+  });
+});
+ 
+  // 4. MEDIA GALLERY
+  this.domElement.querySelectorAll<HTMLElement>('.gallery-swiper')
+    .forEach((element) => {
+ 
+      if ((element as any).swiper) {
+        (element as any).swiper.destroy(true, true);
+      }
+ 
+      new Swiper(element, {
+        modules: [Navigation, Pagination],
+        slidesPerView: 1,
+        spaceBetween: 12,
+        loop: false,
+        speed: 500,
+        pagination: {
+          el: element.querySelector('.gallery-swiper-pagination') as HTMLElement,
+          clickable: true
+        },
+        navigation: {
+          nextEl: this.domElement.querySelector('.gallery-slide-next') as HTMLElement,
+          prevEl: this.domElement.querySelector('.gallery-slide-prev') as HTMLElement
+        },
+        breakpoints: {
+          400: { slidesPerView: 2, spaceBetween: 12 },
+          576: { slidesPerView: 2, spaceBetween: 14 },
+          768: { slidesPerView: 3, spaceBetween: 16 },
+          992: { slidesPerView: 4, spaceBetween: 16 }
+        }
+      });
+    });
+ 
+}
+
+
     private organizationalEventTitles: {
     [key: string]: string
   } = {};
@@ -164,11 +295,6 @@ export default class WpHomePageWebPart
   private myEventTitles: {
     [key: string]: string
   } = {};
-
-
-
-
-
   private socialMediaObserver: MutationObserver | null = null;
  
 private hideSocialMediaTutorialLinks(
@@ -204,9 +330,6 @@ private setupSocialMediaTutorialLinkObserver(): void {
   // ==================== RENDER ====================
 
   public async render(): Promise<void> {
-
-    
-
     const workbenchContent =
       document.getElementById('workbenchPageContent');
 
@@ -312,16 +435,10 @@ private setupSocialMediaTutorialLinkObserver(): void {
     this.domElement.querySelector('#social-media-container')!.innerHTML = SocialMedia.allElementsHtml;
     this.domElement.querySelector('#birthday-container')!.innerHTML = Birthday.allElementsHtml;
     this.domElement.querySelector('#media-gallery-container')!.innerHTML = MediaGalleryTemplate.allElementsHtml;
-    
-      // BannerTemplate.bannerHtml +
-      // UpcomingEventsTemplate.allElementsHtml +
-      // NewsCentre.allElementsHtml+
-      // MediaGalleryTemplate.allElementsHtml +
-      // MediaGalleryTemplate.galleryModalHtml +   
-      // AnnouncementOffer.allElementsHtml +
-      // QuickLinks.allElementsHtml +
-      // Birthday.allElementsHtml+
-      // SocialMedia.allElementsHtml;
+    requestAnimationFrame(() => {
+  this._initializeSwipers();
+});
+
 
       const birthdayViewAll =
       this.domElement.querySelector(
