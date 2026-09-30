@@ -52,113 +52,20 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 
     // this._loadJS();
-
+     await this.loadBootstrap();
     await this._renderHeader();
 
     await this._renderFooter();
 
     return Promise.resolve();
+    
+    
   }
-
-  // ============================================================
-  // CSS
-  // ============================================================
-  // private _loadCSS(): void {
-
-  //   const baseUrl: string =
-  //     this.context.pageContext.web.absoluteUrl;
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/home.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
-  //   );
-  // }
-
-
-  // ============================================================
-  // JavaScript
-  // ============================================================
-
-  // private _loadJS(): void {
-
-  //   const baseUrl: string =
-  //     this.context.pageContext.web.absoluteUrl;
-
-  //   // jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  //   );
-
-  //   // jQuery UI - depends on jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  //   );
-
-  //   // Bootstrap - depends on jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  //   );
-
-  //   // jQuery Marquee - depends on jQuery
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
-  //   );
-
-  //   // Swiper
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  //   );
-
-  //   // Common project JS
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/common.js`
-  //   );
-
-  //   // Home page JS
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/home.js`
-  //   );
-  // }
 
 
   private _loadHome(): void {
     const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
     SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/common.js`
@@ -169,11 +76,35 @@ export default class SoharHeaderFooterApplicationCustomizer
         )
       );
   }
+private async loadBootstrap(): Promise<void> {
+ 
+   const baseUrl: string =
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
+  const win: any = window;
+ 
+  const bootstrap = await SPComponentLoader.loadScript<any>(
+    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+  );
+ 
+  if (bootstrap?.Modal) {
+    win.bootstrap = bootstrap;
+ 
+    const original = bootstrap.Modal.getOrCreateInstance;
+ 
+    if (typeof original === 'function') {
+      bootstrap.Modal.getOrCreateInstance = function (
+        element: Element,
+        config?: any
+      ) {
+        return original.call(bootstrap.Modal, element, config);
+      };
+    }
+  }
 
-
+}
   private _loadCSS(): void {
     const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
     // Load all CSS files in parallel
     SPComponentLoader.loadCss(
@@ -217,11 +148,11 @@ export default class SoharHeaderFooterApplicationCustomizer
           `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
         )
       )
-      .then(() =>
-        SPComponentLoader.loadScript(
-          `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-        )
-      )
+      // .then(() =>
+      //   SPComponentLoader.loadScript(
+      //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+      //   )
+      // )
       //.then(() => SPComponentLoader.loadScript(`${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`))
       .then(() =>
         SPComponentLoader.loadScript(
@@ -230,6 +161,7 @@ export default class SoharHeaderFooterApplicationCustomizer
       )
       .then(() => this._loadHome());
   }
+
 
 
   // ============================================================
@@ -272,12 +204,12 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   private async _getDepartments(): Promise<string> {
 
-    const siteUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+    const siteUrl:  string =
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
 
     const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link`;
+      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder`;
 
 
     try {
@@ -306,26 +238,36 @@ export default class SoharHeaderFooterApplicationCustomizer
         await response.json();
 
 
-      const departmentItems =
-        data.value.map(
-          (department: any) => {
+  const departmentItems =
+  data.value
+    .filter(
+      (department: any) =>
+        department.Status === 'Active'
+    )
+    .sort(
+      (a: any, b: any) =>
+        Number(a.SortOrder) - Number(b.SortOrder)
+    )
+    .map(
+      (department: any) => {
 
-            const link =
-              department.Link?.Url || '#';
+        const link =
+          department.Link?.Url || '#';
 
-
-            return `
-              <li>
-                <a
-                  class="dropdown-item text-sm"
-                  href="${link}">
-                  ${department.Title}
-                </a>
-              </li>
-            `;
-          }
-        ).join('');
-
+        return `
+          <li>
+            <a
+              class="dropdown-item text-sm"
+              href="${link}"
+              target="_blank"
+              data-interception="off">
+              ${department.Title}
+            </a>
+          </li>
+        `;
+      }
+    )
+    .join('');
 
       return departmentItems;
 
@@ -380,7 +322,7 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 
     const siteUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
 
     const userName: string =
@@ -421,59 +363,73 @@ export default class SoharHeaderFooterApplicationCustomizer
   }
 
 
-  private _setupSearchFunctionality(): void {
+private _setupSearchFunctionality(): void {
 
-    if (
-      !this._topPlaceholder ||
-      !this._topPlaceholder.domElement
-    ) {
-      return;
-    }
-
-
-    const inputMainSearchBox =
-      this._topPlaceholder.domElement.querySelector(
-        '#inputGlobalSearchBox'
-      ) as HTMLInputElement;
-
-
-    if (inputMainSearchBox) {
-
-      inputMainSearchBox.addEventListener(
-        'keydown',
-        (event: KeyboardEvent) => {
-
-          if (event.key === 'Enter') {
-
-            const searchKey =
-              inputMainSearchBox.value;
-
-
-            if (searchKey) {
-
-              window.open(
-                `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-                '_blank'
-              );
-            }
-
-
-            event.preventDefault();
-          }
-        }
-      );
-    }
+  if (
+    !this._topPlaceholder ||
+    !this._topPlaceholder.domElement
+  ) {
+    return;
   }
 
+  const inputMainSearchBox =
+    this._topPlaceholder.domElement.querySelector(
+      '#inputGlobalSearchBox'
+    ) as HTMLInputElement;
 
+  const searchButton =
+    this._topPlaceholder.domElement.querySelector(
+      '.search-icon-btn'
+    ) as HTMLButtonElement;
+
+  if (!inputMainSearchBox) {
+    return;
+  }
+
+  const performSearch = (): void => {
+
+    const searchKey: string =
+      inputMainSearchBox.value.trim();
+
+   if (searchKey) {
+  const siteUrl: string = this.context.pageContext.web.absoluteUrl;
+
+  window.open(
+    `${siteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+    '_blank'
+  );
+}
+  };
+
+  inputMainSearchBox.addEventListener(
+    'keydown',
+    (event: KeyboardEvent) => {
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        performSearch();
+      }
+    }
+  );
+
+  if (searchButton) {
+    searchButton.addEventListener(
+      'click',
+      () => {
+        performSearch();
+      }
+    );
+  }
+}
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================
 
   private async _getFooterItems(): Promise<any[]> {
 
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
+    const siteUrl :
+      string =
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
 
     const url =
@@ -523,41 +479,39 @@ export default class SoharHeaderFooterApplicationCustomizer
   // RENDER FOOTER ITEMS
   // ============================================================
 
-  private _renderFooterItems(items: any[]): string {
+ private _renderFooterItems(items: any[]): string {
 
-    return items.map((item: any) => {
+  const baseUrl: string =
+    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
-      const contactDetails =
-        item.ContactDetails || '';
+  return items.map((item: any) => {
 
+    const contactDetails =
+      item.ContactDetails || '';
 
-      let imageUrl = '';
+    let imageUrl = '';
 
+    if (item.Icon) {
 
-      if (item.Icon) {
+      const imgData =
+        JSON.parse(item.Icon);
 
-        const imgData =
-          JSON.parse(item.Icon);
+      imageUrl =
+        `${baseUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
+    }
 
+    return Footer.itemTemplate
+      .replace(
+        '__ICON_URL__',
+        imageUrl
+      )
+      .replace(
+        '__CONTACT_DETAILS__',
+        contactDetails
+      );
 
-        imageUrl =
-          `${this.context.pageContext.web.absoluteUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
-
-      }
-
-
-      return Footer.itemTemplate
-        .replace(
-          '__ICON_URL__',
-          imageUrl
-        )
-        .replace(
-          '__CONTACT_DETAILS__',
-          contactDetails
-        );
-
-    }).join('');
-  }
+  }).join('');
+}
 
 
   // ============================================================
