@@ -78,7 +78,8 @@ export default class SoharHeaderFooterApplicationCustomizer
   }
 private async loadBootstrap(): Promise<void> {
  
-  const baseUrl = this.context.pageContext.web.absoluteUrl;
+   const baseUrl: string =
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
   const win: any = window;
  
   const bootstrap = await SPComponentLoader.loadScript<any>(
@@ -203,8 +204,8 @@ private async loadBootstrap(): Promise<void> {
 
   private async _getDepartments(): Promise<string> {
 
-    const siteUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+    const siteUrl:  string =
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
 
     const url =
@@ -321,7 +322,7 @@ private async loadBootstrap(): Promise<void> {
 
 
     const siteUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
 
     const userName: string =
@@ -390,12 +391,14 @@ private _setupSearchFunctionality(): void {
     const searchKey: string =
       inputMainSearchBox.value.trim();
 
-    if (searchKey) {
-      window.open(
-        `https://soharaluminium5.sharepoint.com/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-        '_blank'
-      );
-    }
+   if (searchKey) {
+  const siteUrl: string = this.context.pageContext.web.absoluteUrl;
+
+  window.open(
+    `${siteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+    '_blank'
+  );
+}
   };
 
   inputMainSearchBox.addEventListener(
@@ -424,8 +427,9 @@ private _setupSearchFunctionality(): void {
 
   private async _getFooterItems(): Promise<any[]> {
 
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
+    const siteUrl :
+      string =
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
 
     const url =
@@ -475,41 +479,39 @@ private _setupSearchFunctionality(): void {
   // RENDER FOOTER ITEMS
   // ============================================================
 
-  private _renderFooterItems(items: any[]): string {
+ private _renderFooterItems(items: any[]): string {
 
-    return items.map((item: any) => {
+  const baseUrl: string =
+    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
-      const contactDetails =
-        item.ContactDetails || '';
+  return items.map((item: any) => {
 
+    const contactDetails =
+      item.ContactDetails || '';
 
-      let imageUrl = '';
+    let imageUrl = '';
 
+    if (item.Icon) {
 
-      if (item.Icon) {
+      const imgData =
+        JSON.parse(item.Icon);
 
-        const imgData =
-          JSON.parse(item.Icon);
+      imageUrl =
+        `${baseUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
+    }
 
+    return Footer.itemTemplate
+      .replace(
+        '__ICON_URL__',
+        imageUrl
+      )
+      .replace(
+        '__CONTACT_DETAILS__',
+        contactDetails
+      );
 
-        imageUrl =
-          `${this.context.pageContext.web.absoluteUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
-
-      }
-
-
-      return Footer.itemTemplate
-        .replace(
-          '__ICON_URL__',
-          imageUrl
-        )
-        .replace(
-          '__CONTACT_DETAILS__',
-          contactDetails
-        );
-
-    }).join('');
-  }
+  }).join('');
+}
 
 
   // ============================================================
