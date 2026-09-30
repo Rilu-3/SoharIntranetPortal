@@ -147,11 +147,11 @@ private async loadBootstrap(): Promise<void> {
           `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
         )
       )
-      .then(() =>
-        SPComponentLoader.loadScript(
-          `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-        )
-      )
+      // .then(() =>
+      //   SPComponentLoader.loadScript(
+      //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
+      //   )
+      // )
       //.then(() => SPComponentLoader.loadScript(`${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`))
       .then(() =>
         SPComponentLoader.loadScript(
@@ -208,7 +208,7 @@ private async loadBootstrap(): Promise<void> {
 
 
     const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link`;
+      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status`;
 
 
     try {
@@ -237,28 +237,31 @@ private async loadBootstrap(): Promise<void> {
         await response.json();
 
 
-      const departmentItems =
-        data.value.map(
-          (department: any) => {
+  const departmentItems =
+  data.value
+    .filter(
+      (department: any) =>
+        department.Status === 'Active'
+    )
+    .map(
+      (department: any) => {
 
-            const link =
-              department.Link?.Url || '#';
+        const link =
+          department.Link?.Url || '#';
 
-
-            return `
-              <li>
-                <a
+        return `
+          <li>
+            <a
               class="dropdown-item text-sm"
               href="${link}"
               target="_blank"
               data-interception="off">
               ${department.Title}
             </a>
-              </li>
-            `;
-          }
-        ).join('');
-
+          </li>
+        `;
+      }
+    ).join('');
 
       return departmentItems;
 
