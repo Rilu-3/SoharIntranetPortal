@@ -122,7 +122,7 @@ export default class UpcomingEvents {
               class="w-100 float-start d-flex justify-content-start px-2">
  
               <a
-                href="sites/DevPortal/SitePages/Upcoming-Events.aspx"
+                href="__KEY_URL_UPCOMING__"
                 target="_blank"
                 data-interception="off"
                 rel="noopener noreferrer"
