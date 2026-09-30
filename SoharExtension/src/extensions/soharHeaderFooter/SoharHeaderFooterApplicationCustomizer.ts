@@ -65,7 +65,7 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   private _loadHome(): void {
     const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
     SPComponentLoader.loadScript(
       `${baseUrl}/SiteAssets/resources/js/common.js`
@@ -103,7 +103,7 @@ private async loadBootstrap(): Promise<void> {
 }
   private _loadCSS(): void {
     const baseUrl: string =
-      this.context.pageContext.web.absoluteUrl;
+  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
     // Load all CSS files in parallel
     SPComponentLoader.loadCss(
@@ -362,7 +362,7 @@ private async loadBootstrap(): Promise<void> {
   }
 
 
- private _setupSearchFunctionality(): void {
+private _setupSearchFunctionality(): void {
 
   if (
     !this._topPlaceholder ||
@@ -381,50 +381,45 @@ private async loadBootstrap(): Promise<void> {
       '.search-icon-btn'
     ) as HTMLButtonElement;
 
-  if (inputMainSearchBox) {
-
-    inputMainSearchBox.addEventListener(
-      'keydown',
-      (event: KeyboardEvent) => {
-
-        if (event.key === 'Enter') {
-
-          const searchKey =
-            inputMainSearchBox.value;
-
-          if (searchKey) {
-            window.open(
-              `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-              '_blank'
-            );
-          }
-
-          event.preventDefault();
-        }
-      }
-    );
+  if (!inputMainSearchBox) {
+    return;
   }
+
+  const performSearch = (): void => {
+
+    const searchKey: string =
+      inputMainSearchBox.value.trim();
+
+    if (searchKey) {
+
+      window.open(
+        `https://soharaluminium5.sharepoint.com/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+        '_blank'
+      );
+    }
+  };
+
+  inputMainSearchBox.addEventListener(
+    'keydown',
+    (event: KeyboardEvent) => {
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        performSearch();
+      }
+    }
+  );
 
   if (searchButton) {
 
     searchButton.addEventListener(
       'click',
       () => {
-
-        const searchKey =
-          inputMainSearchBox.value;
-
-        if (searchKey) {
-          window.open(
-            `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-            '_blank'
-          );
-        }
+        performSearch();
       }
     );
   }
 }
-
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================
