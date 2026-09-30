@@ -2090,6 +2090,8 @@ private newsCentreFormatDate(
     const baseUrl =
       this.context.pageContext.web.absoluteUrl;
 
+    const UpcomingListingPage=`${this.context.pageContext.web.absoluteUrl}/SitePages/Upcoming-Events.aspx`;
+
     const rightArrow =
       `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
 
@@ -2109,6 +2111,7 @@ private newsCentreFormatDate(
       /__KEY_ARROW_RIGHT_SHORT__/g,
       arrowRightShort
     );
+    html=html.replace(/__KEY_URL_UPCOMING__/g,UpcomingListingPage);
 
     const myEventsHtml =
       this.renderEventElements(
