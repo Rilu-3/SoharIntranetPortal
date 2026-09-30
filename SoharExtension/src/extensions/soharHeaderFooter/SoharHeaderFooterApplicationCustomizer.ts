@@ -391,7 +391,6 @@ private _setupSearchFunctionality(): void {
       inputMainSearchBox.value.trim();
 
     if (searchKey) {
-
       window.open(
         `https://soharaluminium5.sharepoint.com/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
         '_blank'
@@ -411,7 +410,6 @@ private _setupSearchFunctionality(): void {
   );
 
   if (searchButton) {
-
     searchButton.addEventListener(
       'click',
       () => {

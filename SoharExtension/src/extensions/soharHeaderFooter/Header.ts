@@ -40,6 +40,7 @@ export default class Header {
               <input
                 type="text"
                 class="form-control"
+                id="inputGlobalSearchBox"
                 placeholder="Search..."
               >
 
