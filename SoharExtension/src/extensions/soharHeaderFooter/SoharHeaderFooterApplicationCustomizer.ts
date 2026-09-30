@@ -208,7 +208,7 @@ private async loadBootstrap(): Promise<void> {
 
 
     const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status`;
+      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder`;
 
 
     try {
@@ -243,6 +243,10 @@ private async loadBootstrap(): Promise<void> {
       (department: any) =>
         department.Status === 'Active'
     )
+    .sort(
+      (a: any, b: any) =>
+        Number(a.SortOrder) - Number(b.SortOrder)
+    )
     .map(
       (department: any) => {
 
@@ -261,7 +265,8 @@ private async loadBootstrap(): Promise<void> {
           </li>
         `;
       }
-    ).join('');
+    )
+    .join('');
 
       return departmentItems;
 
@@ -357,50 +362,68 @@ private async loadBootstrap(): Promise<void> {
   }
 
 
-  private _setupSearchFunctionality(): void {
+ private _setupSearchFunctionality(): void {
 
-    if (
-      !this._topPlaceholder ||
-      !this._topPlaceholder.domElement
-    ) {
-      return;
-    }
-
-
-    const inputMainSearchBox =
-      this._topPlaceholder.domElement.querySelector(
-        '#inputGlobalSearchBox'
-      ) as HTMLInputElement;
-
-
-    if (inputMainSearchBox) {
-
-      inputMainSearchBox.addEventListener(
-        'keydown',
-        (event: KeyboardEvent) => {
-
-          if (event.key === 'Enter') {
-
-            const searchKey =
-              inputMainSearchBox.value;
-
-
-            if (searchKey) {
-
-              window.open(
-                `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-                '_blank'
-              );
-            }
-
-
-            event.preventDefault();
-          }
-        }
-      );
-    }
+  if (
+    !this._topPlaceholder ||
+    !this._topPlaceholder.domElement
+  ) {
+    return;
   }
 
+  const inputMainSearchBox =
+    this._topPlaceholder.domElement.querySelector(
+      '#inputGlobalSearchBox'
+    ) as HTMLInputElement;
+
+  const searchButton =
+    this._topPlaceholder.domElement.querySelector(
+      '.search-icon-btn'
+    ) as HTMLButtonElement;
+
+  if (inputMainSearchBox) {
+
+    inputMainSearchBox.addEventListener(
+      'keydown',
+      (event: KeyboardEvent) => {
+
+        if (event.key === 'Enter') {
+
+          const searchKey =
+            inputMainSearchBox.value;
+
+          if (searchKey) {
+            window.open(
+              `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+              '_blank'
+            );
+          }
+
+          event.preventDefault();
+        }
+      }
+    );
+  }
+
+  if (searchButton) {
+
+    searchButton.addEventListener(
+      'click',
+      () => {
+
+        const searchKey =
+          inputMainSearchBox.value;
+
+        if (searchKey) {
+          window.open(
+            `/sites/DevPortal/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+            '_blank'
+          );
+        }
+      }
+    );
+  }
+}
 
   // ============================================================
   // GET FOOTER ITEMS FROM SHAREPOINT
