@@ -518,147 +518,238 @@ private _setupSearchFunctionality(): void {
   // RENDER FOOTER
   // ============================================================
 
-  private async _renderFooter(): Promise<void> {
 
-    // Create Bottom Placeholder
-    if (!this._bottomPlaceholder) {
+private async _renderFooter(): Promise<void> {
 
-      this._bottomPlaceholder =
-        this.context.placeholderProvider.tryCreateContent(
-          PlaceholderName.Bottom,
-          {
-            onDispose: () => {
+  // Get Footer Items from SharePoint
+  const footerItems =
+    await this._getFooterItems();
 
-              Log.info(
-                LOG_SOURCE,
-                'Bottom placeholder disposed'
-              );
 
-            }
-          }
-        );
+  // Get only Active items
+  const activeItems =
+    footerItems.filter(
+      (item: any) =>
+        String(item.Status || '')
+          .trim()
+          .toLowerCase() === 'active'
+    );
+
+
+  // Important Contacts
+  const importantContacts =
+    activeItems.filter(
+      (item: any) =>
+        String(item.Category || '')
+          .trim()
+          .toLowerCase() ===
+        'important contacts'
+    );
+
+
+  // Medical Services
+  const medicalServices =
+    activeItems.filter(
+      (item: any) =>
+        String(item.Category || '')
+          .trim()
+          .toLowerCase() ===
+        'medical services'
+    );
+
+
+  // Render Important Contacts Items
+  const importantContactsHtml =
+    this._renderFooterItems(
+      importantContacts
+    );
+
+
+  // Render Medical Services Items
+  const medicalServicesHtml =
+    this._renderFooterItems(
+      medicalServices
+    );
+
+
+  // Create Footer HTML
+  const footerHTML =
+    Footer.html
+      .replace(
+        '__IMPORTANT_CONTACTS__',
+        importantContactsHtml
+      )
+      .replace(
+        '__MEDICAL_SERVICES__',
+        medicalServicesHtml
+      )
+      .replace(
+        '__CURRENT_YEAR__',
+        new Date().getFullYear().toString()
+      );
+
+
+  // Check if the current page is the SharePoint Search page
+  const isSearchPage =
+    window.location.pathname
+      .toLowerCase()
+      .indexOf('/_layouts/15/search.aspx') !== -1;
+
+
+  // Search Page Footer
+  if (isSearchPage) {
+
+    // Find the empty Bottom placeholder inside the Search layout
+    const candidates =
+      document.querySelectorAll(
+        'div[data-sp-placeholder="Bottom"].sp-placeholder-bottom'
+      );
+
+
+    let searchPlaceholder: HTMLElement | null = null;
+
+
+    for (
+      let i = 0;
+      i < candidates.length;
+      i++
+    ) {
+
+      const element =
+        candidates[i] as HTMLElement;
+
+
+      if (
+        element.id !== 'spBottomPlaceholder' &&
+        element.children.length === 0
+      ) {
+
+        searchPlaceholder =
+          element;
+
+        break;
+      }
     }
 
 
-    // Check Bottom Placeholder
-    if (!this._bottomPlaceholder) {
+    // Render footer inside the Search page placeholder
+    if (searchPlaceholder) {
 
-      Log.error(
-        LOG_SOURCE,
-        new Error('Bottom placeholder was not created')
-      );
+      searchPlaceholder.innerHTML =
+        footerHTML;
+
+
+      // Remove the outer SPFx Bottom placeholder
+      // to prevent duplicate footer
+      const spfxBottom =
+        document.getElementById(
+          'spBottomPlaceholder'
+        );
+
+
+      if (spfxBottom) {
+        spfxBottom.remove();
+      }
+
+
+      // Clear the cached placeholder reference
+      // because the DOM element has been removed
+      if (this._bottomPlaceholder) {
+        this._bottomPlaceholder = undefined;
+      }
+
 
       return;
     }
+  }
 
 
-    // Get Footer Items from SharePoint
-    const footerItems =
-      await this._getFooterItems();
+  // Default path for all other SharePoint pages
 
 
-    // Get only Active items
-    const activeItems =
-      footerItems.filter(
-        (item: any) =>
-          String(item.Status || '')
-            .trim()
-            .toLowerCase() === 'active'
-      );
+  // Create Bottom Placeholder
+  if (!this._bottomPlaceholder) {
 
+    this._bottomPlaceholder =
+      this.context.placeholderProvider.tryCreateContent(
+        PlaceholderName.Bottom,
+        {
+          onDispose: () => {
 
-    // Important Contacts
-    const importantContacts =
-      activeItems.filter(
-        (item: any) =>
-          String(item.Category || '')
-            .trim()
-            .toLowerCase() ===
-          'important contacts'
-      );
+            Log.info(
+              LOG_SOURCE,
+              'Bottom placeholder disposed'
+            );
 
-
-    // Medical Services
-    const medicalServices =
-      activeItems.filter(
-        (item: any) =>
-          String(item.Category || '')
-            .trim()
-            .toLowerCase() ===
-          'medical services'
-      );
-
-
-    // Render Important Contacts Items
-    const importantContactsHtml =
-      this._renderFooterItems(
-        importantContacts
-      );
-
-
-    // Render Medical Services Items
-    const medicalServicesHtml =
-      this._renderFooterItems(
-        medicalServices
-      );
-
-
-    // Render Footer Template
-    this._bottomPlaceholder.domElement.innerHTML =
-      Footer.html
-        .replace(
-          '__IMPORTANT_CONTACTS__',
-          importantContactsHtml
-        )
-        .replace(
-          '__MEDICAL_SERVICES__',
-          medicalServicesHtml
-        )
-        .replace(
-          '__CURRENT_YEAR__',
-          new Date().getFullYear().toString()
-        );
-
-
-    // Move the existing footer placeholder into SharePoint Canvas
-    const spCanvasElement =
-      document.querySelector('.SPCanvas div');
-
-
-    if (spCanvasElement) {
-
-      // Remove duplicate footer placeholders already inside Canvas
-      const existingFooters =
-        spCanvasElement.querySelectorAll(
-          '#bottomPlaceholder'
-        );
-
-
-      existingFooters.forEach(
-        (footer: Element) => {
-
-          if (
-            footer !==
-            this._bottomPlaceholder!.domElement
-          ) {
-            footer.remove();
           }
-
         }
       );
+  }
 
 
-      // Move the actual Bottom Placeholder
-      if (
-        this._bottomPlaceholder.domElement.parentElement !==
-        spCanvasElement
-      ) {
+  // Check Bottom Placeholder
+  if (
+    !this._bottomPlaceholder ||
+    !this._bottomPlaceholder.domElement
+  ) {
 
-        spCanvasElement.appendChild(
-          this._bottomPlaceholder.domElement
-        );
+    Log.error(
+      LOG_SOURCE,
+      new Error(
+        'Bottom placeholder was not created'
+      )
+    );
+
+    return;
+  }
+
+
+  // Render Footer
+  this._bottomPlaceholder.domElement.innerHTML =
+    footerHTML;
+
+
+  // Move the existing footer placeholder into SharePoint Canvas
+  const spCanvasElement =
+    document.querySelector('.SPCanvas div');
+
+
+  if (spCanvasElement) {
+
+    // Remove duplicate footer placeholders already inside Canvas
+    const existingFooters =
+      spCanvasElement.querySelectorAll(
+        '#bottomPlaceholder'
+      );
+
+
+    existingFooters.forEach(
+      (footer: Element) => {
+
+        if (
+          footer !==
+          this._bottomPlaceholder!.domElement
+        ) {
+
+          footer.remove();
+        }
 
       }
+    );
+
+
+    // Move the actual Bottom Placeholder
+    if (
+      this._bottomPlaceholder.domElement.parentElement !==
+      spCanvasElement
+    ) {
+
+      spCanvasElement.appendChild(
+        this._bottomPlaceholder.domElement
+      );
+
     }
   }
+}
+
 }
