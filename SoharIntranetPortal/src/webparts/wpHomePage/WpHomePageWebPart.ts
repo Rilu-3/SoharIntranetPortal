@@ -1,49 +1,29 @@
 import { Version } from '@microsoft/sp-core-library';
 import Wrapper from './Wrapper';
-import {
-  type IPropertyPaneConfiguration,
-  PropertyPaneTextField
-} from '@microsoft/sp-property-pane';
-
-// import {
-//   BaseClientSideWebPart
-// } from '@microsoft/sp-webpart-base';
-import {
-  BaseClientSideWebPart,
-  WebPartContext
-} from '@microsoft/sp-webpart-base';
-import {
-  SPHttpClient,
-  SPHttpClientResponse,
-  MSGraphClientV3
-} from '@microsoft/sp-http';
-
-// import {
-//   SPComponentLoader
-// } from '@microsoft/sp-loader';
-import Swiper from 'swiper';
-import { Navigation, Pagination, FreeMode, Mousewheel } from 'swiper/modules';
-
-
-
+import { type IPropertyPaneConfiguration, PropertyPaneTextField } from '@microsoft/sp-property-pane';
+import { BaseClientSideWebPart, WebPartContext } from '@microsoft/sp-webpart-base';
+import { SPHttpClient, SPHttpClientResponse, MSGraphClientV3 } from '@microsoft/sp-http';
 import { escape } from '@microsoft/sp-lodash-subset';
 
 import UpcomingEventsTemplate from './UpcomingEvents';
 import { BannerTemplate } from './BannerTemplate';
 import MediaGalleryTemplate from './MediaGalleryTemplate';
-
 import AnnouncementOffer from './AnnouncementOffer';
 import QuickLinks from './QuickLinks';
 import Birthday from './Birthday';
 import SocialMedia from './SocialMedia';
 import NewsCentre from './NewsCentre';
 
-
-
 export interface IWpHomePageWebPartProps {
   description: string;
 }
 
+interface ISharePointImage {
+  serverRelativeUrl?: string;
+  serverUrl?: string;
+  fileName?: string;
+  [key: string]: unknown;
+}
 
 interface IBannerItem {
   Id: number;
@@ -51,8 +31,8 @@ interface IBannerItem {
   Description: string;
   Status: string;
   SortOrder: number;
-Image: string | ISharePointImage | undefined;}
-
+  Image: string | ISharePointImage | undefined;
+}
 
 interface IMediaGalleryItem {
   Id: number;
@@ -60,11 +40,10 @@ interface IMediaGalleryItem {
   Caption: string;
   Status: string;
   SortOrder: number;
-Image: string | ISharePointImage | undefined;}
+  Image: string | ISharePointImage | undefined;
+}
 
-
-// Interface used for both Outlook My Events
-// and SharePoint Organizational Events
+// Interface used for both Outlook My Events and SharePoint Organizational Events
 export interface IEventItem {
   Id: number;
   Title: string;
@@ -80,26 +59,10 @@ export interface IEventItem {
 interface IOutlookEvent {
   id?: string;
   subject?: string;
-  start?: {
-    dateTime?: string;
-  };
-  end?: {
-    dateTime?: string;
-  };
-  location?: {
-    displayName?: string;
-  };
-  onlineMeeting?: {
-    joinUrl?: string;
-  };
-}
-
-interface ISharePointImage {
-  serverRelativeUrl?: string;
-  serverUrl?: string;
-  fileName?: string;
-  [key: string]: unknown;
-
+  start?: { dateTime?: string };
+  end?: { dateTime?: string };
+  location?: { displayName?: string };
+  onlineMeeting?: { joinUrl?: string };
 }
 
 interface IAnnouncement {
@@ -110,25 +73,21 @@ interface IAnnouncement {
   Created: string;
 }
 
-
-
 interface IOffer {
   Id: number;
   Title: string;
   Description: string;
   Created: string;
 }
+
 export interface IQuickLinksList {
   Id: number;
   Title: string;
   Icon: string;
-  URL: {
-    Url: string;
-  };
+  URL: { Url: string };
   Status: string;
   SortOrder: number;
 }
-
 
 export interface IBirthdayList {
   Id: number;
@@ -148,285 +107,215 @@ interface INewsItem {
   Status?: string;
 }
 
-export default class WpHomePageWebPart
-  extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
-
+export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
   private newsCentreItems: INewsItem[] = [];
 
-
-  // Stores Organizational Events
-  // fetched from the SharePoint Upcoming Events list
-  
-  
-  // Stores My Events
-  // fetched from the logged-in user's Outlook calendar
+  // Organizational Events (SharePoint) and My Events (Outlook)
   private events: IEventItem[] = [];
   private myEvents: IEventItem[] = [];
   private organizationalEventDates: string[] = [];
   private myEventDates: string[] = [];
-
-private _initializeSwipers(): void {
- 
-  // 1. ANNOUNCEMENT
-  this.domElement.querySelectorAll<HTMLElement>('.announcement-swiper')
-    .forEach((element) => {
- 
-      if ((element as any).swiper) {
-        (element as any).swiper.destroy(true, true);
-      }
- 
-      new Swiper(element, {
-        modules: [Navigation],
-        slidesPerView: 1,
-        spaceBetween: 10,
-        breakpoints: {
-          768: {
-            slidesPerView: 2,
-            spaceBetween: 16
-          },
-          1200: {
-            slidesPerView: 2,
-            spaceBetween: 32
-          }
-        },
-        navigation: {
-          nextEl: this.domElement.querySelector('.announcement-button-next') as HTMLElement,
-          prevEl: this.domElement.querySelector('.announcement-button-prev') as HTMLElement
-        }
-      });
-    });
- 
-  // 2. BANNER
-  this.domElement.querySelectorAll<HTMLElement>('.banner-swiper')
-    .forEach((element) => {
- 
-      if ((element as any).swiper) {
-        (element as any).swiper.destroy(true, true);
-      }
- 
-      new Swiper(element, {
-        modules: [Navigation, Pagination],
-      pagination: {
-  el: (
-    element.querySelector('.swiper-pagination') ||
-    this.domElement.querySelector('.swiper-pagination')
-  ) as HTMLElement,
-  clickable: true
-},
-        navigation: {
-          nextEl: this.domElement.querySelector('.banner-slide-next') as HTMLElement,
-          prevEl: this.domElement.querySelector('.banner-slide-prev') as HTMLElement
-        }
-      });
-    });
- 
-  // 3. SOCIAL MEDIA
-document.querySelectorAll<HTMLElement>('.social-swiper').forEach((element) => {
-  const panel = element.closest<HTMLElement>('[id^="social-panel-"]');
-
-  new Swiper(element, {
-    modules: [Navigation, FreeMode, Mousewheel],
-
-    slidesPerView: 'auto',
-    spaceBetween: 12,
-
-    freeMode: {
-      enabled: true,
-      momentum: true
-    },
-
-    grabCursor: true,
-
-    mousewheel: {
-      forceToAxis: true
-    },
-
-    navigation: {
-      prevEl: panel
-        ? panel.querySelector<HTMLElement>('.social-swiper-prev')
-        : undefined,
-
-      nextEl: panel
-        ? panel.querySelector<HTMLElement>('.social-swiper-next')
-        : undefined
-    }
-  });
-});
- 
-  // 4. MEDIA GALLERY
-  this.domElement.querySelectorAll<HTMLElement>('.gallery-swiper')
-    .forEach((element) => {
- 
-      if ((element as any).swiper) {
-        (element as any).swiper.destroy(true, true);
-      }
- 
-      new Swiper(element, {
-        modules: [Navigation, Pagination],
-        slidesPerView: 1,
-        spaceBetween: 12,
-        loop: false,
-        speed: 500,
-        pagination: {
-          el: element.querySelector('.gallery-swiper-pagination') as HTMLElement,
-          clickable: true
-        },
-        navigation: {
-          nextEl: this.domElement.querySelector('.gallery-slide-next') as HTMLElement,
-          prevEl: this.domElement.querySelector('.gallery-slide-prev') as HTMLElement
-        },
-        breakpoints: {
-          400: { slidesPerView: 2, spaceBetween: 12 },
-          576: { slidesPerView: 2, spaceBetween: 14 },
-          768: { slidesPerView: 3, spaceBetween: 16 },
-          992: { slidesPerView: 4, spaceBetween: 16 }
-        }
-      });
-    });
- 
-}
-
-
-    private organizationalEventTitles: {
-    [key: string]: string
-  } = {};
-
-  private myEventTitles: {
-    [key: string]: string
-  } = {};
+  private organizationalEventTitles: { [key: string]: string } = {};
+  private myEventTitles: { [key: string]: string } = {};
   private socialMediaObserver: MutationObserver | null = null;
- 
-private hideSocialMediaTutorialLinks(
-  root: Document | ShadowRoot = document
-): void {
-  root.querySelectorAll<HTMLElement>('a.tutorial_link').forEach((link) => {
-    link.style.setProperty('display', 'none', 'important');
-  });
- 
-  root.querySelectorAll<HTMLElement>('*').forEach((element) => {
-    if (element.shadowRoot) {
-      this.hideSocialMediaTutorialLinks(element.shadowRoot);
-    }
-  });
-}
- 
-private setupSocialMediaTutorialLinkObserver(): void {
-  this.socialMediaObserver?.disconnect();
- 
-  this.hideSocialMediaTutorialLinks();
- 
-  this.socialMediaObserver = new MutationObserver(() => {
-    this.hideSocialMediaTutorialLinks();
-  });
- 
-  this.socialMediaObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-}
 
+  // ==================== WAIT FOR LIBRARIES (loaded by extension) ====================
+
+  private waitForLibraries(timeout: number = 10000): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const start = Date.now();
+      const check = (): void => {
+        const w = window as any;
+        if ((w.jQuery && w.jQuery.fn && w.jQuery.fn.datepicker && w.Swiper && w.bootstrap) || Date.now() - start > timeout) {
+          resolve();
+          return;
+        }
+        setTimeout(check, 50);
+      };
+      check();
+    });
+  }
+
+  // ==================== HOME JS (moved from home.js) ====================
+
+  // ---------- BANNER ----------
+  private initBannerSwiper(): void {
+    const Swiper = (window as any).Swiper;
+    if (!Swiper) { console.warn('Swiper is not available.'); return; }
+
+    new Swiper(".banner-swiper", {
+      pagination: { el: ".swiper-pagination", clickable: true },
+      navigation: { nextEl: ".banner-slide-next", prevEl: ".banner-slide-prev" },
+    });
+  }
+
+  // ---------- ANNOUNCEMENT / OFFERS TABS ----------
+  private initAnnouncementOfferTabs(): void {
+    const $ = (window as any).jQuery;
+    if (!$) { console.warn('jQuery is not available.'); return; }
+
+    $('.panel-title-tab').on('click', function (this: HTMLElement) {
+      const targetId = $(this).data('tab-ao');
+
+      // Update active tab
+      $('.panel-title-tab').removeClass('panel-title-tab-active');
+      $(this).addClass('panel-title-tab-active');
+
+      // Hide all panels and fade in selected panel
+      $('.ao-tab-view').stop(true, true).hide();
+      $('#' + targetId).stop(true, true).fadeIn(200);
+    });
+  }
+
+  // ---------- SOCIAL MEDIA ----------
+  private initSocialMediaSwipers(): void {
+    const $ = (window as any).jQuery;
+    const Swiper = (window as any).Swiper;
+    if (!$ || !Swiper) { console.warn('jQuery or Swiper is not available.'); return; }
+
+    const socialSwipers: { [key: string]: any } = {};
+    document.querySelectorAll('.social-swiper').forEach(function (el) {
+      const panel = el.closest('[id^="social-panel-"]');
+      const swiper = new Swiper(el, {
+        slidesPerView: 'auto',
+        spaceBetween: 12,
+        freeMode: { enabled: true, momentum: true },
+        grabCursor: true,
+        mousewheel: { forceToAxis: true },
+        navigation: {
+          prevEl: panel ? panel.querySelector('.social-swiper-prev') : null,
+          nextEl: panel ? panel.querySelector('.social-swiper-next') : null,
+        },
+      });
+      if (panel) socialSwipers[panel.id] = swiper;
+    });
+
+    $('.sm-tab').on('click', function (this: HTMLElement) {
+      const targetId = $(this).data('tab-social-id');
+
+      // Update active tab
+      $('.sm-tab').removeClass('sm-tab-active');
+      $(this).addClass('sm-tab-active');
+
+      // Hide all panels and fade in selected panel
+      $('.social-media-view').stop(true, true).hide();
+      $('#' + targetId).stop(true, true).fadeIn(200);
+    });
+  }
+
+  // ---------- MEDIA GALLERY ----------
+  private initMediaGallery(): void {
+    const $ = (window as any).jQuery;
+    const Swiper = (window as any).Swiper;
+    const bootstrap = (window as any).bootstrap;
+    if (!$ || !Swiper || !bootstrap) { console.warn('jQuery, Swiper or Bootstrap is not available.'); return; }
+
+    new Swiper('.gallery-swiper', {
+      slidesPerView: 1,
+      spaceBetween: 12,
+      loop: false,
+      speed: 500,
+      pagination: { el: ".gallery-swiper-pagination", clickable: true },
+      navigation: { nextEl: ".gallery-slide-next", prevEl: ".gallery-slide-prev" },
+      breakpoints: {
+        400: { slidesPerView: 2, spaceBetween: 12 },
+        576: { slidesPerView: 2, spaceBetween: 14 },
+        768: { slidesPerView: 3, spaceBetween: 16 },
+        992: { slidesPerView: 4, spaceBetween: 16 },
+      },
+    });
+
+    const modalElement = document.getElementById("galleryModal");
+    if (!modalElement) { return; }
+    const modal = new bootstrap.Modal.getOrCreateInstance(modalElement);
+
+    let swiperGalleryModal: any = null;
+    let gallery_slider_index = 0;
+
+    function initGalleryModalSwiper(): void {
+      // Destroy any previous instance before creating a new one
+      if (swiperGalleryModal) {
+        swiperGalleryModal.destroy(true, true);
+        swiperGalleryModal = null;
+      }
+
+      swiperGalleryModal = new Swiper(".gallery-modal-swiper", {
+        spaceBetween: 10,
+        slidesPerView: 1,
+        autoplay: false,
+        speed: 1400,
+        autoHeight: true,
+        initialSlide: gallery_slider_index,
+        navigation: { nextEl: ".gallery-swiper-modal-next", prevEl: ".gallery-swiper-modal-prev" },
+      });
+
+      $(".gallery-modal-content").css("opacity", 1);
+    }
+
+    // Set the index BEFORE the modal opens
+    $(document).on("click", ".gallery-item img, .gallery-item video", function (this: HTMLElement) {
+      $(".gallery-modal-content").css("opacity", 0);
+      gallery_slider_index = $(this).closest(".swiper-slide").index();
+      modal.show();
+    });
+
+    // shown.bs.modal fires AFTER the transition — Swiper can measure dimensions safely here
+    modalElement.addEventListener("shown.bs.modal", () => {
+      initGalleryModalSwiper();
+    });
+
+    // hidden.bs.modal fires AFTER modal is fully hidden
+    modalElement.addEventListener("hidden.bs.modal", () => {
+      if (swiperGalleryModal) {
+        swiperGalleryModal.destroy(true, true);
+        swiperGalleryModal = null;
+      }
+    });
+  }
+
+  // ==================== SOCIAL MEDIA TUTORIAL LINKS ====================
+
+  private hideSocialMediaTutorialLinks(root: Document | ShadowRoot = document): void {
+    root.querySelectorAll<HTMLElement>('a.tutorial_link').forEach((link) => {
+      link.style.setProperty('display', 'none', 'important');
+    });
+
+    root.querySelectorAll<HTMLElement>('*').forEach((element) => {
+      if (element.shadowRoot) {
+        this.hideSocialMediaTutorialLinks(element.shadowRoot);
+      }
+    });
+  }
+
+  private setupSocialMediaTutorialLinkObserver(): void {
+    this.socialMediaObserver?.disconnect();
+    this.hideSocialMediaTutorialLinks();
+    this.socialMediaObserver = new MutationObserver(() => { this.hideSocialMediaTutorialLinks(); });
+    this.socialMediaObserver.observe(document.body, { childList: true, subtree: true });
+  }
 
   // ==================== RENDER ====================
 
   public async render(): Promise<void> {
-    const workbenchContent =
-      document.getElementById('workbenchPageContent');
-
+    const workbenchContent = document.getElementById('workbenchPageContent');
     if (workbenchContent) {
       workbenchContent.style.maxWidth = 'none';
     }
 
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
+    const newsarrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    const arrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-       
-
-
-    /*
-     * ==========================================================
-     * 2. SET STATIC ELEMENTS
-     * ==========================================================
-     */
-
-    const newsarrowIconUrl =
-      `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
-
-    
-
-  
-
+    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc`;
+    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    const OfferApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     /*
-     * ==========================================================
-     * 3. CREATE NEWS API URL
-     * ==========================================================
+     * 1. Render the page layout immediately (before any API call),
+     *    so every section is visible straight away.
      */
-
-    const newsApiUrl =
-      `${baseUrl}/_api/web/lists/getbytitle('News')/items` +
-      `?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status` +
-      `&$filter=Status eq 'Active'` +
-      `&$orderby=PublishedDate desc`;
-
-
-    /*
-     * ==========================================================
-     * 4. GET NEWS DATA AND RENDER IT
-     * ==========================================================
-     */
-
-  
-
-    /*
-     * ==========================================================
-     * 5. ATTACH TAB FUNCTIONALITY
-     * ==========================================================
-     */
-
-   
-
-
-    // Get the current date
-    const today = new Date();
-
-
-    // Load both event sources at the same time
-    await Promise.all([
-      this.loadEvents(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      ),
-      this.loadMyEvents(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      ),
-      this.loadOrganizationalEventDates(
-        today.getFullYear(),
-        today.getMonth()
-      ),
-      this.loadMyEventDates(
-        today.getFullYear(),
-        today.getMonth()
-      )
-    ]);
-
-  
-
-    const arrowIconUrl =
-    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
-    /*
-     * Create the complete page HTML first.
-     *
-     * This is important because Banner,
-     * Upcoming Events and Media Gallery
-     * must have their own containers.
-     */
-    
-    this.domElement.innerHTML =Wrapper.wrapperHtml;
+    this.domElement.innerHTML = Wrapper.wrapperHtml;
     this.domElement.querySelector('#banner-container')!.innerHTML = BannerTemplate.bannerHtml;
     this.domElement.querySelector('#announcement-offer-container')!.innerHTML = AnnouncementOffer.allElementsHtml;
     this.domElement.querySelector('#quick-links-container')!.innerHTML = QuickLinks.allElementsHtml;
@@ -435,1502 +324,337 @@ private setupSocialMediaTutorialLinkObserver(): void {
     this.domElement.querySelector('#social-media-container')!.innerHTML = SocialMedia.allElementsHtml;
     this.domElement.querySelector('#birthday-container')!.innerHTML = Birthday.allElementsHtml;
     this.domElement.querySelector('#media-gallery-container')!.innerHTML = MediaGalleryTemplate.allElementsHtml;
-    requestAnimationFrame(() => {
-  this._initializeSwipers();
-});
 
-
-      const birthdayViewAll =
-      this.domElement.querySelector(
-        '.birthday-view-all'
-      ) as HTMLAnchorElement;
-
-      if (birthdayViewAll) {
-        birthdayViewAll.href =
-          `${this.context.pageContext.web.absoluteUrl}` +
-          `/SitePages/Upcoming-Birthdys.aspx`;
-      }
-
-    const birthdayArrow =
-      this.domElement.querySelector(
-        '.birthday-view-all-arrow'
-      ) as HTMLImageElement;
-
-    if (birthdayArrow) {
-      birthdayArrow.src =
-        `${this.context.pageContext.web.absoluteUrl}` +
-        `/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    // 2. Static links
+    const birthdayViewAll = this.domElement.querySelector('.birthday-view-all') as HTMLAnchorElement;
+    if (birthdayViewAll) {
+      birthdayViewAll.href = `${baseUrl}/SitePages/Upcoming-Birthdys.aspx`;
     }
 
-      this.newsCentreSetupViewAll(
-      newsarrowIconUrl
-    );
+    const birthdayArrow = this.domElement.querySelector('.birthday-view-all-arrow') as HTMLImageElement;
+    if (birthdayArrow) {
+      birthdayArrow.src = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    }
 
-    
-
-
-  
-
-
-
- 
-
-
+    this.newsCentreSetupViewAll(newsarrowIconUrl);
     this.setupViewAllLink(arrowIconUrl);
 
-    const AnnouncementApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Icon,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    /*
+     * 3. Load every section in parallel.
+     *    Each section initialises its own Swiper / tabs as soon as
+     *    its own data is ready, so the banner no longer waits for
+     *    the other web part sections.
+     */
+    const libsReady = this.waitForLibraries();
+    const today = new Date();
 
-    const OfferApiUrl =
-      `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    await Promise.all([
 
-    await this._renderAnnouncementsAsync(AnnouncementApiUrl);
+      // Banner (first priority) + Announcement / Offers tabs
+      Promise.all([this._getBannerItems(), libsReady]).then(() => {
+        this.initBannerSwiper();
+        this.initAnnouncementOfferTabs();
+      }),
 
-    await this._renderOffersAsync(OfferApiUrl);
+      // Announcements and Offers
+      this._renderAnnouncementsAsync(AnnouncementApiUrl),
+      this._renderOffersAsync(OfferApiUrl),
 
+      // Media Gallery
+      Promise.all([this._getMediaGalleryItems(), libsReady]).then(() => {
+        this.initMediaGallery();
+      }),
 
-    // Load Banner items from SharePoint
-     await this._getBannerItems();
+      // Quick Links
+      this.initializeQuickLinks(),
 
+      // Birthdays
+      this.renderBirthdays(),
 
-    // Load Active Media Gallery items from SharePoint
-     await this._getMediaGalleryItems();
+      // Social Media
+      Promise.all([this.initializeSocialMedia(), libsReady]).then(() => {
+        this.initSocialMediaSwipers();
+      }),
 
-    
-    await this.initializeQuickLinks();
+      // News Centre
+      this._renderNewsAsync(newsApiUrl).then(() => {
+        this.newsCentreAttachTabEvents();
+      }),
 
-
-    await this.renderBirthdays();
-
-    await this.initializeSocialMedia();
-
-    await this._renderNewsAsync(
-      newsApiUrl
-    );
-   this.newsCentreAttachTabEvents();
-
-    this.renderUpcomingEvents();
-    this.initializeUpcomingEvents();
-    this.initializeCalendar();
-
-    // Load home.js only after the HTML is available
-    // this.loadHomeJS();
-
+      // Upcoming Events
+      Promise.all([
+        this.loadEvents(today.getFullYear(), today.getMonth(), today.getDate()),
+        this.loadMyEvents(today.getFullYear(), today.getMonth(), today.getDate()),
+        this.loadOrganizationalEventDates(today.getFullYear(), today.getMonth()),
+        this.loadMyEventDates(today.getFullYear(), today.getMonth()),
+        libsReady
+      ]).then(() => {
+        this.renderUpcomingEvents();
+        this.initializeUpcomingEvents();
+        this.initializeCalendar();
+      })
+    ]);
   }
 
+  // ==================== NEWS CENTRE ====================
 
-private newsCentreSetupViewAll(
-    arrowIconUrl: string
-  ): void {
+  private newsCentreSetupViewAll(arrowIconUrl: string): void {
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
 
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    /*
-     * ----------------------------------------------------------
-     * Find View All link by ID.
-     * ----------------------------------------------------------
-     */
-
-    let viewAllLink =
-      this.domElement.querySelector(
-        '#news-view-all'
-      ) as HTMLAnchorElement | null;
-
-
-    /*
-     * ----------------------------------------------------------
-     * Fallback:
-     * Your older template may still contain the placeholder
-     * directly in the href.
-     * ----------------------------------------------------------
-     */
-
+    // Find View All link by ID (fallback: older template placeholder)
+    let viewAllLink = this.domElement.querySelector('#news-view-all') as HTMLAnchorElement | null;
     if (!viewAllLink) {
-
-      viewAllLink =
-        this.domElement.querySelector(
-          'a[href="__KEY_URL_VIEW_ALL__"]'
-        ) as HTMLAnchorElement | null;
+      viewAllLink = this.domElement.querySelector('a[href="__KEY_URL_VIEW_ALL__"]') as HTMLAnchorElement | null;
     }
-
-
-    /*
-     * ----------------------------------------------------------
-     * Set View All URL.
-     * ----------------------------------------------------------
-     */
 
     if (viewAllLink) {
-
-      viewAllLink.href =
-        `${baseUrl}/SitePages/News-List.aspx`;
-
-    }
-    else {
-
-      console.warn(
-        'News View All link not found.'
-      );
+      viewAllLink.href = `${baseUrl}/SitePages/News-List.aspx`;
+    } else {
+      console.warn('News View All link not found.');
     }
 
-
-    /*
-     * ----------------------------------------------------------
-     * Find arrow image by ID.
-     * ----------------------------------------------------------
-     */
-
-    let arrowImage =
-      this.domElement.querySelector(
-        '#news-view-all-arrow'
-      ) as HTMLImageElement | null;
-
-
-    /*
-     * ----------------------------------------------------------
-     * Fallback:
-     * Older template may still contain the placeholder
-     * directly in the image src.
-     * ----------------------------------------------------------
-     */
-
+    // Find arrow image by ID (fallback: older template placeholder)
+    let arrowImage = this.domElement.querySelector('#news-view-all-arrow') as HTMLImageElement | null;
     if (!arrowImage) {
-
-      arrowImage =
-        this.domElement.querySelector(
-          'img[src="__KEY_URL_ARROW__"]'
-        ) as HTMLImageElement | null;
+      arrowImage = this.domElement.querySelector('img[src="__KEY_URL_ARROW__"]') as HTMLImageElement | null;
     }
-
-
-    /*
-     * ----------------------------------------------------------
-     * Set arrow image.
-     * ----------------------------------------------------------
-     */
 
     if (arrowImage) {
-
-      arrowImage.src =
-        arrowIconUrl;
-
-    }
-    else {
-
-      console.warn(
-        'News View All arrow image not found.'
-      );
+      arrowImage.src = arrowIconUrl;
+    } else {
+      console.warn('News View All arrow image not found.');
     }
   }
 
-
-  /*
-   * ============================================================
-   * RENDER NEWS
-   * ============================================================
-   *
-   * Gets News data from SharePoint.
-   *
-   * After getting the data:
-   *
-   * 1. Store it in newsCentreItems.
-   * 2. Render All News.
-   * 3. Render Announcements.
-   */
-
-  private async _renderNewsAsync(
-    apiUrl: string
-  ): Promise<void> {
-
+  private async _renderNewsAsync(apiUrl: string): Promise<void> {
     try {
+      const data: INewsItem[] = await this._getNewsData(apiUrl);
 
-      /*
-       * ========================================================
-       * GET SHAREPOINT DATA
-       * ========================================================
-       */
+      // Store the data (required later for tab filtering)
+      this.newsCentreItems = data;
 
-      const data: INewsItem[] =
-        await this._getNewsData(
-          apiUrl
-        );
-
-
-      /*
-       * Store the data.
-       *
-       * This is required later for tab filtering.
-       */
-
-      this.newsCentreItems =
-        data;
-
-
-    
-
-
-      /*
-       * ========================================================
-       * DEFAULT TAB — ALL
-       * ========================================================
-       */
-
-      this.newsCentreRenderCategory(
-        'All'
-      );
-
-
-      /*
-       * ========================================================
-       * ANNOUNCEMENTS TAB
-       * ========================================================
-       */
-
-      this.newsCentreRenderCategory(
-        'Announcements'
-      );
+      this.newsCentreRenderCategory('All');
+      this.newsCentreRenderCategory('Announcements');
       this.newsCentreRenderCategory('Events');
-
       this.newsCentreRenderCategory('News');
-
       this.newsCentreRenderCategory('Circulars');
-
-    }
-    catch (error) {
-
-      console.error(
-        'Error rendering News:',
-        error
-      );
+    } catch (error) {
+      console.error('Error rendering News:', error);
     }
   }
 
-
-  /*
-   * ============================================================
-   * RENDER CATEGORY
-   * ============================================================
-   *
-   * THIS IS THE MAIN TEMPLATE RENDERING METHOD.
-   *
-   * The structure is intentionally the same as your
-   * AnnouncementOffer rendering pattern:
-   *
-   * let singleElementHtml =
-   *     NewsCentre.singleElementHtml
-   *       .replace(...)
-   *       .replace(...);
-   *
-   * allElementsHtml += singleElementHtml;
-   *
-   * container.innerHTML = allElementsHtml;
-   */
-
-  
-
-  private newsCentreRenderCategory(
-  category: string
-): void {
-
-
-  /*
-   * ==========================================================
-   * 1. DETERMINE THE PANEL
-   * ==========================================================
-   */
-
-  let panel: HTMLElement | null = null;
-
-
-  /*
-   * ----------------------------------------------------------
-   * All
-   * ----------------------------------------------------------
-   */
-
-  if (category === 'All') {
-
-    panel =
-      this.domElement.querySelector(
-        '#news-panel-all'
-      ) as HTMLElement | null;
-
-  }
-
-
-  /*
-   * ----------------------------------------------------------
-   * Announcements
-   * ----------------------------------------------------------
-   */
-
-  else if (category === 'Announcements') {
-
-    panel =
-      this.domElement.querySelector(
-        '#news-panel-announcements'
-      ) as HTMLElement | null;
-
-  }
-
-
-  /*
-   * ----------------------------------------------------------
-   * Events
-   * ----------------------------------------------------------
-   */
-
-  else if (category === 'Events') {
-
-    panel =
-      this.domElement.querySelector(
-        '#news-panel-events'
-      ) as HTMLElement | null;
-
-  }
-
-
-  /*
-   * ----------------------------------------------------------
-   * News
-   * ----------------------------------------------------------
-   */
-
-  else if (category === 'News') {
-
-    panel =
-      this.domElement.querySelector(
-        '#news-panel-news'
-      ) as HTMLElement | null;
-
-  }
-
-
-  /*
-   * ----------------------------------------------------------
-   * Circulars
-   * ----------------------------------------------------------
-   */
-
-  else if (category === 'Circulars') {
-
-    panel =
-      this.domElement.querySelector(
-        '#news-panel-circulars'
-      ) as HTMLElement | null;
-
-  }
-
-
-  /*
-   * ----------------------------------------------------------
-   * Invalid category
-   * ----------------------------------------------------------
-   */
-
-  else {
-
-    console.error(
-      `Unknown News category: ${category}`
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * ==========================================================
-   * 2. CHECK WHETHER PANEL EXISTS
-   * ==========================================================
-   */
-
-  if (!panel) {
-
-    console.error(
-      `News panel not found for category: ${category}`
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * ==========================================================
-   * 3. FIND NEWS CONTAINER
-   * ==========================================================
-   *
-   * Every category panel contains:
-   *
-   * <div class="panel-card-news">
-   *
-   * This is where the generated News item HTML
-   * will be inserted.
-   *
-   */
-
-  const container =
-    panel.querySelector(
-      '.panel-card-news'
-    ) as HTMLElement | null;
-
-
-  /*
-   * Container not found
-   */
-
-  if (!container) {
-
-    console.error(
-      `News container not found for category: ${category}`
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * ==========================================================
-   * 4. FILTER NEWS ITEMS
-   * ==========================================================
-   */
-
-  let items: INewsItem[];
-
-
-  /*
-   * ----------------------------------------------------------
-   * All category
-   * ----------------------------------------------------------
-   *
-   * Show every News item.
-   *
-   */
-
-  if (category === 'All') {
-
-    items =
-      this.newsCentreItems;
-
-  }
-
-
-  /*
-   * ----------------------------------------------------------
-   * Specific category
-   * ----------------------------------------------------------
-   *
-   * Only show items whose Category matches
-   * the selected tab.
-   *
-   */
-
-  else {
-
-    items =
-      this.newsCentreItems.filter(
-        (item) =>
-
-          this.newsCentreNormalizeValue(
-            item.Category
-          ) ===
-
-          this.newsCentreNormalizeValue(
-            category
-          )
-      );
-
-  }
-
-
-  /*
-   * ==========================================================
-   * 5. START COMPLETE HTML STRING
-   * ==========================================================
-   *
-   * This will contain all News items for
-   * the selected category.
-   *
-   */
-
-  let allElementsHtml: string = '';
-
-
-  /*
-   * ==========================================================
-   * 6. LOOP THROUGH NEWS ITEMS
-   * ==========================================================
-   */
-  const newsIconImg=
-    `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/quick-links/quick-link-1.png`;
-
-  items.forEach(
-    (item) => {
-
-
-      /*
-       * ======================================================
-       * IMAGE URL
-       * ======================================================
-       */
-
-    
-
-
-      /*
-       * ======================================================
-       * DATE
-       * ======================================================
-       */
-
-      const createddate =
-        this.newsCentreFormatDate(
-          item.PublishedDate
-        );
-
-
-      /*
-       * ======================================================
-       * DETAILS URL
-       * ======================================================
-       */
-
-      const detailsUrl =
-        `${this.context.pageContext.web.absoluteUrl}` +
-        `/Lists/News/DispForm.aspx?ID=${item.Id}`;
-
-
-      /*
-       * ======================================================
-       * TAKE SINGLE ELEMENT TEMPLATE
-       * ======================================================
-       */
-
-      let singleElementHtml =
-        NewsCentre.singleElementHtml;
-
-
-      /*
-       * ======================================================
-       * REPLACE NEWS ICON
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_URL_IMGICON__/g,
-          newsIconImg
-        );
-
-
-      /*
-       * ======================================================
-       * REPLACE TITLE
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_DATA_TITLE__/g,
-          this.newsCentreEscapeHtml(
-            item.Title || ''
-          )
-        );
-
-
-      /*
-       * ======================================================
-       * REPLACE DESCRIPTION
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_DATA_DESCRIPTION__/g,
-          this.newsCentreEscapeHtml(
-            item.ShortDescription || ''
-          )
-        );
-
-
-      /*
-       * ======================================================
-       * REPLACE CATEGORY
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_DATA_CATEGORY__/g,
-          this.newsCentreEscapeHtml(
-            item.Category || ''
-          )
-        );
-
-
-      /*
-       * ======================================================
-       * REPLACE DATE
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_DATA_DATE__/g,
-          createddate
-        );
-
-
-      /*
-       * ======================================================
-       * REPLACE DETAILS LINK
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_URL_LINK__/g,
-          detailsUrl
-        );
-
-
-      /*
-       * ======================================================
-       * REPLACE ARROW IMAGE
-       * ======================================================
-       */
-
-      singleElementHtml =
-        singleElementHtml.replace(
-          /__KEY_URL_ARROW__/g,
-          this.newsCentreGetArrowImageUrl()
-        );
-
-
-      /*
-       * ======================================================
-       * ADD ITEM TO COMPLETE HTML
-       * ======================================================
-       */
-
-      allElementsHtml +=
-        singleElementHtml;
-
+  private newsCentreRenderCategory(category: string): void {
+
+    // 1. Determine the panel
+    let panel: HTMLElement | null = null;
+
+    if (category === 'All') {
+      panel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
+    } else if (category === 'Announcements') {
+      panel = this.domElement.querySelector('#news-panel-announcements') as HTMLElement | null;
+    } else if (category === 'Events') {
+      panel = this.domElement.querySelector('#news-panel-events') as HTMLElement | null;
+    } else if (category === 'News') {
+      panel = this.domElement.querySelector('#news-panel-news') as HTMLElement | null;
+    } else if (category === 'Circulars') {
+      panel = this.domElement.querySelector('#news-panel-circulars') as HTMLElement | null;
+    } else {
+      console.error(`Unknown News category: ${category}`);
+      return;
     }
-  );
 
+    // 2. Check whether panel exists
+    if (!panel) {
+      console.error(`News panel not found for category: ${category}`);
+      return;
+    }
 
-  /*
-   * ==========================================================
-   * 7. NO DATA
-   * ==========================================================
-   *
-   * If the selected category has no items,
-   * show the "No records found." message.
-   *
-   */
+    // 3. Find news container
+    const container = panel.querySelector('.panel-card-news') as HTMLElement | null;
+    if (!container) {
+      console.error(`News container not found for category: ${category}`);
+      return;
+    }
 
-  if (!items.length) {
+    // 4. Filter news items
+    let items: INewsItem[];
+    if (category === 'All') {
+      items = this.newsCentreItems;
+    } else {
+      items = this.newsCentreItems.filter((item) => this.newsCentreNormalizeValue(item.Category) === this.newsCentreNormalizeValue(category));
+    }
 
-    allElementsHtml =
-      NewsCentre.noElementHtml;
+    // 5. Build HTML
+    let allElementsHtml: string = '';
+    const newsIconImg = `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/DefaultImages/news-icon.png`;
 
+    items.forEach((item) => {
+      const createddate = this.newsCentreFormatDate(item.PublishedDate);
+      const detailsUrl = `${this.context.pageContext.web.absoluteUrl}/Lists/News/DispForm.aspx?ID=${item.Id}`;
+
+      let singleElementHtml = NewsCentre.singleElementHtml;
+      singleElementHtml = singleElementHtml.replace(/__KEY_URL_IMGICON__/g, newsIconImg);
+      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_TITLE__/g, this.newsCentreEscapeHtml(item.Title || ''));
+      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DESCRIPTION__/g, this.newsCentreEscapeHtml(item.ShortDescription || ''));
+      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_CATEGORY__/g, this.newsCentreEscapeHtml(item.Category || ''));
+      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DATE__/g, createddate);
+      singleElementHtml = singleElementHtml.replace(/__KEY_URL_LINK__/g, detailsUrl);
+      singleElementHtml = singleElementHtml.replace(/__KEY_URL_ARROW__/g, this.newsCentreGetArrowImageUrl());
+
+      allElementsHtml += singleElementHtml;
+    });
+
+    // 6. No data
+    if (!items.length) {
+      allElementsHtml = NewsCentre.noElementHtml;
+    }
+
+    // 7. Insert HTML
+    container.innerHTML = allElementsHtml;
   }
 
-
-  /*
-   * ==========================================================
-   * 8. INSERT HTML INTO CATEGORY CONTAINER
-   * ==========================================================
-   */
-
-  container.innerHTML =
-    allElementsHtml;
-
-}
-
-
-  /*
-   * ============================================================
-   * GET NEWS DATA
-   * ============================================================
-   *
-   * Sends GET request to the SharePoint REST API.
-   */
-
-  private async _getNewsData(
-    apiUrl: string
-  ): Promise<INewsItem[]> {
-
+  private async _getNewsData(apiUrl: string): Promise<INewsItem[]> {
     try {
-
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          apiUrl,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept':
-                'application/json;odata=nometadata'
-            }
-          }
-        );
-
-
-      /*
-       * Check HTTP response.
-       */
+      const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
-
-        throw new Error(
-          `News API failed: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`News API failed: ${response.status} ${response.statusText}`);
       }
 
-
-      /*
-       * Convert response to JSON.
-       */
-
-      const data =
-        await response.json();
-
-      
-
-
-      /*
-       * Return SharePoint items.
-       */
-
+      const data = await response.json();
       return data.value || [];
-
-    }
-    catch (error) {
-
-      console.error(
-        'Error loading News list:',
-        error
-      );
-
+    } catch (error) {
+      console.error('Error loading News list:', error);
       throw error;
     }
   }
 
-
-  /*
-   * ============================================================
-   * NEWS IMAGE URL
-   * ============================================================
-   *
-   * NewsIcon contains JSON information about the uploaded
-   * attachment.
-   */
-
-
-
-
-  /*
-   * ============================================================
-   * ARROW IMAGE URL
-   * ============================================================
-   */
-
   private newsCentreGetArrowImageUrl(): string {
-
-    const webUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-
-    return (
-      `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`
-    );
+    const webUrl = this.context.pageContext.web.absoluteUrl;
+    return `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
   }
 
-
-  /*
-   * ============================================================
-   * TAB FUNCTIONALITY
-   * ============================================================
-   */
-
- private newsCentreAttachTabEvents(): void {
-
-  /*
-   * ==========================================================
-   * 1. FIND ALL TABS
-   * ==========================================================
-   */
-
-  const tabs =
-    this.domElement.querySelectorAll(
-      '#news-tabs .tab-title-pill'
-    );
-
-
-  /*
-   * ==========================================================
-   * 2. FIND ALL NEWS PANELS
-   * ==========================================================
-   */
-
-  const panels =
-    this.domElement.querySelectorAll(
-      '#news-tabs .news-panel-tab-view'
-    );
-
-
-  /*
-   * ==========================================================
-   * 3. CHECK WHETHER TABS EXIST
-   * ==========================================================
-   */
-
-  if (!tabs.length) {
-
-    console.warn(
-      'News tabs not found.'
-    );
-
-    return;
-  }
-
-
-  /*
-   * ==========================================================
-   * 4. ADD CLICK EVENT TO EACH TAB
-   * ==========================================================
-   */
-
-  tabs.forEach(
-    (tab) => {
-
-      tab.addEventListener(
-        'click',
-        () => {
-
-          /*
-           * ==================================================
-           * GET TARGET PANEL ID
-           * ==================================================
-           *
-           * Example:
-           *
-           * data-tab-news-id="news-panel-events"
-           *
-           */
-
-          const targetId =
-            tab.getAttribute(
-              'data-tab-news-id'
-            );
-
-
-          /*
-           * No target ID
-           */
-
-          if (!targetId) {
-
-            return;
-          }
-
-
-          /*
-           * ==================================================
-           * REMOVE ACTIVE CLASS FROM ALL TABS
-           * ==================================================
-           */
-
-          tabs.forEach(
-            (otherTab) => {
-
-              otherTab.classList.remove(
-                'tab-title-pill-active'
-              );
-
-            }
-          );
-
-
-          /*
-           * ==================================================
-           * ADD ACTIVE CLASS TO CLICKED TAB
-           * ==================================================
-           */
-
-          tab.classList.add(
-            'tab-title-pill-active'
-          );
-
-
-          /*
-           * ==================================================
-           * HIDE ALL PANELS
-           * ==================================================
-           */
-
-          panels.forEach(
-            (panel) => {
-
-              (panel as HTMLElement).style.display =
-                'none';
-
-            }
-          );
-
-
-          /*
-           * ==================================================
-           * SHOW SELECTED PANEL
-           * ==================================================
-           */
-
-          const targetPanel =
-            this.domElement.querySelector(
-              `#${targetId}`
-            ) as HTMLElement | null;
-
-
-          if (targetPanel) {
-
-            targetPanel.style.display =
-              'block';
-
-          }
-          else {
-
-            console.warn(
-              `News panel not found: ${targetId}`
-            );
-
-            return;
-          }
-
-
-          /*
-           * ==================================================
-           * DETERMINE CATEGORY
-           * ==================================================
-           */
-
-          let category = '';
-
-
-          if (
-            targetId ===
-            'news-panel-all'
-          ) {
-
-            category = 'All';
-
-          }
-          else if (
-            targetId ===
-            'news-panel-announcements'
-          ) {
-
-            category = 'Announcements';
-
-          }
-          else if (
-            targetId ===
-            'news-panel-events'
-          ) {
-
-            category = 'Events';
-
-          }
-          else if (
-            targetId ===
-            'news-panel-news'
-          ) {
-
-            category = 'News';
-
-          }
-          else if (
-            targetId ===
-            'news-panel-circulars'
-          ) {
-
-            category = 'Circulars';
-
-          }
-
-
-          /*
-           * ==================================================
-           * RENDER SELECTED CATEGORY
-           * ==================================================
-           */
-
-          if (category) {
-
-            this.newsCentreRenderCategory(
-              category
-            );
-
-          }
-
+  private newsCentreAttachTabEvents(): void {
+    const tabs = this.domElement.querySelectorAll('#news-tabs .tab-title-pill');
+    const panels = this.domElement.querySelectorAll('#news-tabs .news-panel-tab-view');
+
+    if (!tabs.length) {
+      console.warn('News tabs not found.');
+      return;
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.getAttribute('data-tab-news-id');
+        if (!targetId) {
+          return;
         }
-      );
 
+        tabs.forEach((otherTab) => { otherTab.classList.remove('tab-title-pill-active'); });
+        tab.classList.add('tab-title-pill-active');
+
+        panels.forEach((panel) => { (panel as HTMLElement).style.display = 'none'; });
+
+        const targetPanel = this.domElement.querySelector(`#${targetId}`) as HTMLElement | null;
+        if (targetPanel) {
+          targetPanel.style.display = 'block';
+        } else {
+          console.warn(`News panel not found: ${targetId}`);
+          return;
+        }
+
+        let category = '';
+        if (targetId === 'news-panel-all') {
+          category = 'All';
+        } else if (targetId === 'news-panel-announcements') {
+          category = 'Announcements';
+        } else if (targetId === 'news-panel-events') {
+          category = 'Events';
+        } else if (targetId === 'news-panel-news') {
+          category = 'News';
+        } else if (targetId === 'news-panel-circulars') {
+          category = 'Circulars';
+        }
+
+        if (category) {
+          this.newsCentreRenderCategory(category);
+        }
+      });
+    });
+
+    // Default tab state: All tab active
+    tabs.forEach((tab) => { tab.classList.remove('tab-title-pill-active'); });
+
+    const defaultTab = this.domElement.querySelector('[data-tab-news-id="news-panel-all"]') as HTMLElement | null;
+    if (defaultTab) {
+      defaultTab.classList.add('tab-title-pill-active');
     }
-  );
 
+    // Default panel state: show All panel only
+    panels.forEach((panel) => { (panel as HTMLElement).style.display = 'none'; });
 
-  /*
-   * ==========================================================
-   * DEFAULT TAB STATE
-   * ==========================================================
-   *
-   * All tab should be active when the page loads.
-   *
-   */
-
-  tabs.forEach(
-    (tab) => {
-
-      tab.classList.remove(
-        'tab-title-pill-active'
-      );
-
+    const allPanel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
+    if (allPanel) {
+      allPanel.style.display = 'block';
     }
-  );
-
-
-  const defaultTab =
-    this.domElement.querySelector(
-      '[data-tab-news-id="news-panel-all"]'
-    ) as HTMLElement | null;
-
-
-  if (defaultTab) {
-
-    defaultTab.classList.add(
-      'tab-title-pill-active'
-    );
-
   }
 
-
-  /*
-   * ==========================================================
-   * DEFAULT PANEL STATE
-   * ==========================================================
-   *
-   * Hide every panel first.
-   *
-   */
-
-  panels.forEach(
-    (panel) => {
-
-      (panel as HTMLElement).style.display =
-        'none';
-
-    }
-  );
-
-
-  /*
-   * ==========================================================
-   * SHOW ALL PANEL
-   * ==========================================================
-   */
-
-  const allPanel =
-    this.domElement.querySelector(
-      '#news-panel-all'
-    ) as HTMLElement | null;
-
-
-  if (allPanel) {
-
-    allPanel.style.display =
-      'block';
-
-  }
-
-}
-
-
-  /*
-   * ============================================================
-   * DATE FORMAT
-   * ============================================================
-   *
-   * Example:
-   *
-   * Sep 25, 2026
-   */
-
-private newsCentreFormatDate(
-    value?: string
-  ): string {
-
+  private newsCentreFormatDate(value?: string): string {
     if (!value) {
-
       return '';
     }
 
-
-    const date =
-      new Date(value);
-
-
-    if (
-      isNaN(
-        date.getTime()
-      )
-    ) {
-
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
       return '';
     }
 
-
-    return date.toLocaleDateString(
-      'en-US',
-      {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }
-    );
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-
-  /*
-   * ============================================================
-   * NORMALIZE VALUE
-   * ============================================================
-   *
-   * Used when comparing categories.
-   */
-
-   private newsCentreNormalizeValue(
-    value?: string
-  ): string {
-
-    return (
-      value || ''
-    )
-      .trim()
-      .toLowerCase();
+  private newsCentreNormalizeValue(value?: string): string {
+    return (value || '').trim().toLowerCase();
   }
 
-
-  /*
-   * ============================================================
-   * ESCAPE HTML
-   * ============================================================
-   */
-
-   private newsCentreEscapeHtml(
-    value: string
-  ): string {
-
-    return value
-      .replace(
-        /&/g,
-        '&amp;'
-      )
-      .replace(
-        /</g,
-        '&lt;'
-      )
-      .replace(
-        />/g,
-        '&gt;'
-      )
-      .replace(
-        /"/g,
-        '&quot;'
-      )
-      .replace(
-        /'/g,
-        '&#039;'
-      );
+  private newsCentreEscapeHtml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
-
-
-  // ==================== LOAD CSS ====================
-
-  // private loadCSS(): void {
-
-  //   const baseUrl =
-  //     this.context.pageContext.web.absoluteUrl;
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/home.css`
-  //   );
-
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-  //   );
-
-  // }
-
-  // private async loadJS(): Promise<void> {
-
-  //   const baseUrl =
-  //     this.context.pageContext.web.absoluteUrl;
-
-
-  //   await SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  //   );
-
-
-  //   await this.loadBootstrap();
-
-
-  //   await SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  //   );
-
-
-  //   await SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  //   );
-
-
-  //   await SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`
-  //   );
-
-
-  //   await SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/common.js`
-  //   );
-
-  // }
-  // ==================== LOAD BOOTSTRAP ====================
-
-  // private async loadBootstrap(): Promise<void> {
-
-  //   const baseUrl =
-  //     this.context.pageContext.web.absoluteUrl;
-
-
-  //   if (
-  //     typeof (window as any).bootstrap !== 'undefined'
-  //   ) {
-
-  //     return;
-
-  //   }
-
-
-  //   const bootstrapModule =
-  //     await SPComponentLoader.loadScript<any>(
-  //       `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  //     );
-
-
-  //   if (bootstrapModule) {
-
-  //     (window as any).bootstrap =
-  //       bootstrapModule;
-
-  //   }
-
-
-  //   console.log(
-  //     'Bootstrap loaded:',
-  //     typeof (window as any).bootstrap
-  //   );
-
-  // }
-
-
-  // ==================== LOAD HOME JS ====================
-
-  // private async loadHomeJS(): Promise<void> {
-
-  //   const baseUrl =
-  //     this.context.pageContext.web.absoluteUrl;
-
-
-  //   try {
-
-  //     await SPComponentLoader.loadScript(
-  //       `${baseUrl}/SiteAssets/resources/js/home.js`
-  //     );
-
-
-  //     console.log(
-  //       'home.js loaded'
-  //     );
-
-  //   } catch (error) {
-
-  //     console.error(
-  //       'Error loading home.js:',
-  //       error
-  //     );
-
-  //   }
-
-  // }
-
 
   // ==================== LOAD EVENTS ====================
 
- private async loadEvents(
-    year: number,
-    month: number,
-    day: number
-  ): Promise<void> {
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
+  private async loadEvents(year: number, month: number, day: number): Promise<void> {
+    const siteUrl = this.context.pageContext.web.absoluteUrl;
+    const startDate = new Date(year, month, day, 0, 0, 0);
+    const endDate = new Date(year, month, day + 1, 0, 0, 0);
 
-    const startDate =
-      new Date(
-        year,
-        month,
-        day,
-        0,
-        0,
-        0
-      );
-
-    const endDate =
-      new Date(
-        year,
-        month,
-        day + 1,
-        0,
-        0,
-        0
-      );
-
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
-      `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link` +
-      `&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'` +
-      `&$orderby=EventDate asc`;
+    const url = `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'&$orderby=EventDate asc`;
 
     try {
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              Accept:
-                'application/json;odata=nometadata'
-            }
-          }
-        );
+      const response: SPHttpClientResponse = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { Accept: 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
-        console.error(
-          'Upcoming Events list error:',
-          response.status,
-          response.statusText
-        );
-
+        console.error('Upcoming Events list error:', response.status, response.statusText);
         this.events = [];
         return;
       }
 
       const data = await response.json();
-
-      this.events =
-        data.value || [];
+      this.events = data.value || [];
     } catch (error) {
-      console.error(
-        'Error loading Upcoming Events:',
-        error
-      );
-
+      console.error('Error loading Upcoming Events:', error);
       this.events = [];
     }
   }
 
+  private async loadOrganizationalEventDates(year: number, month: number): Promise<void> {
+    const siteUrl = this.context.pageContext.web.absoluteUrl;
+    const startDate = new Date(year, month, 1, 0, 0, 0);
+    const endDate = new Date(year, month + 1, 1, 0, 0, 0);
 
-  private async loadOrganizationalEventDates(
-    year: number,
-    month: number
-  ): Promise<void> {
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-    const startDate =
-      new Date(
-        year,
-        month,
-        1,
-        0,
-        0,
-        0
-      );
-
-    const endDate =
-      new Date(
-        year,
-        month + 1,
-        1,
-        0,
-        0,
-        0
-      );
-
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
-      `?$select=EventDate,Status,Title` +
-      `&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}' and Status eq 'Active'`;
+    const url = `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items?$select=EventDate,Status,Title&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}' and Status eq 'Active'`;
 
     try {
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              Accept:
-                'application/json;odata=nometadata'
-            }
-          }
-        );
+      const response: SPHttpClientResponse = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { Accept: 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
         this.organizationalEventDates = [];
@@ -1939,3202 +663,1117 @@ private newsCentreFormatDate(
       }
 
       const data = await response.json();
-
       this.organizationalEventDates = [];
       this.organizationalEventTitles = {};
 
-      (data.value || []).forEach(
-        (item: {
-          EventDate: string;
-          Status: string;
-          Title: string;
-        }) => {
+      (data.value || []).forEach((item: { EventDate: string; Status: string; Title: string }) => {
+        const dateKey = this.getDateKey(item.EventDate);
+        if (!dateKey) {
+          return;
+        }
 
-          const dateKey =
-            this.getDateKey(
-              item.EventDate
-            );
+        if (this.organizationalEventDates.indexOf(dateKey) === -1) {
+          this.organizationalEventDates.push(dateKey);
+        }
 
-          if (!dateKey) {
-            return;
-          }
-
-          if (
-            this.organizationalEventDates
-              .indexOf(dateKey) === -1
-          ) {
-            this.organizationalEventDates.push(
-              dateKey
-            );
-          }
-
-          const title =
-            item.Title || '';
-
-          if (title) {
-            if (
-              this.organizationalEventTitles[
-                dateKey
-              ]
-            ) {
-              this.organizationalEventTitles[
-                dateKey
-              ] += `, ${title}`;
-            } else {
-              this.organizationalEventTitles[
-                dateKey
-              ] = title;
-            }
+        const title = item.Title || '';
+        if (title) {
+          if (this.organizationalEventTitles[dateKey]) {
+            this.organizationalEventTitles[dateKey] += `, ${title}`;
+          } else {
+            this.organizationalEventTitles[dateKey] = title;
           }
         }
-      );
+      });
     } catch (error) {
-      console.error(
-        'Error loading organizational event dates:',
-        error
-      );
-
+      console.error('Error loading organizational event dates:', error);
       this.organizationalEventDates = [];
       this.organizationalEventTitles = {};
     }
   }
 
-  private async loadMyEventDates(
-    year: number,
-    month: number
-  ): Promise<void> {
+  private async loadMyEventDates(year: number, month: number): Promise<void> {
     try {
-      const client: MSGraphClientV3 =
-        await this.context.msGraphClientFactory
-          .getClient('3');
+      const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
+      const startDate = new Date(year, month, 1, 0, 0, 0);
+      const endDate = new Date(year, month + 1, 1, 0, 0, 0);
 
-      const startDate =
-        new Date(
-          year,
-          month,
-          1,
-          0,
-          0,
-          0
-        );
-
-      const endDate =
-        new Date(
-          year,
-          month + 1,
-          1,
-          0,
-          0,
-          0
-        );
-
-      const response =
-        await client
-          .api('/me/calendar/calendarView')
-          .query({
-            startDateTime:
-              startDate.toISOString(),
-            endDateTime:
-              endDate.toISOString()
-          })
-          .select('start,subject')
-          .orderby('start/dateTime')
-          .get();
+      const response = await client.api('/me/calendar/calendarView').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('start,subject').orderby('start/dateTime').get();
 
       this.myEventDates = [];
       this.myEventTitles = {};
 
-      (response.value || []).forEach(
-        (event: IOutlookEvent) => {
+      (response.value || []).forEach((event: IOutlookEvent) => {
+        if (!event.start?.dateTime) {
+          return;
+        }
 
-          if (!event.start?.dateTime) {
-            return;
-          }
+        const dateKey = this.getDateKey(event.start.dateTime);
+        if (!dateKey) {
+          return;
+        }
 
-          const dateKey =
-            this.getDateKey(
-              event.start.dateTime
-            );
+        if (this.myEventDates.indexOf(dateKey) === -1) {
+          this.myEventDates.push(dateKey);
+        }
 
-          if (!dateKey) {
-            return;
-          }
-
-          if (
-            this.myEventDates.indexOf(
-              dateKey
-            ) === -1
-          ) {
-            this.myEventDates.push(
-              dateKey
-            );
-          }
-
-          const title =
-            event.subject || '';
-
-          if (title) {
-            if (
-              this.myEventTitles[
-                dateKey
-              ]
-            ) {
-              this.myEventTitles[
-                dateKey
-              ] += `, ${title}`;
-            } else {
-              this.myEventTitles[
-                dateKey
-              ] = title;
-            }
+        const title = event.subject || '';
+        if (title) {
+          if (this.myEventTitles[dateKey]) {
+            this.myEventTitles[dateKey] += `, ${title}`;
+          } else {
+            this.myEventTitles[dateKey] = title;
           }
         }
-      );
+      });
     } catch (error) {
-      console.error(
-        'Error loading Outlook event dates:',
-        error
-      );
-
+      console.error('Error loading Outlook event dates:', error);
       this.myEventDates = [];
       this.myEventTitles = {};
     }
   }
 
-    private getDateKey(
-    dateValue: string
-  ): string {
-    const date =
-      new Date(dateValue);
-
+  private getDateKey(dateValue: string): string {
+    const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
       return '';
     }
-
-    return (
-      date.getFullYear() +
-      '-' +
-      date.getMonth() +
-      '-' +
-      date.getDate()
-    );
+    return date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
   }
 
   // ==================== LOAD MY EVENTS ====================
 
-   private async loadMyEvents(
-    year: number,
-    month: number,
-    day: number
-  ): Promise<void> {
+  private async loadMyEvents(year: number, month: number, day: number): Promise<void> {
     try {
-      const client: MSGraphClientV3 =
-        await this.context.msGraphClientFactory
-          .getClient('3');
+      const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
+      const startDate = new Date(year, month, day, 0, 0, 0);
+      const endDate = new Date(year, month, day + 1, 0, 0, 0);
 
-      const startDate =
-        new Date(
-          year,
-          month,
-          day,
-          0,
-          0,
-          0
-        );
+      const response = await client.api('/me/calendar/calendarView').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('id,subject,start,end,location,onlineMeeting').orderby('start/dateTime').get();
 
-      const endDate =
-        new Date(
-          year,
-          month,
-          day + 1,
-          0,
-          0,
-          0
-        );
-
-      const response =
-        await client
-          .api('/me/calendar/calendarView')
-          .query({
-            startDateTime:
-              startDate.toISOString(),
-            endDateTime:
-              endDate.toISOString()
-          })
-          .select(
-            'id,subject,start,end,location,onlineMeeting'
-          )
-          .orderby('start/dateTime')
-          .get();
-
-      this.myEvents =
-        (response.value || []).map(
-          (
-            event: IOutlookEvent,
-            index: number
-          ): IEventItem => {
-            return {
-              Id: index + 1,
-              Title: event.subject || '',
-              EventDate:
-                event.start?.dateTime || '',
-              StartTime:
-                event.start?.dateTime || '',
-              EndTime:
-                event.end?.dateTime || '',
-              Location:
-                event.location?.displayName || '',
-              Status: 'Active',
-              TeamsUrl:
-                event.onlineMeeting?.joinUrl || ''
-            };
-          }
-        );
+      this.myEvents = (response.value || []).map((event: IOutlookEvent, index: number): IEventItem => {
+        return {
+          Id: index + 1,
+          Title: event.subject || '',
+          EventDate: event.start?.dateTime || '',
+          StartTime: event.start?.dateTime || '',
+          EndTime: event.end?.dateTime || '',
+          Location: event.location?.displayName || '',
+          Status: 'Active',
+          TeamsUrl: event.onlineMeeting?.joinUrl || ''
+        };
+      });
     } catch (error) {
-      console.error(
-        'Error loading Outlook Calendar events:',
-        error
-      );
-
+      console.error('Error loading Outlook Calendar events:', error);
       this.myEvents = [];
     }
   }
 
-
   // ==================== RENDER UPCOMING EVENTS ====================
 
-    private renderUpcomingEvents(): void {
-    const baseUrl =
-      this.context.pageContext.web.absoluteUrl;
+  private renderUpcomingEvents(): void {
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
+    const rightArrow = `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+    const arrowRightShort = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-    const UpcomingListingPage=`${this.context.pageContext.web.absoluteUrl}/SitePages/Upcoming-Events.aspx`;
+    const myEvents = this.getMyEvents();
+    const organizationalEvents = this.getOrganizationalEvents();
 
-    const rightArrow =
-      `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+    let html = UpcomingEventsTemplate.allElementsHtml;
+    html = html.replace(/__KEY_ARROW_RIGHT_SHORT__/g, arrowRightShort);
 
-    const arrowRightShort =
-      `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
+    const myEventsHtml = this.renderEventElements(myEvents, rightArrow, true);
+    const organizationalEventsHtml = this.renderEventElements(organizationalEvents, rightArrow, false);
 
-    const myEvents =
-      this.getMyEvents();
+    html = html.replace('id="events-list-my">', `id="events-list-my">${myEventsHtml}`);
+    html = html.replace('id="events-list-org">', `id="events-list-org">${organizationalEventsHtml}`);
 
-    const organizationalEvents =
-      this.getOrganizationalEvents();
-
-    let html =
-      UpcomingEventsTemplate.allElementsHtml;
-
-    html = html.replace(
-      /__KEY_ARROW_RIGHT_SHORT__/g,
-      arrowRightShort
-    );
-    html=html.replace(/__KEY_URL_UPCOMING__/g,UpcomingListingPage);
-
-    const myEventsHtml =
-      this.renderEventElements(
-        myEvents,
-        rightArrow,
-        true
-      );
-
-    const organizationalEventsHtml =
-      this.renderEventElements(
-        organizationalEvents,
-        rightArrow,
-        false
-      );
-
-    html = html.replace(
-      'id="events-list-my">',
-      `id="events-list-my">${myEventsHtml}`
-    );
-
-    html = html.replace(
-      'id="events-list-org">',
-      `id="events-list-org">${organizationalEventsHtml}`
-    );
-
-    this.domElement.querySelector('#upcoming-events-container')!.innerHTML =html;
+    this.domElement.querySelector('#upcoming-events-container')!.innerHTML = html;
   }
-
-
-  // ==================== GET MY EVENTS ====================
 
   private getMyEvents(): IEventItem[] {
     return this.myEvents;
   }
 
-
-  // ==================== GET ORGANIZATIONAL EVENTS ====================
-
-    private getOrganizationalEvents(): IEventItem[] {
-    return this.events.filter(
-      (event: IEventItem) =>
-        event.Status === 'Active'
-    );
+  private getOrganizationalEvents(): IEventItem[] {
+    return this.events.filter((event: IEventItem) => event.Status === 'Active');
   }
 
-
-  // ==================== RENDER EVENT ELEMENTS ====================
-
-  private renderEventElements(
-    events: IEventItem[],
-    rightArrow: string,
-    isMyEvent: boolean
-  ): string {
+  private renderEventElements(events: IEventItem[], rightArrow: string, isMyEvent: boolean): string {
     if (!events.length) {
       return UpcomingEventsTemplate.noRecord;
     }
 
-    return events
-      .map(
-        (event: IEventItem) => {
-          const date =
-            this.formatDate(
-              event.EventDate
-            );
+    return events.map((event: IEventItem) => {
+      const date = this.formatDate(event.EventDate);
+      const time = this.formatTime(event.StartTime, event.EndTime);
 
-          const time =
-            this.formatTime(
-              event.StartTime,
-              event.EndTime
-            );
+      let html = UpcomingEventsTemplate.singleElementHtml;
+      html = html.replace('__KEY_EVENT_MONTH__', escape(date.month));
+      html = html.replace('__KEY_EVENT_DAY__', escape(date.day));
+      html = html.replace('__KEY_EVENT_TITLE__', escape(event.Title || ''));
+      html = html.replace('__KEY_EVENT_TIME__', escape(time));
+      html = html.replace('__KEY_EVENT_LOCATION__', escape(event.Location || ''));
 
-          let html =
-            UpcomingEventsTemplate.singleElementHtml;
+      let arrowHtml = '';
+      if (isMyEvent) {
+        const teamsUrl = event.TeamsUrl || 'https://teams.microsoft.com/';
+        arrowHtml = `<a href="${escape(teamsUrl)}" target="_blank" data-interception="off" rel="noopener noreferrer"><img src="${rightArrow}" /></a>`;
+      } else if (event.Link) {
+        arrowHtml = `<a href="${escape(event.Link)}" target="_blank" data-interception="off" rel="noopener noreferrer"><img src="${rightArrow}" /></a>`;
+      }
 
-          html = html.replace(
-            '__KEY_EVENT_MONTH__',
-            escape(date.month)
-          );
-
-          html = html.replace(
-            '__KEY_EVENT_DAY__',
-            escape(date.day)
-          );
-
-          html = html.replace(
-            '__KEY_EVENT_TITLE__',
-            escape(
-              event.Title || ''
-            )
-          );
-
-          html = html.replace(
-            '__KEY_EVENT_TIME__',
-            escape(time)
-          );
-
-          html = html.replace(
-            '__KEY_EVENT_LOCATION__',
-            escape(
-              event.Location || ''
-            )
-          );
-
-          let arrowHtml = '';
-
-          if (isMyEvent) {
-            const teamsUrl =
-              event.TeamsUrl ||
-              'https://teams.microsoft.com/';
-
-            arrowHtml =
-              `<a href="${escape(teamsUrl)}" target="_blank" data-interception="off" rel="noopener noreferrer">
-                <img src="${rightArrow}" />
-              </a>`;
-          } else if (event.Link) {
-            arrowHtml =
-              `<a href="${escape(event.Link)}" target="_blank" data-interception="off" rel="noopener noreferrer">
-                <img src="${rightArrow}" />
-              </a>`;
-          }
-
-          html = html.replace(
-            '__KEY_EVENT_ARROW__',
-            arrowHtml
-          );
-
-          return html;
-        }
-      )
-      .join('');
+      html = html.replace('__KEY_EVENT_ARROW__', arrowHtml);
+      return html;
+    }).join('');
   }
 
-
-  // ==================== FORMAT DATE ====================
-
-  private formatDate(
-    eventDate: string
-  ): {
-    month: string;
-    day: string;
-  } {
-    const date =
-      new Date(eventDate);
-
+  private formatDate(eventDate: string): { month: string; day: string } {
+    const date = new Date(eventDate);
     if (isNaN(date.getTime())) {
-      return {
-        month: '',
-        day: ''
-      };
+      return { month: '', day: '' };
     }
 
     return {
-      month:
-        date.toLocaleString(
-          'en-US',
-          {
-            month: 'short'
-          }
-        ).toUpperCase(),
-
-      day:
-        date.getDate().toString()
+      month: date.toLocaleString('en-US', { month: 'short' }).toUpperCase(),
+      day: date.getDate().toString()
     };
   }
 
-
-  // ==================== FORMAT TIME ====================
-
- private formatTime(
-    startTime: string,
-    endTime: string
-  ): string {
-    const start =
-      this.parseSharePointTime(
-        startTime
-      );
-
-    const end =
-      this.parseSharePointTime(
-        endTime
-      );
+  private formatTime(startTime: string, endTime: string): string {
+    const start = this.parseSharePointTime(startTime);
+    const end = this.parseSharePointTime(endTime);
 
     if (!start && !end) {
       return '';
     }
-
     if (!end) {
       return start;
     }
-
     return `${start} – ${end}`;
   }
 
-
-  // ==================== PARSE TIME ====================
-
- private parseSharePointTime(
-    timeValue: string
-  ): string {
+  private parseSharePointTime(timeValue: string): string {
     if (!timeValue) {
       return '';
     }
 
-    if (
-      timeValue.indexOf('T') !== -1
-    ) {
-      const date =
-        new Date(timeValue);
-
+    if (timeValue.indexOf('T') !== -1) {
+      const date = new Date(timeValue);
       if (!isNaN(date.getTime())) {
-        return date.toLocaleTimeString(
-          'en-US',
-          {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          }
-        );
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       }
     }
 
-    const match =
-      timeValue.match(
-        /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
-      );
-
+    const match = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
     if (match) {
-      const hours =
-        parseInt(
-          match[1],
-          10
-        );
+      const hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
 
-      const minutes =
-        parseInt(
-          match[2],
-          10
-        );
-
-      if (
-        hours >= 0 &&
-        hours <= 23 &&
-        minutes >= 0 &&
-        minutes <= 59
-      ) {
-        const period =
-          hours >= 12
-            ? 'PM'
-            : 'AM';
-
-        const displayHour =
-          hours % 12 === 0
-            ? 12
-            : hours % 12;
-
-        return (
-          `${('0' + displayHour).slice(-2)}:` +
-          `${('0' + minutes).slice(-2)} ` +
-          `${period}`
-        );
+      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+        return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
       }
     }
 
     return timeValue;
   }
 
-
-  // ==================== INITIALIZE TABS ====================
+  // ==================== INITIALIZE EVENT TABS ====================
 
   private initializeUpcomingEvents(): void {
-    const tabs =
-      this.domElement.querySelectorAll(
-        '.events-tabs-list .etab'
-      );
+    const tabs = this.domElement.querySelectorAll('.events-tabs-list .etab');
+    const panels = this.domElement.querySelectorAll('.event-calendar-view');
 
-    const panels =
-      this.domElement.querySelectorAll(
-        '.event-calendar-view'
-      );
+    tabs.forEach((tab: Element) => {
+      tab.addEventListener('click', () => {
+        const targetId = tab.getAttribute('data-tab-event-id');
 
-    tabs.forEach(
-      (tab: Element) => {
-        tab.addEventListener(
-          'click',
-          () => {
-            const targetId =
-              tab.getAttribute(
-                'data-tab-event-id'
-              );
+        tabs.forEach((item: Element) => { item.classList.remove('etab-active'); });
+        panels.forEach((panel: Element) => { (panel as HTMLElement).style.display = 'none'; });
+        tab.classList.add('etab-active');
 
-            tabs.forEach(
-              (item: Element) => {
-                item.classList.remove(
-                  'etab-active'
-                );
-              }
-            );
-
-            panels.forEach(
-              (panel: Element) => {
-                (
-                  panel as HTMLElement
-                ).style.display =
-                  'none';
-              }
-            );
-
-            tab.classList.add(
-              'etab-active'
-            );
-
-            if (targetId) {
-              const selectedPanel =
-                this.domElement.querySelector(
-                  `#${targetId}`
-                );
-
-              if (selectedPanel) {
-                (
-                  selectedPanel as HTMLElement
-                ).style.display =
-                  'block';
-              }
-            }
+        if (targetId) {
+          const selectedPanel = this.domElement.querySelector(`#${targetId}`);
+          if (selectedPanel) {
+            (selectedPanel as HTMLElement).style.display = 'block';
           }
-        );
-      }
-    );
+        }
+      });
+    });
   }
-
 
   // ==================== INITIALIZE CALENDAR ====================
 
- private initializeCalendar(): void {
-    const $ = (window as Window & {
-      jQuery?: any;
-    }).jQuery;
+  private initializeCalendar(): void {
+    const $ = (window as Window & { jQuery?: any }).jQuery;
 
-    if (
-      !$ ||
-      !$.fn ||
-      !$.fn.datepicker
-    ) {
-      console.warn(
-        'jQuery UI Datepicker is not available.'
-      );
+    if (!$ || !$.fn || !$.fn.datepicker) {
+      console.warn('jQuery UI Datepicker is not available.');
       return;
     }
 
     // MY EVENTS CALENDAR
     $('#events-calendar-my').datepicker({
       dateFormat: 'dd M yy',
-      
 
-      beforeShowDay:
-        (date: Date): [
-          boolean,
-          string,
-          string
-        ] => {
-          const dateKey =
-            this.getDateKey(
-              date.toISOString()
-            );
+      beforeShowDay: (date: Date): [boolean, string, string] => {
+        const dateKey = this.getDateKey(date.toISOString());
+        const hasEvent = this.myEventDates.indexOf(dateKey) !== -1;
+        return hasEvent ? [true, 'has-event', this.myEventTitles[dateKey] || 'Special Event'] : [true, '', ''];
+      },
 
-          const hasEvent =
-            this.myEventDates.indexOf(
-              dateKey
-            ) !== -1;
-
-          return hasEvent
-            ? [
-                true,
-                'has-event',
-                this.myEventTitles[dateKey] ||
-                  'Special Event'
-              ]
-            : [
-                true,
-                '',
-                ''
-              ];
-        },
-
-      onSelect:
-        async (
-          dateText: string
-        ): Promise<void> => {
-          const selectedDate =
-            this.parseCalendarDate(
-              dateText
-            );
-
-          if (!selectedDate) {
-            return;
-          }
-
-          await this.loadMyEvents(
-            selectedDate.getFullYear(),
-            selectedDate.getMonth(),
-            selectedDate.getDate()
-          );
-
-          const rightArrow =
-            `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
-
-          const myEventsList =
-            this.domElement.querySelector(
-              '#events-list-my'
-            );
-
-          if (myEventsList) {
-            myEventsList.innerHTML =
-              this.renderEventElements(
-                this.getMyEvents(),
-                rightArrow,
-                true
-              );
-          }
-        },
-
-      onChangeMonthYear:
-        async (
-          year: number,
-          month: number
-        ): Promise<void> => {
-          await this.loadMyEventDates(
-            year,
-            month - 1
-          );
-
-          $('#events-calendar-my')
-            .datepicker(
-              'refresh'
-            );
+      onSelect: async (dateText: string): Promise<void> => {
+        const selectedDate = this.parseCalendarDate(dateText);
+        if (!selectedDate) {
+          return;
         }
+
+        await this.loadMyEvents(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+
+        const rightArrow = `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+        const myEventsList = this.domElement.querySelector('#events-list-my');
+        if (myEventsList) {
+          myEventsList.innerHTML = this.renderEventElements(this.getMyEvents(), rightArrow, true);
+        }
+      },
+
+      onChangeMonthYear: async (year: number, month: number): Promise<void> => {
+        await this.loadMyEventDates(year, month - 1);
+        $('#events-calendar-my').datepicker('refresh');
+      }
     });
-    $('#events-calendar-my')
-  .find('.ui-datepicker-current-day')
-  .removeClass('ui-datepicker-current-day')
-  .find('.ui-state-active')
-  .removeClass('ui-state-active');
+
+    $('#events-calendar-my').find('.ui-datepicker-current-day').removeClass('ui-datepicker-current-day').find('.ui-state-active').removeClass('ui-state-active');
 
     // ORGANIZATIONAL EVENTS CALENDAR
     $('#events-calendar-org').datepicker({
       dateFormat: 'dd M yy',
 
-      beforeShowDay:
-        (date: Date): [
-          boolean,
-          string,
-          string
-        ] => {
-          const dateKey =
-            this.getDateKey(
-              date.toISOString()
-            );
+      beforeShowDay: (date: Date): [boolean, string, string] => {
+        const dateKey = this.getDateKey(date.toISOString());
+        const hasEvent = this.organizationalEventDates.indexOf(dateKey) !== -1;
+        return hasEvent ? [true, 'has-event', this.organizationalEventTitles[dateKey] || 'Special Event'] : [true, '', ''];
+      },
 
-          const hasEvent =
-            this.organizationalEventDates
-              .indexOf(dateKey) !== -1;
-
-          return hasEvent
-            ? [
-                true,
-                'has-event',
-                this.organizationalEventTitles[
-                  dateKey
-                ] || 'Special Event'
-              ]
-            : [
-                true,
-                '',
-                ''
-              ];
-        },
-
-      onSelect:
-        async (
-          dateText: string
-        ): Promise<void> => {
-          const selectedDate =
-            this.parseCalendarDate(
-              dateText
-            );
-
-          if (!selectedDate) {
-            return;
-          }
-
-          await this.loadEvents(
-            selectedDate.getFullYear(),
-            selectedDate.getMonth(),
-            selectedDate.getDate()
-          );
-
-          const rightArrow =
-            `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
-
-          const organizationalEventsList =
-            this.domElement.querySelector(
-              '#events-list-org'
-            );
-
-          if (organizationalEventsList) {
-            organizationalEventsList.innerHTML =
-              this.renderEventElements(
-                this.getOrganizationalEvents(),
-                rightArrow,
-                false
-              );
-          }
-        },
-
-      onChangeMonthYear:
-        async (
-          year: number,
-          month: number
-        ): Promise<void> => {
-          await this.loadOrganizationalEventDates(
-            year,
-            month - 1
-          );
-
-          $('#events-calendar-org')
-            .datepicker(
-              'refresh'
-            );
+      onSelect: async (dateText: string): Promise<void> => {
+        const selectedDate = this.parseCalendarDate(dateText);
+        if (!selectedDate) {
+          return;
         }
+
+        await this.loadEvents(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+
+        const rightArrow = `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
+        const organizationalEventsList = this.domElement.querySelector('#events-list-org');
+        if (organizationalEventsList) {
+          organizationalEventsList.innerHTML = this.renderEventElements(this.getOrganizationalEvents(), rightArrow, false);
+        }
+      },
+
+      onChangeMonthYear: async (year: number, month: number): Promise<void> => {
+        await this.loadOrganizationalEventDates(year, month - 1);
+        $('#events-calendar-org').datepicker('refresh');
+      }
     });
-$('#events-calendar-org')
-  .find('.ui-datepicker-current-day')
-  .removeClass('ui-datepicker-current-day')
-  .find('.ui-state-active')
-  .removeClass('ui-state-active');  }
 
-   private parseCalendarDate(
-    dateText: string
-  ): Date | null {
-    const parts =
-      dateText.split(' ');
+    $('#events-calendar-org').find('.ui-datepicker-current-day').removeClass('ui-datepicker-current-day').find('.ui-state-active').removeClass('ui-state-active');
+  }
 
+  private parseCalendarDate(dateText: string): Date | null {
+    const parts = dateText.split(' ');
     if (parts.length !== 3) {
       return null;
     }
 
-    const day =
-      parseInt(
-        parts[0],
-        10
-      );
+    const day = parseInt(parts[0], 10);
+    const year = parseInt(parts[2], 10);
+    const months: string[] = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months.indexOf(parts[1]);
 
-    const year =
-      parseInt(
-        parts[2],
-        10
-      );
-
-    const months: string[] = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-
-    const month =
-      months.indexOf(
-        parts[1]
-      );
-
-    if (
-      isNaN(day) ||
-      isNaN(year) ||
-      month === -1
-    ) {
+    if (isNaN(day) || isNaN(year) || month === -1) {
       return null;
     }
 
-    return new Date(
-      year,
-      month,
-      day
-    );
+    return new Date(year, month, day);
   }
 
-  // ==================== GET BANNER ITEMS ====================
+  // ==================== BANNER ====================
 
   private async _getBannerItems(): Promise<void> {
-
     try {
+      const siteUrl = this.context.pageContext.web.absoluteUrl;
+      const url = `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image&$orderby=SortOrder asc`;
 
-      const siteUrl =
-        this.context.pageContext.web.absoluteUrl;
-
-
-      const url =
-        `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
-
-      const response =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept':
-                'application/json;odata=nometadata'
-            }
-          }
-        );
-
+      const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
-
-        throw new Error(
-          `Banner list request failed: ${response.status}`
-        );
-
+        throw new Error(`Banner list request failed: ${response.status}`);
       }
 
+      const data = await response.json();
+      const bannerItems: IBannerItem[] = data.value.filter((item: IBannerItem) => item.Status === 'Active').sort((a: IBannerItem, b: IBannerItem) => a.SortOrder - b.SortOrder);
 
-      const data =
-        await response.json();
-
-
-      const bannerItems: IBannerItem[] =
-        data.value
-          .filter(
-            (item: IBannerItem) =>
-              item.Status === 'Active'
-          )
-          .sort(
-            (a: IBannerItem, b: IBannerItem) =>
-              a.SortOrder - b.SortOrder
-          );
-
-
-   
-
-
-      this._renderBanner(
-        bannerItems
-      );
-
-
+      this._renderBanner(bannerItems);
     } catch (error) {
+      console.error('Error loading Banner list:', error);
 
-      console.error(
-        'Error loading Banner list:',
-        error
-      );
-
-
-      const divBanner =
-        this.domElement.querySelector(
-          '#divBanner'
-        );
-
-
+      const divBanner = this.domElement.querySelector('#divBanner');
       if (divBanner !== null) {
-
-        divBanner.innerHTML =
-          BannerTemplate.noRecord;
-
+        divBanner.innerHTML = BannerTemplate.noRecord;
       }
-
     }
-
   }
 
-
-  // ==================== RENDER BANNER ====================
-
-  private _renderBanner(
-    bannerItems: IBannerItem[]
-  ): void {
-
+  private _renderBanner(bannerItems: IBannerItem[]): void {
     let allElementsHtml: string = '';
 
-
-    bannerItems.forEach(
-      (item: IBannerItem) => {
-
-        let imageData: any = {};
-
-
-        if (item.Image) {
-
-          imageData =
-            typeof item.Image === 'string'
-              ? JSON.parse(item.Image)
-              : item.Image;
-
-        }
-
-const defaultImageUrl =
-  '/sites/DevPortal/SiteAssets/resources/images/bannerDefault/banner-1.png';
- 
-const imageUrl =
-  imageData?.serverRelativeUrl || defaultImageUrl;
-
-        const singleElementHtml =
-          BannerTemplate.singleElementHtml
-            .replace(
-              '__KEY_BANNER_IMAGE__',
-              imageUrl
-            )
-            .replace(
-              /__KEY_BANNER_TITLE__/g,
-              item.Title || ''
-            )
-            .replace(
-              '__KEY_BANNER_DESCRIPTION__',
-              item.Description || ''
-            );
-
-
-        allElementsHtml +=
-          singleElementHtml;
-
+    bannerItems.forEach((item: IBannerItem) => {
+      let imageData: any = {};
+      if (item.Image) {
+        imageData = typeof item.Image === 'string' ? JSON.parse(item.Image) : item.Image;
       }
-    );
 
+      const defaultImageUrl = '/sites/DevPortal/SiteAssets/resources/images/bannerDefault/banner-1.png';
+      const imageUrl = imageData?.serverRelativeUrl || defaultImageUrl;
+
+      const singleElementHtml = BannerTemplate.singleElementHtml
+        .replace('__KEY_BANNER_IMAGE__', imageUrl)
+        .replace(/__KEY_BANNER_TITLE__/g, item.Title || '')
+        .replace('__KEY_BANNER_DESCRIPTION__', item.Description || '');
+
+      allElementsHtml += singleElementHtml;
+    });
 
     if (allElementsHtml === '') {
-
-      allElementsHtml =
-        BannerTemplate.noRecord;
-
+      allElementsHtml = BannerTemplate.noRecord;
     }
 
-
-    const divBanner =
-      this.domElement.querySelector(
-        '#divBanner'
-      );
-
-
+    const divBanner = this.domElement.querySelector('#divBanner');
     if (divBanner !== null) {
-
-      divBanner.innerHTML =
-        allElementsHtml;
-
+      divBanner.innerHTML = allElementsHtml;
     }
-
   }
 
-
-  // ==================== GET MEDIA GALLERY ITEMS ====================
+  // ==================== MEDIA GALLERY ====================
 
   private async _getMediaGalleryItems(): Promise<void> {
-
     try {
+      const siteUrl = this.context.pageContext.web.absoluteUrl;
+      const url = `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
 
-      const siteUrl =
-        this.context.pageContext.web.absoluteUrl;
-
-
-      const url =
-        `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
-
-      const response =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept':
-                'application/json;odata=nometadata'
-            }
-          }
-        );
-
+      const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
-
-        throw new Error(
-          `Media Gallery list request failed: ${response.status}`
-        );
-
+        throw new Error(`Media Gallery list request failed: ${response.status}`);
       }
 
+      const data = await response.json();
+      const galleryItems: IMediaGalleryItem[] = data.value.filter((item: IMediaGalleryItem) => item.Status === 'Active').sort((a: IMediaGalleryItem, b: IMediaGalleryItem) => a.SortOrder - b.SortOrder);
 
-      const data =
-        await response.json();
-
-
-      const galleryItems: IMediaGalleryItem[] =
-        data.value
-          .filter(
-            (item: IMediaGalleryItem) =>
-              item.Status === 'Active'
-          )
-          .sort(
-            (a: IMediaGalleryItem, b: IMediaGalleryItem) =>
-              a.SortOrder - b.SortOrder
-          );
-
-
-  
-
-
-      this._renderMediaGallery(
-        galleryItems
-      );
-
-
+      this._renderMediaGallery(galleryItems);
     } catch (error) {
+      console.error('Error loading Media Gallery list:', error);
 
-      console.error(
-        'Error loading Media Gallery list:',
-        error
-      );
-
-
-      const galleryWrapper =
-        this.domElement.querySelector(
-          '.gallery-swiper .swiper-wrapper'
-        );
-
-
+      const galleryWrapper = this.domElement.querySelector('.gallery-swiper .swiper-wrapper');
       if (galleryWrapper !== null) {
-
-        galleryWrapper.innerHTML =
-          MediaGalleryTemplate.noRecord;
-
+        galleryWrapper.innerHTML = MediaGalleryTemplate.noRecord;
       }
-
     }
-
   }
 
-
-  // ==================== RENDER MEDIA GALLERY ====================
-
-  private _renderMediaGallery(
-    galleryItems: IMediaGalleryItem[]
-  ): void {
-
+  private _renderMediaGallery(galleryItems: IMediaGalleryItem[]): void {
     let allElementsHtml: string = '';
 
-
-    galleryItems.forEach(
-      (item: IMediaGalleryItem) => {
-
-        let imageData: any = {};
-
-
-        if (item.Image) {
-
-          imageData =
-            typeof item.Image === 'string'
-              ? JSON.parse(item.Image)
-              : item.Image;
-
-        }
-
-
-const imageUrl =
-  imageData.serverRelativeUrl || '';
-       
-
-
-        const singleElementHtml =
-          MediaGalleryTemplate.singleElementHtml
-            .replace(
-              '__KEY_GALLERY_IMAGE__',
-              imageUrl
-            )
-            .replace(
-              '__KEY_GALLERY_CAPTION__',
-              item.Caption || item.Title || ''
-            );
-
-
-        allElementsHtml +=
-          singleElementHtml;
-
+    galleryItems.forEach((item: IMediaGalleryItem) => {
+      let imageData: any = {};
+      if (item.Image) {
+        imageData = typeof item.Image === 'string' ? JSON.parse(item.Image) : item.Image;
       }
-    );
 
+      const imageUrl = imageData.serverRelativeUrl || '';
+
+      const singleElementHtml = MediaGalleryTemplate.singleElementHtml
+        .replace('__KEY_GALLERY_IMAGE__', imageUrl)
+        .replace('__KEY_GALLERY_CAPTION__', item.Caption || item.Title || '');
+
+      allElementsHtml += singleElementHtml;
+    });
 
     if (allElementsHtml === '') {
-
-      allElementsHtml =
-        MediaGalleryTemplate.noRecord;
-
+      allElementsHtml = MediaGalleryTemplate.noRecord;
     }
 
-
-    const galleryWrapper =
-      this.domElement.querySelector(
-        '.gallery-swiper .swiper-wrapper'
-      );
-
+    const galleryWrapper = this.domElement.querySelector('.gallery-swiper .swiper-wrapper');
 
     if (galleryWrapper !== null) {
+      galleryWrapper.innerHTML = allElementsHtml;
 
-      galleryWrapper.innerHTML =
-        allElementsHtml;
-
-
-      /*
-       * Fill Modal Gallery
-       */
-      const modalWrapper =
-        this.domElement.querySelector(
-          '.gallery-modal-swiper .swiper-wrapper'
-        );
-
+      // Fill Modal Gallery
+      const modalWrapper = this.domElement.querySelector('.gallery-modal-swiper .swiper-wrapper');
 
       if (modalWrapper !== null) {
-
         let modalElementsHtml: string = '';
 
-
-        galleryItems.forEach(
-          (item: IMediaGalleryItem) => {
-
-            let imageData: any = {};
-
-
-            if (item.Image) {
-
-              imageData =
-                typeof item.Image === 'string'
-                  ? JSON.parse(item.Image)
-                  : item.Image;
-
-            }
-
-
-            const imageUrl =
-  imageData.serverRelativeUrl || '';
-  
-            modalElementsHtml += `
-              <div class="swiper-slide gallery-swiper-slide">
-                <img
-                  src="${imageUrl}"
-                  alt="${item.Caption || item.Title || ''}"
-                />
-              </div>
-            `;
-
+        galleryItems.forEach((item: IMediaGalleryItem) => {
+          let imageData: any = {};
+          if (item.Image) {
+            imageData = typeof item.Image === 'string' ? JSON.parse(item.Image) : item.Image;
           }
-        );
 
+          const imageUrl = imageData.serverRelativeUrl || '';
 
-        modalWrapper.innerHTML =
-          modalElementsHtml;
+          modalElementsHtml += `
+            <div class="swiper-slide gallery-swiper-slide">
+              <img src="${imageUrl}" alt="${item.Caption || item.Title || ''}" />
+            </div>
+          `;
+        });
 
+        modalWrapper.innerHTML = modalElementsHtml;
       }
 
-
-      const galleryElement =
-        this.domElement.querySelector(
-          '.gallery-swiper'
-        ) as HTMLElement & {
-          swiper?: any;
-        };
-
-
-      if (
-        galleryElement &&
-        galleryElement.swiper
-      ) {
-
+      const galleryElement = this.domElement.querySelector('.gallery-swiper') as HTMLElement & { swiper?: any };
+      if (galleryElement && galleryElement.swiper) {
         galleryElement.swiper.update();
-
       }
+    }
+  }
 
+  // ==================== ANNOUNCEMENT / OFFERS ====================
+
+  private setupViewAllLink(arrowIconUrl: string): void {
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
+
+    const arrowImage = this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
+    if (!arrowImage) {
+      console.error('arrow image element not found');
+      return;
     }
 
-  }
- private setupViewAllLink(arrowIconUrl: string): void {
- 
-  const baseUrl = this.context.pageContext.web.absoluteUrl;
- 
-  const arrowImage =
-    this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
-    if (!arrowImage) {
-    console.error('arrow image element not found');
-    return;
-  }
- 
-  // Set arrow image
-  arrowImage.src = arrowIconUrl;
-  const viewAllLink =
-    this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
- 
-  if (!viewAllLink) {
-    console.error('View All elements not found');
-    return;
-  }
- 
-  viewAllLink.href =
-    `${baseUrl}/SitePages/Announcement.aspx`;
- 
-  const tabs =
-    this.domElement.querySelectorAll('[data-tab-ao]');
- 
- 
- 
-  // Set default URL
-  // Change URL when tab changes
-  tabs.forEach((tab) => {
- 
-    tab.addEventListener('click', () => {
- 
-      const selectedTab = tab.getAttribute('data-tab-ao');
- 
-      if (selectedTab === 'announcement') {
-        viewAllLink.href =
-          `${baseUrl}/SitePages/Announcement.aspx`;
-      }
-      else if (selectedTab === 'offers') {
-        viewAllLink.href =
-          `${baseUrl}/SitePages/Offer-List.aspx`;
-      }
-    });
- 
-  });
-}
- 
-  /*
-   * ==========================================================
-   * RENDER ANNOUNCEMENTS
-   * ==========================================================
-   *
-   * Gets Announcement data from SharePoint and converts each
-   * SharePoint item into the Announcement HTML template.
-   */
-  private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
+    // Set arrow image
+    arrowImage.src = arrowIconUrl;
 
-   try {
-    let imageUrl:string=''
-    const data: IAnnouncement[] =
-      await this._getAnnouncementsData(apiUrl);
- 
- 
-    let allElementsHtml: string = "";
- 
-   if(!data||data.length===0){
-    this.domElement.querySelector('#announcement-container')!.innerHTML=AnnouncementOffer.noElementHtml;
-    return;
-   }
- 
-      data.forEach((item) => {
- 
-       const imageData =
-      typeof item.Icon === 'string'
-        ? JSON.parse(item.Icon)
-        : item.Icon;
+    const viewAllLink = this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
+    if (!viewAllLink) {
+      console.error('View All elements not found');
+      return;
+    }
 
-    // SharePoint stores the real location of the image here
-    if (imageData?.serverRelativeUrl) {
-      const serverUrl =
-        imageData.serverUrl ||
-        new URL(this.context.pageContext.web.absoluteUrl).origin;
-        imageUrl=`${serverUrl}${imageData.serverRelativeUrl}`
+    // Set default URL
+    viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx`;
+
+    // Change URL when tab changes
+    const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const selectedTab = tab.getAttribute('data-tab-ao');
+
+        if (selectedTab === 'announcement') {
+          viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx`;
+        } else if (selectedTab === 'offers') {
+          viewAllLink.href = `${baseUrl}/SitePages/Offer-List.aspx`;
         }
- 
-        /*
-         * Convert the SharePoint Created date into the
-         * required display format.
-         */
-        let createddate = this.formatDates(item.Created);
- 
-        /*
-         * Replace the placeholders in the Announcement
-         * HTML template with actual SharePoint data.
-         */
-        let singleElementHtml = AnnouncementOffer.singleElementHtml
+      });
+    });
+  }
+
+  private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
+    try {
+      const baseUrl = this.context.pageContext.web.absoluteUrl;
+      const imageUrl: string = `${baseUrl}/SiteAssets/resources/images/DefaultImages/announcement-icon.png`;
+      const data: IAnnouncement[] = await this._getAnnouncementsData(apiUrl);
+      let allElementsHtml: string = "";
+
+      if (!data || data.length === 0) {
+        this.domElement.querySelector('#announcement-container')!.innerHTML = AnnouncementOffer.noElementHtml;
+        return;
+      }
+
+      data.forEach((item) => {
+        // const imageData = typeof item.Icon === 'string' ? JSON.parse(item.Icon) : item.Icon;
+
+        // // SharePoint stores the real location of the image here
+        // if (imageData?.serverRelativeUrl) {
+        //   const serverUrl = imageData.serverUrl || new URL(this.context.pageContext.web.absoluteUrl).origin;
+        //   imageUrl = `${serverUrl}${imageData.serverRelativeUrl}`;
+        // }
+
+        const createddate = this.formatDates(item.Created);
+
+        const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
           .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
- 
-        /*
-         * Add the generated Announcement HTML to the
-         * complete HTML string.
-         */
+
         allElementsHtml += singleElementHtml;
-      })
-        /*
-     * Insert all generated Announcement HTML into the
-     * Announcement container.
-     */
-this.domElement.querySelector("#announcement-container")!.innerHTML =allElementsHtml;
-    }
-    catch (error) {
+      });
+
+      this.domElement.querySelector("#announcement-container")!.innerHTML = allElementsHtml;
+    } catch (error) {
       console.error('Error rendering QuickList:', error);
     }
   }
 
-
-  /*
-   * ==========================================================
-   * RENDER OFFERS
-   * ==========================================================
-   *
-   * Gets Offer data from SharePoint and converts each
-   * SharePoint item into the Offer HTML template.
-   */
   private async _renderOffersAsync(apiUrl: string): Promise<void> {
+    try {
+      const imageUrl = `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/DefaultImages/offer-icon.png`;
+      const data: IOffer[] = await this._getOffersData(apiUrl);
+      let allElementsHtml: string = "";
 
-    try{
-      const imageUrl=`${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/icons/announcement-3.png`;
-    const data: IOffer[] =
-      await this._getOffersData(apiUrl);
- 
- 
-    let allElementsHtml: string = "";
- 
-         if(!data||data.length===0){
-    this.domElement.querySelector('#offer-container')!.innerHTML=AnnouncementOffer.noElementHtml;
-    return;
-   }
- 
+      if (!data || data.length === 0) {
+        this.domElement.querySelector('#offer-container')!.innerHTML = AnnouncementOffer.noElementHtml;
+        return;
+      }
+
       data.forEach((item) => {
- 
- 
-        /*
-         * Convert the SharePoint Created date into the
-         * required display format.
-         */
-        let createddate = this.formatDates(item.Created);
- 
-        /*
-         * Replace the placeholders in the Offer HTML template
-         * with actual SharePoint data.
-         */
-        let singleElementHtml = AnnouncementOffer.singleElementHtml
+        const createddate = this.formatDates(item.Created);
+
+        const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
           .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
- 
-        /*
-         * Add the generated Offer HTML to the complete
-         * HTML string.
-         */
+
         allElementsHtml += singleElementHtml;
- 
-      })
-          /*
-     * Insert all generated Offer HTML into the Offer container.
-     */
-   this.domElement.querySelector("#offer-container")!.innerHTML =
-      allElementsHtml;
-    }
-    catch (error) {
+      });
+
+      this.domElement.querySelector("#offer-container")!.innerHTML = allElementsHtml;
+    } catch (error) {
       console.error('Error rendering QuickList:', error);
     }
   }
 
+  private async _getAnnouncementsData(apiUrl: string): Promise<IAnnouncement[]> {
+    const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1);
 
-  /*
-   * ==========================================================
-   * GET ANNOUNCEMENT DATA
-   * ==========================================================
-   *
-   * Sends a GET request to the SharePoint REST API and
-   * returns the Announcement list items.
-   */
-  private async _getAnnouncementsData(
-    apiUrl: string
-  ): Promise<IAnnouncement[]> {
+    if (response.ok) {
+      const data = await response.json();
+      return data.value;
+    }
 
-    try {
- 
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          apiUrl,
-          SPHttpClient.configurations.v1
-        );
- 
-      if (response.ok) {
- 
-        const data = await response.json();
- 
-        return data.value;
- 
-      } else {
- 
-        console.error(
-          `Request failed with status ${response.status}: ${response.statusText}`
-        );
- 
-        throw new Error(
-          `Request failed with status ${response.status}: ${response.statusText}`
-        );
-      }
- 
-    }
-    catch (error) {
- 
- 
-      throw error;
-    }
+    console.error(`Request failed with status ${response.status}: ${response.statusText}`);
+    throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
   }
 
+  private async _getOffersData(apiUrl: string): Promise<IOffer[]> {
+    const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1);
 
-  /*
-   * ==========================================================
-   * GET OFFER DATA
-   * ==========================================================
-   *
-   * Sends a GET request to the SharePoint REST API and
-   * returns the Offer list items.
-   */
-  private async _getOffersData(
-    apiUrl: string
-  ): Promise<IOffer[]> {
+    if (response.ok) {
+      const data = await response.json();
+      return data.value;
+    }
 
-    try {
- 
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          apiUrl,
-          SPHttpClient.configurations.v1
-        );
- 
-      if (response.ok) {
- 
-        const data = await response.json();
- 
-        return data.value;
- 
-      } else {
- 
-        console.error(
-          `Request failed with status ${response.status}: ${response.statusText}`
-        );
- 
-        throw new Error(
-          `Request failed with status ${response.status}: ${response.statusText}`
-        );
-      }
- 
-    }
-    catch (error) {
- 
- 
-      throw error;
-    }
- 
+    console.error(`Request failed with status ${response.status}: ${response.statusText}`);
+    throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
   }
 
-
-  /*
-   * ==========================================================
-   * FORMAT DATE
-   * ==========================================================
-   *
-   * Converts the SharePoint Created date into:
-   *
-   *     Sep 21, 2026
-   *
-   * If the date is empty or invalid, the original value
-   * is returned where appropriate.
-   */
-  private formatDates(
-    dateValue: string
-  ): string {
-
+  // Converts the SharePoint Created date into: Sep 21, 2026
+  private formatDates(dateValue: string): string {
     if (!dateValue) {
       return '';
     }
 
-    const date =
-      new Date(dateValue);
-
-    if (
-      isNaN(
-        date.getTime()
-      )
-    ) {
-
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
       return dateValue;
     }
 
-    return date.toLocaleDateString(
-      'en-US',
-      {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }
-    );
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-// =========================================================
-  // QUICK LINKS
-  // =========================================================
-
-
-  // =========================================================
-  // Initialize Quick Links
-  // =========================================================
+  // ==================== QUICK LINKS ====================
 
   private async initializeQuickLinks(): Promise<void> {
-
     try {
+      const quickLinks = await this.getQuickLinks(this.context);
+      const favouriteIds = await this.getUserFavouriteIds(this.context);
 
-      const quickLinks =
-        await this.getQuickLinks(
-          this.context
-        );
-
-
-      const favouriteIds =
-        await this.getUserFavouriteIds(
-          this.context
-        );
-
-
-      this.renderQuickLinks(
-        this.context,
-        this.domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.renderFavouriteOptions(
-        this.domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.setupTabs(
-        this.domElement
-      );
-
-
-      this.setupAddFavouriteButton(
-        this.context,
-        this.domElement
-      );
-
-
-      this.setupFavouriteModal(
-        this.context,
-        this.domElement
-      );
-
-
-      this.updateFavouriteTabVisibility(
-        this.domElement,
-        favouriteIds
-      );
-
+      this.renderQuickLinks(this.context, this.domElement, quickLinks, favouriteIds);
+      this.renderFavouriteOptions(this.domElement, quickLinks, favouriteIds);
+      this.setupTabs(this.domElement);
+      this.setupAddFavouriteButton(this.context, this.domElement);
+      this.setupFavouriteModal(this.context, this.domElement);
+      this.updateFavouriteTabVisibility(this.domElement, favouriteIds);
     } catch (error) {
+      console.error('Error initializing Quick Links:', error);
 
-      console.error(
-        'Error initializing Quick Links:',
-        error
-      );
-
-
-      const container =
-        this.domElement.querySelector(
-          '.quick-links-grid'
-        );
-
-
+      const container = this.domElement.querySelector('.quick-links-grid');
       if (container) {
-
-        container.innerHTML = `
-          <div class="p-3">
-            Unable to load Quick Links.
-          </div>
-        `;
-
+        container.innerHTML = `<div class="p-3">Unable to load Quick Links.</div>`;
       }
-
     }
-
   }
 
+  private async getQuickLinks(context: WebPartContext): Promise<IQuickLinksList[]> {
+    const webUrl = context.pageContext.web.absoluteUrl;
+    const apiUrl = `${webUrl}/_api/web/lists/GetByTitle('Quick_Links')/items?$select=Id,Title,Icon,URL,Status,SortOrder&$orderby=SortOrder asc`;
 
-  // =========================================================
-  // Get Quick Links
-  // =========================================================
-
-  private async getQuickLinks(
-    context: WebPartContext
-  ): Promise<IQuickLinksList[]> {
-
-    const webUrl =
-      context.pageContext.web.absoluteUrl;
-
-
-    const apiUrl =
-      `${webUrl}` +
-      `/_api/web/lists/GetByTitle('Quick_Links')/items` +
-      `?$select=Id,Title,Icon,URL,Status,SortOrder` +
-      `&$orderby=SortOrder asc`;
-
-
-    const response =
-      await context.spHttpClient.get(
-        apiUrl,
-        SPHttpClient.configurations.v1
-      );
-
+    const response = await context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1);
 
     if (!response.ok) {
-
-      console.error(
-        `Quick Links request failed: ${response.status}`
-      );
-
+      console.error(`Quick Links request failed: ${response.status}`);
       return [];
-
     }
 
-
-    const data =
-      await response.json();
-
-
+    const data = await response.json();
     return data.value;
-
   }
 
-
-  // =========================================================
-  // Get Current User
-  // =========================================================
-
-  private async getCurrentUser(
-    context: WebPartContext
-  ): Promise<any> {
-
-    const webUrl =
-      context.pageContext.web.absoluteUrl;
-
-
-    const response =
-      await context.spHttpClient.get(
-        `${webUrl}/_api/web/currentuser`,
-        SPHttpClient.configurations.v1
-      );
-
+  private async getCurrentUser(context: WebPartContext): Promise<any> {
+    const webUrl = context.pageContext.web.absoluteUrl;
+    const response = await context.spHttpClient.get(`${webUrl}/_api/web/currentuser`, SPHttpClient.configurations.v1);
 
     if (!response.ok) {
-
-      throw new Error(
-        `Unable to get current user: ${response.status}`
-      );
-
+      throw new Error(`Unable to get current user: ${response.status}`);
     }
-
 
     return await response.json();
-
   }
 
-
-  // =========================================================
-  // Get User Favourite IDs
-  // =========================================================
-
-  private async getUserFavouriteIds(
-    context: WebPartContext
-  ): Promise<number[]> {
-
+  private async getUserFavouriteIds(context: WebPartContext): Promise<number[]> {
     try {
+      const webUrl = context.pageContext.web.absoluteUrl;
+      const currentUser = await this.getCurrentUser(context);
 
-      const webUrl =
-        context.pageContext.web.absoluteUrl;
-
-
-      const currentUser =
-        await this.getCurrentUser(
-          context
-        );
-
-
-      const response =
-        await context.spHttpClient.get(
-
-          `${webUrl}` +
-          `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items` +
-          `?$select=Id,Quick_x0020_LinkId` +
-          `&$filter=UserId eq ${currentUser.Id}`,
-
-          SPHttpClient.configurations.v1
-
-        );
-
+      const response = await context.spHttpClient.get(`${webUrl}/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items?$select=Id,Quick_x0020_LinkId&$filter=UserId eq ${currentUser.Id}`, SPHttpClient.configurations.v1);
 
       if (!response.ok) {
-
-        console.error(
-          'Unable to get user favourites:',
-          response.status
-        );
-
+        console.error('Unable to get user favourites:', response.status);
         return [];
-
       }
 
-
-      const data =
-        await response.json();
-
-
-      return data.value.map(
-        (item: { Quick_x0020_LinkId: number }) =>
-          Number(
-            item.Quick_x0020_LinkId
-          )
-      );
-
+      const data = await response.json();
+      return data.value.map((item: { Quick_x0020_LinkId: number }) => Number(item.Quick_x0020_LinkId));
     } catch (error) {
-
-      console.error(
-        'Error loading user favourites:',
-        error
-      );
-
+      console.error('Error loading user favourites:', error);
       return [];
+    }
+  }
 
+  private getQuickLinkImageUrl(item: IQuickLinksList): string {
+    if (!item.Icon) {
+      return '';
     }
 
+    try {
+      const imgData = typeof item.Icon === 'string' ? JSON.parse(item.Icon) : item.Icon;
+      return imgData.serverRelativeUrl || '';
+    } catch (error) {
+      console.error('Error parsing Quick Link Icon:', error);
+      return '';
+    }
   }
 
-
-  // =========================================================
-  // Get Quick Link Image URL
-  // =========================================================
-
-private getQuickLinkImageUrl(
-
-  item: IQuickLinksList
-
-): string {
- 
-  if (!item.Icon) {
-
-    return '';
-
-  }
- 
-  try {
- 
-    const imgData =
-
-      typeof item.Icon === 'string'
-
-        ? JSON.parse(item.Icon)
-
-        : item.Icon;
- 
-    return imgData.serverRelativeUrl || '';
- 
-  } catch (error) {
- 
-    console.error(
-
-      'Error parsing Quick Link Icon:',
-
-      error
-
-    );
- 
-    return '';
- 
-  }
- 
-}
- 
-
-
-  // =========================================================
-  // Render Quick Links
-  // =========================================================
-
-  private renderQuickLinks(
-    context: WebPartContext,
-    domElement: HTMLElement,
-    items: IQuickLinksList[],
-    favouriteIds: number[]
-  ): void {
-
-    const container =
-      domElement.querySelector(
-        '.quick-links-grid'
-      );
-
-
+  private renderQuickLinks(context: WebPartContext, domElement: HTMLElement, items: IQuickLinksList[], favouriteIds: number[]): void {
+    const container = domElement.querySelector('.quick-links-grid');
     if (!container) {
-
-      console.error(
-        'Quick Links container not found.'
-      );
-
+      console.error('Quick Links container not found.');
       return;
-
     }
-
 
     let allElementsHtml = '';
+    const activeItems = items.filter((item) => item.Status === 'Active');
 
+    activeItems.forEach((item) => {
+      const imageUrl = this.getQuickLinkImageUrl(item);
+      const isFavourite = favouriteIds.indexOf(item.Id) !== -1;
+      const favouriteAttribute = isFavourite ? 'data-tab-cat="ql-favourite"' : '';
 
-    const activeItems =
-      items.filter(
-        (item) =>
-          item.Status === 'Active'
-      );
+      const singleElementHtml = QuickLinks.singleElementHtml
+        .replace(/__KEY_URL_IMGICON__/, imageUrl)
+        .replace(/__KEY_DATA_TITLE__/g, item.Title || '')
+        .replace(/__KEY_URL_LINK__/, item.URL?.Url || '#')
+        // .replace(/__KEY_URL_TARGET__/, '_blank')
+        .replace(/__KEY_DATA_FAVOURITE__/, favouriteAttribute);
 
+      allElementsHtml += singleElementHtml;
+    });
 
-    activeItems.forEach(
-      (item) => {
-
-       const imageUrl =
-  this.getQuickLinkImageUrl(item);
-
-
-        const isFavourite =
-          favouriteIds.indexOf(
-            item.Id
-          ) !== -1;
-
-
-        const favouriteAttribute =
-          isFavourite
-            ? 'data-tab-cat="ql-favourite"'
-            : '';
-
-
-        const singleElementHtml =
-          QuickLinks.singleElementHtml
-
-            .replace(
-              /__KEY_URL_IMGICON__/,
-              imageUrl
-            )
-
-            .replace(
-              /__KEY_DATA_TITLE__/g,
-              item.Title || ''
-            )
-
-            .replace(
-              /__KEY_URL_LINK__/,
-              item.URL?.Url || '#'
-            )
-
-            // .replace(
-            //   /__KEY_URL_TARGET__/,
-            //   '_blank'
-            // )
-
-            .replace(
-              /__KEY_DATA_FAVOURITE__/,
-              favouriteAttribute
-            );
-
-
-        allElementsHtml +=
-          singleElementHtml;
-
-      }
-    );
-
-
-    container.innerHTML =
-      allElementsHtml;
-
+    container.innerHTML = allElementsHtml;
   }
 
-
-  // =========================================================
-  // Render Favourite Options
-  // =========================================================
-
-  private renderFavouriteOptions(
-    domElement: HTMLElement,
-    items: IQuickLinksList[],
-    favouriteIds: number[]
-  ): void {
-
-    const container =
-      domElement.querySelector(
-        '.favourite-options'
-      );
-
-
+  private renderFavouriteOptions(domElement: HTMLElement, items: IQuickLinksList[], favouriteIds: number[]): void {
+    const container = domElement.querySelector('.favourite-options');
     if (!container) {
-
-      console.error(
-        'Favourite options container not found.'
-      );
-
+      console.error('Favourite options container not found.');
       return;
-
     }
 
-
-    const activeItems =
-      items.filter(
-        (item) =>
-          item.Status === 'Active'
-      );
-
-
+    const activeItems = items.filter((item) => item.Status === 'Active');
     let optionsHtml = '';
 
+    activeItems.forEach((item) => {
+      const isFavourite = favouriteIds.indexOf(item.Id) !== -1;
+      optionsHtml += `
+        <label class="favourite-option">
+          <input type="checkbox" value="${item.Id}" ${isFavourite ? 'checked' : ''}>
+          <span>${item.Title}</span>
+        </label>
+      `;
+    });
 
-    activeItems.forEach(
-      (item) => {
-
-        const isFavourite =
-          favouriteIds.indexOf(
-            item.Id
-          ) !== -1;
-
-
-        optionsHtml += `
-
-          <label class="favourite-option">
-
-            <input
-              type="checkbox"
-              value="${item.Id}"
-              ${isFavourite ? 'checked' : ''}>
-
-            <span>
-              ${item.Title}
-            </span>
-
-          </label>
-
-        `;
-
-      }
-    );
-
-
-    container.innerHTML =
-      optionsHtml;
-
+    container.innerHTML = optionsHtml;
   }
 
+  private setupTabs(domElement: HTMLElement): void {
+    const tabs = domElement.querySelectorAll('[data-filter-ql]');
 
-  // =========================================================
-  // Setup Tabs
-  // =========================================================
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const selectedTab = (tab as HTMLElement).getAttribute('data-filter-ql');
+        const allLinks = domElement.querySelectorAll('.quick-links-grid .quick-link-box');
 
-  private setupTabs(
-    domElement: HTMLElement
-  ): void {
+        tabs.forEach((item) => { item.classList.remove('panel-title-filter-active'); });
+        tab.classList.add('panel-title-filter-active');
 
-    const tabs =
-      domElement.querySelectorAll(
-        '[data-filter-ql]'
-      );
+        allLinks.forEach((link) => {
+          const favouriteCategory = link.getAttribute('data-tab-cat');
 
-
-    tabs.forEach(
-      (tab) => {
-
-        tab.addEventListener(
-          'click',
-          () => {
-
-            const selectedTab =
-              (tab as HTMLElement)
-                .getAttribute(
-                  'data-filter-ql'
-                );
-
-
-            const allLinks =
-              domElement.querySelectorAll(
-                '.quick-links-grid .quick-link-box'
-              );
-
-
-            tabs.forEach(
-              (item) => {
-
-                item.classList.remove(
-                  'panel-title-filter-active'
-                );
-
-              }
-            );
-
-
-            tab.classList.add(
-              'panel-title-filter-active'
-            );
-
-
-            allLinks.forEach(
-              (link) => {
-
-                const favouriteCategory =
-                  link.getAttribute(
-                    'data-tab-cat'
-                  );
-
-
-                if (
-                  selectedTab ===
-                  'favourites'
-                ) {
-
-                  if (
-                    favouriteCategory ===
-                    'ql-favourite'
-                  ) {
-
-                    (
-                      link as HTMLElement
-                    ).style.display = '';
-
-                  } else {
-
-                    (
-                      link as HTMLElement
-                    ).style.display = 'none';
-
-                  }
-
-                } else {
-
-                  (
-                    link as HTMLElement
-                  ).style.display = '';
-
-                }
-
-              }
-            );
-
+          if (selectedTab === 'favourites') {
+            (link as HTMLElement).style.display = favouriteCategory === 'ql-favourite' ? '' : 'none';
+          } else {
+            (link as HTMLElement).style.display = '';
           }
-        );
-
-      }
-    );
-
+        });
+      });
+    });
   }
 
-
-  // =========================================================
-  // Show / Hide Favourites Tab
-  // =========================================================
-
-  private updateFavouriteTabVisibility(
-    domElement: HTMLElement,
-    favouriteIds: number[]
-  ): void {
-
-    const favouriteTab =
-      domElement.querySelector(
-        '[data-filter-ql="favourites"]'
-      ) as HTMLElement;
-
-
+  private updateFavouriteTabVisibility(domElement: HTMLElement, favouriteIds: number[]): void {
+    const favouriteTab = domElement.querySelector('[data-filter-ql="favourites"]') as HTMLElement;
     if (!favouriteTab) {
-
       return;
-
     }
-
-
-    if (favouriteIds.length === 0) {
-
-      favouriteTab.style.display =
-        'none';
-
-    } else {
-
-      favouriteTab.style.display =
-        '';
-
-    }
-
+    favouriteTab.style.display = favouriteIds.length === 0 ? 'none' : '';
   }
 
-
-  // =========================================================
-  // Setup Add Favourite Button
-  // =========================================================
-
-  private setupAddFavouriteButton(
-    context: WebPartContext,
-    domElement: HTMLElement
-  ): void {
-
-    const button =
-      domElement.querySelector(
-        '#btnAddFavourites'
-      );
-
-
+  private setupAddFavouriteButton(context: WebPartContext, domElement: HTMLElement): void {
+    const button = domElement.querySelector('#btnAddFavourites');
     if (!button) {
-
-      console.error(
-        'Add Favourites button not found.'
-      );
-
+      console.error('Add Favourites button not found.');
       return;
-
     }
 
-
-    button.addEventListener(
-      'click',
-      async () => {
-
-        await this.addFavourites(
-          context,
-          domElement
-        );
-
-      }
-    );
-
+    button.addEventListener('click', async () => {
+      await this.addFavourites(context, domElement);
+    });
   }
 
-
-  // =========================================================
-  // Setup Favourite Modal
-  // =========================================================
-
-  private setupFavouriteModal(
-    context: WebPartContext,
-    domElement: HTMLElement
-  ): void {
-
-    const modal =
-      domElement.querySelector(
-        '#addFavouriteModal'
-      );
-
-
+  private setupFavouriteModal(context: WebPartContext, domElement: HTMLElement): void {
+    const modal = domElement.querySelector('#addFavouriteModal');
     if (!modal) {
-
-      console.error(
-        'Favourite modal not found.'
-      );
-
+      console.error('Favourite modal not found.');
       return;
-
     }
 
+    modal.addEventListener('show.bs.modal', async () => {
+      const favouriteIds = await this.getUserFavouriteIds(context);
+      const checkboxes = domElement.querySelectorAll('.favourite-options input[type="checkbox"]');
 
-    modal.addEventListener(
-      'show.bs.modal',
-      async () => {
-
-        const favouriteIds =
-          await this.getUserFavouriteIds(
-            context
-          );
-
-
-        const checkboxes =
-          domElement.querySelectorAll(
-            '.favourite-options input[type="checkbox"]'
-          );
-
-
-        checkboxes.forEach(
-          (checkbox) => {
-
-            const input =
-              checkbox as HTMLInputElement;
-
-
-            const quickLinkId =
-              Number(
-                input.value
-              );
-
-
-            input.checked =
-              favouriteIds.indexOf(
-                quickLinkId
-              ) !== -1;
-
-          }
-        );
-
-      }
-    );
-
+      checkboxes.forEach((checkbox) => {
+        const input = checkbox as HTMLInputElement;
+        const quickLinkId = Number(input.value);
+        input.checked = favouriteIds.indexOf(quickLinkId) !== -1;
+      });
+    });
   }
 
-
-  // =========================================================
-  // Add / Remove Favourites
-  // =========================================================
-
-  private async addFavourites(
-    context: WebPartContext,
-    domElement: HTMLElement
-  ): Promise<void> {
-
+  private async addFavourites(context: WebPartContext, domElement: HTMLElement): Promise<void> {
     try {
-
-      const checkboxes =
-        domElement.querySelectorAll(
-          '.favourite-options input[type="checkbox"]'
-        );
-
-
+      const checkboxes = domElement.querySelectorAll('.favourite-options input[type="checkbox"]');
       const selectedIds: number[] = [];
 
-
-      checkboxes.forEach(
-        (checkbox) => {
-
-          const input =
-            checkbox as HTMLInputElement;
-
-
-          if (input.checked) {
-
-            selectedIds.push(
-              Number(
-                input.value
-              )
-            );
-
-          }
-
+      checkboxes.forEach((checkbox) => {
+        const input = checkbox as HTMLInputElement;
+        if (input.checked) {
+          selectedIds.push(Number(input.value));
         }
-      );
+      });
 
+      const webUrl = context.pageContext.web.absoluteUrl;
+      const currentUser = await this.getCurrentUser(context);
 
-      const webUrl =
-        context.pageContext.web.absoluteUrl;
-
-
-      const currentUser =
-        await this.getCurrentUser(
-          context
-        );
-
-
-      // =====================================================
-      // Get Existing Favourites
-      // =====================================================
-
-      const favouritesResponse =
-        await context.spHttpClient.get(
-
-          `${webUrl}` +
-          `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items` +
-          `?$select=Id,Quick_x0020_LinkId` +
-          `&$filter=UserId eq ${currentUser.Id}`,
-
-          SPHttpClient.configurations.v1
-
-        );
-
+      // Get existing favourites
+      const favouritesResponse = await context.spHttpClient.get(`${webUrl}/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items?$select=Id,Quick_x0020_LinkId&$filter=UserId eq ${currentUser.Id}`, SPHttpClient.configurations.v1);
 
       if (!favouritesResponse.ok) {
-
-        console.error(
-          'Unable to get existing favourites:',
-          favouritesResponse.status
-        );
-
+        console.error('Unable to get existing favourites:', favouritesResponse.status);
         return;
-
       }
 
-
-      const favouritesData =
-        await favouritesResponse.json();
-
-
-      const existingFavourites =
-        favouritesData.value;
-
-
+      const favouritesData = await favouritesResponse.json();
+      const existingFavourites = favouritesData.value;
       const keptIds: number[] = [];
 
+      // Remove unchecked favourites
+      for (let i = 0; i < existingFavourites.length; i++) {
+        const favourite = existingFavourites[i];
+        const quickLinkId = Number(favourite.Quick_x0020_LinkId);
 
-      // =====================================================
-      // Remove Unchecked Favourites
-      // =====================================================
-
-      for (
-        let i = 0;
-        i < existingFavourites.length;
-        i++
-      ) {
-
-        const favourite =
-          existingFavourites[i];
-
-
-        const quickLinkId =
-          Number(
-            favourite.Quick_x0020_LinkId
-          );
-
-
-        if (
-          selectedIds.indexOf(
-            quickLinkId
-          ) === -1
-        ) {
-
-          await this.deleteFavourite(
-            context,
-            favourite.Id
-          );
-
+        if (selectedIds.indexOf(quickLinkId) === -1) {
+          await this.deleteFavourite(context, favourite.Id);
         } else {
-
-          keptIds.push(
-            quickLinkId
-          );
-
+          keptIds.push(quickLinkId);
         }
-
       }
 
+      // Add newly selected favourites
+      for (let i = 0; i < selectedIds.length; i++) {
+        const quickLinkId = selectedIds[i];
 
-      // =====================================================
-      // Add Newly Selected Favourites
-      // =====================================================
+        if (keptIds.indexOf(quickLinkId) === -1) {
+          const requestBody = { UserId: currentUser.Id, Quick_x0020_LinkId: quickLinkId };
 
-      for (
-        let i = 0;
-        i < selectedIds.length;
-        i++
-      ) {
-
-        const quickLinkId =
-          selectedIds[i];
-
-
-        if (
-          keptIds.indexOf(
-            quickLinkId
-          ) === -1
-        ) {
-
-          const requestBody = {
-
-            UserId:
-              currentUser.Id,
-
-            Quick_x0020_LinkId:
-              quickLinkId
-
-          };
-
-
-          const response =
-            await context.spHttpClient.post(
-
-              `${webUrl}` +
-              `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items`,
-
-              SPHttpClient.configurations.v1,
-
-              {
-
-                headers: {
-
-                  'Accept':
-                    'application/json;odata=nometadata',
-
-                  'Content-Type':
-                    'application/json;odata=nometadata'
-
-                },
-
-                body:
-                  JSON.stringify(
-                    requestBody
-                  )
-
-              }
-
-            );
-
+          const response = await context.spHttpClient.post(`${webUrl}/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items`, SPHttpClient.configurations.v1, {
+            headers: { 'Accept': 'application/json;odata=nometadata', 'Content-Type': 'application/json;odata=nometadata' },
+            body: JSON.stringify(requestBody)
+          });
 
           if (!response.ok) {
-
-            const errorText =
-              await response.text();
-
-
-            console.error(
-              'Failed to add favourite:',
-              response.status,
-              errorText
-            );
-
+            const errorText = await response.text();
+            console.error('Failed to add favourite:', response.status, errorText);
             return;
-
           }
 
-
-          keptIds.push(
-            quickLinkId
-          );
-
+          keptIds.push(quickLinkId);
         }
-
       }
 
-      const activeTab =
-        domElement.querySelector(
-          '.panel-title-filter-active'
-        ) as HTMLElement;
+      const activeTab = domElement.querySelector('.panel-title-filter-active') as HTMLElement;
+      const activeTabValue = activeTab?.getAttribute('data-filter-ql');
 
-      const activeTabValue =
-        activeTab?.getAttribute(
-          'data-filter-ql'
-        );
-
-
-
-      // =====================================================
       // Refresh Quick Links
-      // =====================================================
+      const quickLinks = await this.getQuickLinks(context);
+      const favouriteIds = await this.getUserFavouriteIds(context);
 
-      const quickLinks =
-        await this.getQuickLinks(
-          context
-        );
+      this.renderQuickLinks(context, domElement, quickLinks, favouriteIds);
+      this.renderFavouriteOptions(domElement, quickLinks, favouriteIds);
+      this.updateFavouriteTabVisibility(domElement, favouriteIds);
 
-
-      const favouriteIds =
-        await this.getUserFavouriteIds(
-          context
-        );
-
-
-      this.renderQuickLinks(
-        context,
-        domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.renderFavouriteOptions(
-        domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.updateFavouriteTabVisibility(
-            domElement,
-            favouriteIds
-          );
-
-          if (activeTabValue) {
-
-      const tabToRestore =
-        domElement.querySelector(
-          `[data-filter-ql="${activeTabValue}"]`
-        ) as HTMLElement;
-
-      if (tabToRestore) {
-        tabToRestore.click();
-      }
-
-    }
-
-
-      // =====================================================
-      // Close Modal
-      // =====================================================
-
-      const modal =
-        domElement.querySelector(
-          '#addFavouriteModal'
-        ) as HTMLElement;
-
-
-      if (modal) {
-
-        modal.classList.remove(
-          'show'
-        );
-
-
-        modal.style.display =
-          'none';
-
-
-        modal.setAttribute(
-          'aria-hidden',
-          'true'
-        );
-
-
-        document.body.classList.remove(
-          'modal-open'
-        );
-
-
-        const backdrop =
-          document.querySelector(
-            '.modal-backdrop'
-          );
-
-
-        if (backdrop) {
-
-          backdrop.remove();
-
+      if (activeTabValue) {
+        const tabToRestore = domElement.querySelector(`[data-filter-ql="${activeTabValue}"]`) as HTMLElement;
+        if (tabToRestore) {
+          tabToRestore.click();
         }
-
       }
 
+      // Close modal
+      const modal = domElement.querySelector('#addFavouriteModal') as HTMLElement;
+      if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+          backdrop.remove();
+        }
+      }
     } catch (error) {
-
-      console.error(
-        'Error updating favourites:',
-        error
-      );
-
+      console.error('Error updating favourites:', error);
     }
-
   }
 
+  private async deleteFavourite(context: WebPartContext, favouriteId: number): Promise<void> {
+    const webUrl = context.pageContext.web.absoluteUrl;
 
-  // =========================================================
-  // Delete Favourite
-  // =========================================================
-
-  private async deleteFavourite(
-    context: WebPartContext,
-    favouriteId: number
-  ): Promise<void> {
-
-    const webUrl =
-      context.pageContext.web.absoluteUrl;
-
-
-    const response =
-      await context.spHttpClient.post(
-
-        `${webUrl}` +
-        `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items(${favouriteId})`,
-
-        SPHttpClient.configurations.v1,
-
-        {
-
-          headers: {
-
-            'Accept':
-              'application/json;odata=nometadata',
-
-            'X-HTTP-Method':
-              'DELETE',
-
-            'IF-MATCH':
-              '*'
-
-          }
-
-        }
-
-      );
-
+    const response = await context.spHttpClient.post(`${webUrl}/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items(${favouriteId})`, SPHttpClient.configurations.v1, {
+      headers: { 'Accept': 'application/json;odata=nometadata', 'X-HTTP-Method': 'DELETE', 'IF-MATCH': '*' }
+    });
 
     if (!response.ok) {
-
-      const errorText =
-        await response.text();
-
-
-      console.error(
-        'Failed to delete favourite:',
-        favouriteId,
-        response.status,
-        errorText
-      );
-
-
-      throw new Error(
-        `Failed to delete favourite: ${response.status}`
-      );
-
+      const errorText = await response.text();
+      console.error('Failed to delete favourite:', favouriteId, response.status, errorText);
+      throw new Error(`Failed to delete favourite: ${response.status}`);
     }
-
   }
 
+  // ==================== BIRTHDAYS ====================
 
-  // =========================================================
-  // BIRTHDAYS
-  // =========================================================
-
-
-  // =========================================================
-  // Get Birthdays
-  // =========================================================
-
-  private async getBirthdays(
-    context: WebPartContext
-  ): Promise<IBirthdayList[]> {
-
-    const webUrl =
-      context.pageContext.web.absoluteUrl;
-
-
-    const endpoint =
-      `${webUrl}/_api/web/lists/getbytitle('Birthday')/items` +
-      `?$select=Id,Title,EmployeePhoto,BirthDate,Status`;
-
+  private async getBirthdays(context: WebPartContext): Promise<IBirthdayList[]> {
+    const webUrl = context.pageContext.web.absoluteUrl;
+    const endpoint = `${webUrl}/_api/web/lists/getbytitle('Birthday')/items?$select=Id,Title,EmployeePhoto,BirthDate,Status`;
 
     try {
-
-      const response =
-        await context.spHttpClient.get(
-          endpoint,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              Accept:
-                'application/json;odata=nometadata'
-            }
-          }
-        );
-
+      const response = await context.spHttpClient.get(endpoint, SPHttpClient.configurations.v1, { headers: { Accept: 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
-
-        console.error(
-          'Failed to get birthday data:',
-          response.status,
-          response.statusText
-        );
-
+        console.error('Failed to get birthday data:', response.status, response.statusText);
         return [];
-
       }
 
-
-      const data =
-        await response.json();
-
-
+      const data = await response.json();
       return data.value;
-
     } catch (error) {
-
-      console.error(
-        'Error getting birthday data:',
-        error
-      );
-
+      console.error('Error getting birthday data:', error);
       return [];
+    }
+  }
 
+  private getBirthdayImageUrl(photo: any): string {
+    if (!photo) {
+      return '';
     }
 
-  }
-
-
-  // =========================================================
-  // Get Employee Photo URL
-  // =========================================================
-private getBirthdayImageUrl(photo: any): string {
-  if (!photo) {
-    return '';
-  }
- 
-  try {
-    if (typeof photo === 'string') {
-      photo = JSON.parse(photo);
+    try {
+      if (typeof photo === 'string') {
+        photo = JSON.parse(photo);
+      }
+      return photo.serverRelativeUrl || '';
+    } catch (error) {
+      console.error('Error parsing employee photo:', error);
+      return '';
     }
- 
-    return photo.serverRelativeUrl || '';
- 
-  } catch (error) {
-    console.error('Error parsing employee photo:', error);
-    return '';
-  }
-}
-
-
-  // =========================================================
-  // Get Upcoming Birthdays
-  // =========================================================
-
-  private getUpcomingBirthdays(
-    birthdays: IBirthdayList[]
-  ): IBirthdayList[] {
-
-    const today =
-      new Date();
-
-
-    today.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-
-    const upcoming =
-      birthdays
-
-        .filter(
-          (item) =>
-            item.Status === 'Active'
-        )
-
-        .map(
-          (item) => {
-
-            const birthDate =
-              new Date(
-                item.BirthDate
-              );
-
-
-            let birthday =
-              new Date(
-                today.getFullYear(),
-                birthDate.getMonth(),
-                birthDate.getDate()
-              );
-
-
-            if (
-              birthday < today
-            ) {
-
-              birthday.setFullYear(
-                today.getFullYear() + 1
-              );
-
-            }
-
-
-            const difference =
-              Math.floor(
-                (
-                  birthday.getTime() -
-                  today.getTime()
-                ) /
-                (
-                  1000 *
-                  60 *
-                  60 *
-                  24
-                )
-              );
-
-
-            return {
-              item,
-              difference
-            };
-
-          }
-        )
-
-        .filter(
-          (item) =>
-            item.difference < 7
-        )
-
-        .sort(
-          (a, b) =>
-            a.difference -
-            b.difference
-        );
-
-
-    return upcoming.map(
-      (item) =>
-        item.item
-    );
-
   }
 
+  private getUpcomingBirthdays(birthdays: IBirthdayList[]): IBirthdayList[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  // =========================================================
-  // Render Birthdays
-  // =========================================================
+    const upcoming = birthdays
+      .filter((item) => item.Status === 'Active')
+      .map((item) => {
+        const birthDate = new Date(item.BirthDate);
+        const birthday = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+
+        if (birthday < today) {
+          birthday.setFullYear(today.getFullYear() + 1);
+        }
+
+        const difference = Math.floor((birthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return { item, difference };
+      })
+      .filter((item) => item.difference < 7)
+      .sort((a, b) => a.difference - b.difference);
+
+    return upcoming.map((item) => item.item);
+  }
 
   private async renderBirthdays(): Promise<void> {
-    
+    const birthdays = await this.getBirthdays(this.context);
+    const upcomingBirthdays = this.getUpcomingBirthdays(birthdays);
 
-    const birthdays =
-      await this.getBirthdays(
-        this.context
-      );
-
-
-    const upcomingBirthdays =
-      this.getUpcomingBirthdays(
-        birthdays
-      );
-
-
-    const container =
-      this.domElement.querySelector(
-        '.panel-card-birthdays'
-      );
-
-
+    const container = this.domElement.querySelector('.panel-card-birthdays');
     if (!container) {
-
-      console.error(
-        'Birthday container not found.'
-      );
-
+      console.error('Birthday container not found.');
       return;
-
     }
-
 
     let html = '';
 
+    upcomingBirthdays.forEach((item) => {
+      const birthDate = new Date(item.BirthDate);
+      const month = birthDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+      const day = birthDate.getDate().toString();
+      const imageUrl = this.getBirthdayImageUrl(item.EmployeePhoto);
 
-    upcomingBirthdays.forEach(
-      (item) => {
+      html += Birthday.singleElementHtml
+        .replace(/__KEY_URL_IMG__/g, imageUrl)
+        .replace(/__KEY_TITLE__/g, item.Title)
+        .replace(/__KEY_MONTH__/g, month)
+        .replace(/__KEY_DAY__/g, day);
+    });
 
-        const birthDate =
-          new Date(
-            item.BirthDate
-          );
-
-
-        const month =
-          birthDate
-            .toLocaleString(
-              'en-US',
-              {
-                month: 'short'
-              }
-            )
-            .toUpperCase();
-
-
-        const day =
-          birthDate
-            .getDate()
-            .toString();
-
-
-     const imageUrl = this.getBirthdayImageUrl(
-  item.EmployeePhoto
-);
-
-
-        html +=
-          Birthday.singleElementHtml
-
-            .replace(
-              /__KEY_URL_IMG__/g,
-              imageUrl
-            )
-
-            .replace(
-              /__KEY_TITLE__/g,
-              item.Title
-            )
-
-            .replace(
-              /__KEY_MONTH__/g,
-              month
-            )
-
-            .replace(
-              /__KEY_DAY__/g,
-              day
-            );
-
-      }
-    );
-
-
-    container.innerHTML =
-      html;
-
+    container.innerHTML = html;
   }
 
-  // =====================================================
-// HR API - Birthdays
-// =====================================================
+  // HR API - Birthdays
+  // private async getHRBirthdays(): Promise<any[]> {
+  //   const apiUrl = 'HR_API_URL_WILL_BE_PROVIDED';
+  //   // API implementation will be added once HR provides endpoint and authentication details.
+  //   return [];
+  // }
 
-// private async getHRBirthdays(): Promise<any[]> {
+  // ==================== SOCIAL MEDIA ====================
 
-//   const apiUrl = 'HR_API_URL_WILL_BE_PROVIDED';
+  private async initializeSocialMedia(): Promise<void> {
 
-//   // API implementation will be added
-//   // once HR provides endpoint and authentication details.
+    // Instagram
+    const instagramContainer = this.domElement.querySelector('#social-instagram') as HTMLElement;
+    if (instagramContainer) {
+      instagramContainer.innerHTML = `<div class="sk-instagram-feed" data-embed-id="25716225"></div>`;
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/instagram-feed/widget.js';
+      script.defer = true;
+      instagramContainer.appendChild(script);
+    }
 
-//   return [];
-// }
+    // X (Twitter)
+    const twitterContainer = this.domElement.querySelector('#social-twitter') as HTMLElement;
+    if (twitterContainer) {
+      twitterContainer.innerHTML = `<div class="sk-ww-twitter-feed" data-embed-id="25716230"></div>`;
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/twitter-feed/widget.js';
+      script.defer = true;
+      twitterContainer.appendChild(script);
+    }
 
-// =========================================================
-// SOCIAL MEDIA
-// =========================================================
+    // LinkedIn
+    const linkedinContainer = this.domElement.querySelector('#social-linkedin') as HTMLElement;
+    if (linkedinContainer) {
+      linkedinContainer.innerHTML = `<div class="sk-ww-linkedin-page-post" data-embed-id="25716233"></div>`;
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/linkedin-page-posts/widget.js';
+      script.defer = true;
+      linkedinContainer.appendChild(script);
+    }
 
-private async initializeSocialMedia(): Promise<void> {
+    // Facebook
+    const facebookContainer = this.domElement.querySelector('#social-facebook') as HTMLElement;
+    if (facebookContainer) {
+      facebookContainer.innerHTML = `<div class="sk-ww-facebook-page-posts" data-embed-id="25716238"></div>`;
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/facebook-page-posts/widget.js';
+      script.defer = true;
+      facebookContainer.appendChild(script);
+    }
 
-  // Instagram
-  const instagramContainer =
-    this.domElement.querySelector(
-      '#social-instagram'
-    ) as HTMLElement;
+    // YouTube
+    const youtubeContainer = this.domElement.querySelector('#social-youtube') as HTMLElement;
+    if (youtubeContainer) {
+      youtubeContainer.innerHTML = `<div class="sk-ww-youtube-channel-videos" data-embed-id="25716248"></div>`;
+      const script = document.createElement('script');
+      script.src = 'https://widgets.sociablekit.com/youtube-channel-videos/widget.js';
+      script.defer = true;
+      youtubeContainer.appendChild(script);
+    }
 
-  if (instagramContainer) {
-    instagramContainer.innerHTML = `
-      <div
-        class="sk-instagram-feed"
-        data-embed-id="25716225">
-      </div>
-    `;
-
-    const script = document.createElement('script');
-    script.src =
-      'https://widgets.sociablekit.com/instagram-feed/widget.js';
-    script.defer = true;
-
-    instagramContainer.appendChild(script);
+    this.setupSocialMediaTutorialLinkObserver();
   }
-
-
-  // X (Twitter)
-  const twitterContainer =
-    this.domElement.querySelector(
-      '#social-twitter'
-    ) as HTMLElement;
-
-  if (twitterContainer) {
-    twitterContainer.innerHTML = `
-      <div
-        class="sk-ww-twitter-feed"
-        data-embed-id="25716230">
-      </div>
-    `;
-
-    const script = document.createElement('script');
-    script.src =
-      'https://widgets.sociablekit.com/twitter-feed/widget.js';
-    script.defer = true;
-
-    twitterContainer.appendChild(script);
-  }
-
-
-  // LinkedIn
-  const linkedinContainer =
-    this.domElement.querySelector(
-      '#social-linkedin'
-    ) as HTMLElement;
-
-  if (linkedinContainer) {
-    linkedinContainer.innerHTML = `
-      <div
-        class="sk-ww-linkedin-page-post"
-        data-embed-id="25716233">
-      </div>
-    `;
-
-    const script = document.createElement('script');
-    script.src =
-      'https://widgets.sociablekit.com/linkedin-page-posts/widget.js';
-    script.defer = true;
-
-    linkedinContainer.appendChild(script);
-  }
-
-
-  // Facebook
-  const facebookContainer =
-    this.domElement.querySelector(
-      '#social-facebook'
-    ) as HTMLElement;
-
-  if (facebookContainer) {
-    facebookContainer.innerHTML = `
-      <div
-        class="sk-ww-facebook-page-posts"
-        data-embed-id="25716238">
-      </div>
-    `;
-
-    const script = document.createElement('script');
-    script.src =
-      'https://widgets.sociablekit.com/facebook-page-posts/widget.js';
-    script.defer = true;
-
-    facebookContainer.appendChild(script);
-  }
-
-
-  // YouTube
-  const youtubeContainer =
-    this.domElement.querySelector(
-      '#social-youtube'
-    ) as HTMLElement;
-
-  if (youtubeContainer) {
-    youtubeContainer.innerHTML = `
-      <div
-        class="sk-ww-youtube-channel-videos"
-        data-embed-id="25716248">
-      </div>
-    `;
-
-    const script = document.createElement('script');
-    script.src =
-      'https://widgets.sociablekit.com/youtube-channel-videos/widget.js';
-    script.defer = true;
-
-    youtubeContainer.appendChild(script);
-  }
-
-  this.setupSocialMediaTutorialLinkObserver();
-}
 
   // ==================== INITIALIZE WEB PART ====================
 
   protected async onInit(): Promise<void> {
-
-    // this.loadCSS();
-
-
-    // await this.loadJS();
-
-
     return super.onInit();
-
   }
-
 
   // ==================== PROPERTY PANE ====================
 
-  protected getPropertyPaneConfiguration():
-    IPropertyPaneConfiguration {
-
+  protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
     return {
-
       pages: [
-
         {
-
-          header: {
-            description: 'Home Page'
-          },
-
+          header: { description: 'Home Page' },
           groups: [
-
             {
-
               groupName: 'Configuration',
-
               groupFields: [
-
-                PropertyPaneTextField(
-                  'description',
-                  {
-                    label: 'Description'
-                  }
-                )
-
+                PropertyPaneTextField('description', { label: 'Description' })
               ]
-
             }
-
           ]
-
         }
-
       ]
-
     };
-
   }
-
 
   // ==================== DATA VERSION ====================
 
   protected get dataVersion(): Version {
-
     return Version.parse('1.0');
-
   }
-
 }
