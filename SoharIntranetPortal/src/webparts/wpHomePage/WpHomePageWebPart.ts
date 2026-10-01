@@ -980,7 +980,6 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     $('#events-calendar-org').find('.ui-datepicker-current-day').removeClass('ui-datepicker-current-day').find('.ui-state-active').removeClass('ui-state-active');
   }
-
   private parseCalendarDate(dateText: string): Date | null {
     const parts = dateText.split(' ');
     if (parts.length !== 3) {
@@ -1553,12 +1552,19 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       this.renderFavouriteOptions(domElement, quickLinks, favouriteIds);
       this.updateFavouriteTabVisibility(domElement, favouriteIds);
 
-      if (activeTabValue) {
-        const tabToRestore = domElement.querySelector(`[data-filter-ql="${activeTabValue}"]`) as HTMLElement;
-        if (tabToRestore) {
-          tabToRestore.click();
-        }
-      }
+    if (favouriteIds.length === 0) {
+  const quickLinksTab = domElement.querySelector(
+    '[data-filter-ql="quick-links"]'
+  ) as HTMLElement;
+ 
+  quickLinksTab?.click();
+} else if (activeTabValue) {
+  const tabToRestore = domElement.querySelector(
+    `[data-filter-ql="${activeTabValue}"]`
+  ) as HTMLElement;
+ 
+  tabToRestore?.click();
+}
 
       // Close modal
       const modal = domElement.querySelector('#addFavouriteModal') as HTMLElement;
