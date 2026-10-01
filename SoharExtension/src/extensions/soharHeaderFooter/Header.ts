@@ -5,7 +5,7 @@ export default class Header {
     private userName: string,
     private designation: string,
     private profilePhoto: string,
-    private departmentItems: string
+    private departmentItems: string[]
   ) { }
 
   public render(): string {
@@ -19,9 +19,9 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand"   href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-  target="_blank"
-  data-interception="off">
+            <a class="navbar-brand" href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+              target="_blank"
+              data-interception="off">
 
               <img
                 class="logo-desktop"
@@ -137,41 +137,62 @@ export default class Header {
                   </a>
 
                 </li>
-<li class="nav-item d-lg-flex dropdown">
 
-  <a
-    class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-    href="#"
-    id="navbarScrollingDropdown"
-    role="button"
-    data-bs-toggle="dropdown"
-    aria-expanded="false">
+                <li class="nav-item d-lg-flex has-mega">
 
-    <img
-      class="nav-menu-icon"
-      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
-      alt=""
-    />
+                  <a
+                    class="nav-link d-flex align-items-center gap-2"
+                    href="#"
+                    aria-haspopup="true"
+                    aria-expanded="false">
 
-    <span>Departments</span>
+                    <img
+                      class="nav-menu-icon"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+                      alt=""
+                    />
 
-    <img
-      class="dropdown-arrow-nav"
-      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
-      alt=""
-    />
+                    <span>Departments</span>
 
-  </a>
+                  </a>
 
-  <ul
-    class="dropdown-menu"
-    aria-labelledby="navbarScrollingDropdown">
+                  <div
+                    class="mega-panel"
+                    role="menu"
+                    aria-label="Department menu">
 
-    ${this.departmentItems}
+                    <div class="mega-panel-inner">
 
-  </ul>
+                      <div class="mega-panel-content custom-scroll-view">
 
-</li>
+                        <div>
+                          <ul class="mega-links">
+                            ${this.departmentItems[0] || ''}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <ul class="mega-links">
+                            ${this.departmentItems[1] || ''}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <ul class="mega-links">
+                            ${this.departmentItems[2] || ''}
+                          </ul>
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </li>
+
+              </ul>
+
             </div>
 
           </div>

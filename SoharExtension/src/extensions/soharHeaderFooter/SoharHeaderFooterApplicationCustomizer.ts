@@ -71,6 +71,8 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   await this.loadBootstrap();
   await this._renderHeader();
+
+  this._loadHome();
   await this._renderFooter();
 
   return Promise.resolve();
@@ -218,25 +220,24 @@ private async _loadCSS(): Promise<void> {
     `${baseUrl}/SiteAssets/resources/css/home.css`
   );
 
-  // Load scripts sequentially
+  // Load jQuery 3.6.0
   await SPComponentLoader.loadScript(
     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
   );
 
+  // Save the original jQuery instance
+  (window as any).soharJQuery = (window as any).jQuery;
+
+  // Load jQuery UI
   await SPComponentLoader.loadScript(
     `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
   );
 
+  // Load Swiper
   await SPComponentLoader.loadScript(
     `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
   );
-
-  this._loadHome();
 }
-
-
-
-
 
   private async _getUserDesignation(): Promise<string> {
 
@@ -272,89 +273,78 @@ private async _loadCSS(): Promise<void> {
   // DEPARTMENTS
   // ============================================================
 
-  private async _getDepartments(): Promise<string> {
+private async _getDepartments(): Promise<string[]> {
 
-    const siteUrl:  string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
+  const siteUrl: string =
+    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
+  const url =
+    `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder`;
 
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder`;
+  try {
 
-
-    try {
-
-      const response =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept': 'application/json;odata=nometadata'
-            }
-          }
-        );
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          `Failed to load Departments: ${response.status} ${response.statusText}`
-        );
+    const response = await this.context.spHttpClient.get(
+      url,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          'Accept': 'application/json;odata=nometadata'
+        }
       }
+    );
 
+    if (!response.ok) {
+      throw new Error(
+        `Failed to load Departments: ${response.status} ${response.statusText}`
+      );
+    }
 
-      const data =
-        await response.json();
+    const data = await response.json();
 
+    const activeDepartments: any[] = data.value
+      .filter((department: any) => department.Status === 'Active')
+      .sort((a: any, b: any) => Number(a.SortOrder) - Number(b.SortOrder));
 
-  const departmentItems =
-  data.value
-    .filter(
-      (department: any) =>
-        department.Status === 'Active'
-    )
-    .sort(
-      (a: any, b: any) =>
-        Number(a.SortOrder) - Number(b.SortOrder)
-    )
-    .map(
-      (department: any) => {
+    const columnCount: number = 3;
+    const perColumn: number = Math.ceil(activeDepartments.length / columnCount);
 
-        const link =
-          department.Link?.Url || '#';
+    const departmentItems: string[] = [];
 
-        return `
-          <li>
-            <a
-              class="dropdown-item text-sm"
-              href="${link}"
-              target="_blank"
-              data-interception="off">
-              ${department.Title}
-            </a>
-          </li>
-        `;
-      }
-    )
-    .join('');
+    for (let i = 0; i < columnCount; i++) {
 
-      return departmentItems;
-
-    } catch (error) {
-
-      Log.error(
-        LOG_SOURCE,
-        error instanceof Error
-          ? error
-          : new Error(String(error))
+      const chunk = activeDepartments.slice(
+        i * perColumn,
+        (i + 1) * perColumn
       );
 
-      return '';
+      departmentItems.push(
+        chunk.map((department: any) => {
+
+          const link = department.Link?.Url || '#';
+
+          return `
+            <li>
+              <a href="${link}" target="_blank" data-interception="off">
+                <span>${department.Title}</span>
+              </a>
+            </li>
+          `;
+        }).join('')
+      );
     }
+
+    return departmentItems;
+
+  } catch (error) {
+
+    Log.error(
+      LOG_SOURCE,
+      error instanceof Error ? error : new Error(String(error))
+    );
+
+    return ['', '', ''];
   }
-
-
+}
   // ============================================================
   // RENDER HEADER
   // ============================================================
@@ -411,8 +401,8 @@ private async _loadCSS(): Promise<void> {
       await this._getUserDesignation();
 
 
-    const departmentItems: string =
-      await this._getDepartments();
+const departmentItems: string[] =
+  await this._getDepartments();
 
 
     const header: Header =
@@ -429,9 +419,72 @@ private async _loadCSS(): Promise<void> {
       header.render();
 
     this._setupSearchFunctionality();
+    this._setupDepartmentMegaMenu();
 
   }
+private _setupDepartmentMegaMenu(): void {
 
+  if (!this._topPlaceholder) {
+    return;
+  }
+
+  const departmentMenu =
+    this._topPlaceholder.domElement.querySelector(
+      '.has-mega'
+    ) as HTMLElement;
+
+  if (!departmentMenu) {
+    return;
+  }
+
+  const departmentLink =
+    departmentMenu.querySelector(
+      '.nav-link'
+    ) as HTMLElement;
+
+  if (!departmentLink) {
+    return;
+  }
+
+  departmentLink.addEventListener(
+    'click',
+    (event: Event) => {
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const isOpen =
+        departmentMenu.classList.contains('active');
+
+      departmentMenu.classList.toggle('active', !isOpen);
+
+      departmentLink.setAttribute(
+        'aria-expanded',
+        (!isOpen).toString()
+      );
+    }
+  );
+
+  document.addEventListener(
+    'click',
+    (event: Event) => {
+
+      if (
+        !departmentMenu.contains(
+          event.target as Node
+        )
+      ) {
+
+        departmentMenu.classList.remove('active');
+
+        departmentLink.setAttribute(
+          'aria-expanded',
+          'false'
+        );
+      }
+    }
+  );
+}
 
 private _setupSearchFunctionality(): void {
 
