@@ -218,8 +218,8 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ---------- MEDIA GALLERY ----------
   private initMediaGallery(): void {
-    // const $ = (window as any).jQuery;
-    const $ = (window as Window & { soharJQuery?: any }).soharJQuery;
+    const $ = (window as any).jQuery;
+    // const $ = (window as Window & { soharJQuery?: any }).soharJQuery;
     const Swiper = (window as any).Swiper;
     const bootstrap = (window as any).bootstrap;
     if (!$ || !Swiper || !bootstrap) { console.warn('jQuery, Swiper or Bootstrap is not available.'); return; }
