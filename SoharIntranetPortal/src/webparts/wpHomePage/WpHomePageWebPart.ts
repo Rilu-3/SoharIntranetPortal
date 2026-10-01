@@ -130,10 +130,17 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       const start = Date.now();
       const check = (): void => {
         const w = window as any;
-        if ((w.jQuery && w.jQuery.fn && w.jQuery.fn.datepicker && w.Swiper && w.bootstrap) || Date.now() - start > timeout) {
-          resolve();
-          return;
-        }
+         if (
+        (w.soharJQuery &&
+          w.soharJQuery.fn &&
+          w.soharJQuery.fn.datepicker &&
+          w.Swiper &&
+          w.bootstrap) ||
+        Date.now() - start > timeout
+      ) {
+        resolve();
+        return;
+      }
         setTimeout(check, 50);
       };
       check();
@@ -211,8 +218,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ---------- MEDIA GALLERY ----------
   private initMediaGallery(): void {
-    // const $ = (window as any).jQuery;
-       const $ = (window as Window & { soharJQuery?: any }).soharJQuery;
+    const $ = (window as any).jQuery;
     const Swiper = (window as any).Swiper;
     const bootstrap = (window as any).bootstrap;
     if (!$ || !Swiper || !bootstrap) { console.warn('jQuery, Swiper or Bootstrap is not available.'); return; }

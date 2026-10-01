@@ -9,10 +9,91 @@
           "manifest": "./src/webparts/wpHomePage/WpHomePageWebPart.manifest.json"
         }
       ]
+    },
+    "wp-news-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpNewsListing/WpNewsListingWebPart.js",
+          "manifest": "./src/webparts/wpNewsListing/WpNewsListingWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-news-details-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpNewsDetails/WpNewsDetailsWebPart.js",
+          "manifest": "./src/webparts/wpNewsDetails/WpNewsDetailsWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-media-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpMediaListing/WpMediaListingWebPart.js",
+          "manifest": "./src/webparts/wpMediaListing/WpMediaListingWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-announcement-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpAnnouncementListing/WpAnnouncementListingWebPart.js",
+          "manifest": "./src/webparts/wpAnnouncementListing/WpAnnouncementListingWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-announcement-details-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpAnnouncementDetails/WpAnnouncementDetailsWebPart.js",
+          "manifest": "./src/webparts/wpAnnouncementDetails/WpAnnouncementDetailsWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-offers-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpOffersListing/WpOffersListingWebPart.js",
+          "manifest": "./src/webparts/wpOffersListing/WpOffersListingWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-offers-details-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpOffersDetails/WpOffersDetailsWebPart.js",
+          "manifest": "./src/webparts/wpOffersDetails/WpOffersDetailsWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-organization-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpOrganizationListing/WpOrganizationListingWebPart.js",
+          "manifest": "./src/webparts/wpOrganizationListing/WpOrganizationListingWebPart.manifest.json"
+        }
+      ]
+    },
+    "wp-birthday-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpBirthdayListing/WpBirthdayListingWebPart.js",
+          "manifest": "./src/webparts/wpBirthdayListing/WpBirthdayListingWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
-    "WpHomePageWebPartStrings": "lib/webparts/wpHomePage/loc/{locale}.js"
+    "WpHomePageWebPartStrings": "lib/webparts/wpHomePage/loc/{locale}.js",
+    "WpNewsListingWebPartStrings": "lib/webparts/wpNewsListing/loc/{locale}.js",
+    "WpNewsDetailsWebPartStrings": "lib/webparts/wpNewsDetails/loc/{locale}.js",
+    "WpMediaListingWebPartStrings": "lib/webparts/wpMediaListing/loc/{locale}.js",
+    "WpAnnouncementListingWebPartStrings": "lib/webparts/wpAnnouncementListing/loc/{locale}.js",
+    "WpAnnouncementDetailsWebPartStrings": "lib/webparts/wpAnnouncementDetails/loc/{locale}.js",
+    "WpOffersListingWebPartStrings": "lib/webparts/wpOffersListing/loc/{locale}.js",
+    "WpOffersDetailsWebPartStrings": "lib/webparts/wpOffersDetails/loc/{locale}.js",
+    "WpOrganizationListingWebPartStrings": "lib/webparts/wpOrganizationListing/loc/{locale}.js",
+    "WpBirthdayListingWebPartStrings": "lib/webparts/wpBirthdayListing/loc/{locale}.js"
   }
 }
