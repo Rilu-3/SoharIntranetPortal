@@ -69,6 +69,9 @@ export default class WpHomePageWebPart
 // =========================================================
 
 private socialMediaObserver: MutationObserver | null = null;
+private currentUserId: number | null = null;
+private quickLinksCache: IQuickLinksList[] = [];
+private favouritesCache: { Id: number; LinkId: number }[] = [];
 
 private hideSocialMediaTutorialLinks(
   root: Document | ShadowRoot = document
@@ -161,87 +164,30 @@ private setupSocialMediaTutorialLinkObserver(): void {
   // Initialize Quick Links
   // =========================================================
 
-  private async initializeQuickLinks(): Promise<void> {
+private async initializeQuickLinks(): Promise<void> {
+  try {
+    const [quickLinks] = await Promise.all([
+      this.getQuickLinks(this.context),
+      this.loadFavourites(this.context)
+    ]);
 
-    try {
+    this.quickLinksCache = quickLinks;
+    const favouriteIds = this.getFavouriteIds();
 
-      const quickLinks =
-        await this.getQuickLinks(
-          this.context
-        );
-
-
-      const favouriteIds =
-        await this.getUserFavouriteIds(
-          this.context
-        );
-
-
-      this.renderQuickLinks(
-        this.context,
-        this.domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.renderFavouriteOptions(
-        this.domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.setupTabs(
-        this.domElement
-      );
-
-
-      this.setupAddFavouriteButton(
-        this.context,
-        this.domElement
-      );
-
-
-      this.setupFavouriteModal(
-        this.context,
-        this.domElement
-      );
-
-
-      this.updateFavouriteTabVisibility(
-        this.domElement,
-        favouriteIds
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Error initializing Quick Links:',
-        error
-      );
-
-
-      const container =
-        this.domElement.querySelector(
-          '.quick-links-grid'
-        );
-
-
-      if (container) {
-
-        container.innerHTML = `
-          <div class="p-3">
-            Unable to load Quick Links.
-          </div>
-        `;
-
-      }
-
+    this.renderQuickLinks(this.context, this.domElement, quickLinks, favouriteIds);
+    this.renderFavouriteOptions(this.domElement, quickLinks, favouriteIds);
+    this.setupTabs(this.domElement);
+    this.setupAddFavouriteButton(this.context, this.domElement);
+    this.setupFavouriteModal(this.context, this.domElement);
+    this.updateFavouriteTabVisibility(this.domElement, favouriteIds);
+  } catch (error) {
+    console.error('Error initializing Quick Links:', error);
+    const container = this.domElement.querySelector('.quick-links-grid');
+    if (container) {
+      container.innerHTML = `<div class="p-3">Unable to load Quick Links.</div>`;
     }
-
   }
-
+}
 
   // =========================================================
   // Get Quick Links
@@ -326,70 +272,80 @@ private setupSocialMediaTutorialLinkObserver(): void {
   // Get User Favourite IDs
   // =========================================================
 
-  private async getUserFavouriteIds(
-    context: WebPartContext
-  ): Promise<number[]> {
+private async getCurrentUserId(context: WebPartContext): Promise<number> {
+  if (this.currentUserId !== null) {
+    return this.currentUserId;
+  }
+  const user = await this.getCurrentUser(context);
+  this.currentUserId = user.Id;
+  return user.Id;
+}
 
-    try {
+// Fetches from the server once and fills the cache
+private async loadFavourites(context: WebPartContext): Promise<void> {
+  try {
+    const webUrl = context.pageContext.web.absoluteUrl;
+    const userId = await this.getCurrentUserId(context);
 
-      const webUrl =
-        context.pageContext.web.absoluteUrl;
+    const response = await context.spHttpClient.get(
+      `${webUrl}/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items` +
+      `?$select=Id,Quick_x0020_LinkId&$filter=UserId eq ${userId}`,
+      SPHttpClient.configurations.v1
+    );
 
-
-      const currentUser =
-        await this.getCurrentUser(
-          context
-        );
-
-
-      const response =
-        await context.spHttpClient.get(
-
-          `${webUrl}` +
-          `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items` +
-          `?$select=Id,Quick_x0020_LinkId` +
-          `&$filter=UserId eq ${currentUser.Id}`,
-
-          SPHttpClient.configurations.v1
-
-        );
-
-
-      if (!response.ok) {
-
-        console.error(
-          'Unable to get user favourites:',
-          response.status
-        );
-
-        return [];
-
-      }
-
-
-      const data =
-        await response.json();
-
-
-      return data.value.map(
-        (item: { Quick_x0020_LinkId: number }) =>
-          Number(
-            item.Quick_x0020_LinkId
-          )
-      );
-
-    } catch (error) {
-
-      console.error(
-        'Error loading user favourites:',
-        error
-      );
-
-      return [];
-
+    if (!response.ok) {
+      console.error('Unable to get user favourites:', response.status);
+      this.favouritesCache = [];
+      return;
     }
 
+    const data = await response.json();
+    this.favouritesCache = data.value.map(
+      (item: { Id: number; Quick_x0020_LinkId: number }) => ({
+        Id: item.Id,
+        LinkId: Number(item.Quick_x0020_LinkId)
+      })
+    );
+  } catch (error) {
+    console.error('Error loading user favourites:', error);
+    this.favouritesCache = [];
   }
+}
+
+private getFavouriteIds(): number[] {
+  return this.favouritesCache.map((f) => f.LinkId);
+}
+
+// Returns the new list item's Id
+private async createFavourite(
+  context: WebPartContext,
+  userId: number,
+  quickLinkId: number
+): Promise<number> {
+  const webUrl = context.pageContext.web.absoluteUrl;
+
+  const response = await context.spHttpClient.post(
+    `${webUrl}/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items`,
+    SPHttpClient.configurations.v1,
+    {
+      headers: {
+        'Accept': 'application/json;odata=nometadata',
+        'Content-Type': 'application/json;odata=nometadata'
+      },
+      body: JSON.stringify({
+        UserId: userId,
+        Quick_x0020_LinkId: quickLinkId
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to add favourite: ${response.status}`);
+  }
+
+  const created = await response.json();
+  return created.Id;
+}
 
 
   // =========================================================
@@ -782,410 +738,139 @@ private setupSocialMediaTutorialLinkObserver(): void {
   // Setup Favourite Modal
   // =========================================================
 
-  private setupFavouriteModal(
-    context: WebPartContext,
-    domElement: HTMLElement
-  ): void {
-
-    const modal =
-      domElement.querySelector(
-        '#addFavouriteModal'
-      );
-
-
-    if (!modal) {
-
-      console.error(
-        'Favourite modal not found.'
-      );
-
-      return;
-
-    }
-
-
-    modal.addEventListener(
-      'show.bs.modal',
-      async () => {
-
-        const favouriteIds =
-          await this.getUserFavouriteIds(
-            context
-          );
-
-
-        const checkboxes =
-          domElement.querySelectorAll(
-            '.favourite-options input[type="checkbox"]'
-          );
-
-
-        checkboxes.forEach(
-          (checkbox) => {
-
-            const input =
-              checkbox as HTMLInputElement;
-
-
-            const quickLinkId =
-              Number(
-                input.value
-              );
-
-
-            input.checked =
-              favouriteIds.indexOf(
-                quickLinkId
-              ) !== -1;
-
-          }
-        );
-
-      }
-    );
-
+ private setupFavouriteModal(
+  context: WebPartContext,
+  domElement: HTMLElement
+): void {
+  const modal = domElement.querySelector('#addFavouriteModal');
+  if (!modal) {
+    console.error('Favourite modal not found.');
+    return;
   }
+
+  modal.addEventListener('show.bs.modal', () => {
+    const favouriteIds = this.getFavouriteIds();
+
+    domElement
+      .querySelectorAll('.favourite-options input[type="checkbox"]')
+      .forEach((checkbox) => {
+        const input = checkbox as HTMLInputElement;
+        input.checked = favouriteIds.indexOf(Number(input.value)) !== -1;
+      });
+  });
+}
 
 
   // =========================================================
   // Add / Remove Favourites
   // =========================================================
 
-  private async addFavourites(
-    context: WebPartContext,
-    domElement: HTMLElement
-  ): Promise<void> {
+private async addFavourites(
+  context: WebPartContext,
+  domElement: HTMLElement
+): Promise<void> {
 
-    try {
-
-      const checkboxes =
-        domElement.querySelectorAll(
-          '.favourite-options input[type="checkbox"]'
-        );
-
-
-      const selectedIds: number[] = [];
-
-
-      checkboxes.forEach(
-        (checkbox) => {
-
-          const input =
-            checkbox as HTMLInputElement;
-
-
-          if (input.checked) {
-
-            selectedIds.push(
-              Number(
-                input.value
-              )
-            );
-
-          }
-
-        }
-      );
-
-
-      const webUrl =
-        context.pageContext.web.absoluteUrl;
-
-
-      const currentUser =
-        await this.getCurrentUser(
-          context
-        );
-
-
-      // =====================================================
-      // Get Existing Favourites
-      // =====================================================
-
-      const favouritesResponse =
-        await context.spHttpClient.get(
-
-          `${webUrl}` +
-          `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items` +
-          `?$select=Id,Quick_x0020_LinkId` +
-          `&$filter=UserId eq ${currentUser.Id}`,
-
-          SPHttpClient.configurations.v1
-
-        );
-
-
-      if (!favouritesResponse.ok) {
-
-        console.error(
-          'Unable to get existing favourites:',
-          favouritesResponse.status
-        );
-
-        return;
-
+  // 1. Read selection
+  const selectedIds: number[] = [];
+  domElement
+    .querySelectorAll('.favourite-options input[type="checkbox"]')
+    .forEach((checkbox) => {
+      const input = checkbox as HTMLInputElement;
+      if (input.checked) {
+        selectedIds.push(Number(input.value));
       }
-
-
-      const favouritesData =
-        await favouritesResponse.json();
-
-
-      const existingFavourites =
-        favouritesData.value;
-
-
-      const keptIds: number[] = [];
-
-
-      // =====================================================
-      // Remove Unchecked Favourites
-      // =====================================================
-
-      for (
-        let i = 0;
-        i < existingFavourites.length;
-        i++
-      ) {
-
-        const favourite =
-          existingFavourites[i];
-
-
-        const quickLinkId =
-          Number(
-            favourite.Quick_x0020_LinkId
-          );
-
-
-        if (
-          selectedIds.indexOf(
-            quickLinkId
-          ) === -1
-        ) {
-
-          await this.deleteFavourite(
-            context,
-            favourite.Id
-          );
-
-        } else {
-
-          keptIds.push(
-            quickLinkId
-          );
-
-        }
-
-      }
-
-
-      // =====================================================
-      // Add Newly Selected Favourites
-      // =====================================================
-
-      for (
-        let i = 0;
-        i < selectedIds.length;
-        i++
-      ) {
-
-        const quickLinkId =
-          selectedIds[i];
-
-
-        if (
-          keptIds.indexOf(
-            quickLinkId
-          ) === -1
-        ) {
-
-          const requestBody = {
-
-            UserId:
-              currentUser.Id,
-
-            Quick_x0020_LinkId:
-              quickLinkId
-
-          };
-
-
-          const response =
-            await context.spHttpClient.post(
-
-              `${webUrl}` +
-              `/_api/web/lists/GetByTitle('Quick_Link_Favourites')/items`,
-
-              SPHttpClient.configurations.v1,
-
-              {
-
-                headers: {
-
-                  'Accept':
-                    'application/json;odata=nometadata',
-
-                  'Content-Type':
-                    'application/json;odata=nometadata'
-
-                },
-
-                body:
-                  JSON.stringify(
-                    requestBody
-                  )
-
-              }
-
-            );
-
-
-          if (!response.ok) {
-
-            const errorText =
-              await response.text();
-
-
-            console.error(
-              'Failed to add favourite:',
-              response.status,
-              errorText
-            );
-
-            return;
-
-          }
-
-
-          keptIds.push(
-            quickLinkId
-          );
-
-        }
-
-      }
-
-      const activeTab =
-        domElement.querySelector(
-          '.panel-title-filter-active'
-        ) as HTMLElement;
-
-      const activeTabValue =
-        activeTab?.getAttribute(
-          'data-filter-ql'
-        );
-
-
-
-      // =====================================================
-      // Refresh Quick Links
-      // =====================================================
-
-      const quickLinks =
-        await this.getQuickLinks(
-          context
-        );
-
-
-      const favouriteIds =
-        await this.getUserFavouriteIds(
-          context
-        );
-
-
-      this.renderQuickLinks(
-        context,
-        domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.renderFavouriteOptions(
-        domElement,
-        quickLinks,
-        favouriteIds
-      );
-
-
-      this.updateFavouriteTabVisibility(
-            domElement,
-            favouriteIds
-          );
-
-          if (activeTabValue) {
-
-      const tabToRestore =
-        domElement.querySelector(
-          `[data-filter-ql="${activeTabValue}"]`
-        ) as HTMLElement;
-
-      if (tabToRestore) {
-        tabToRestore.click();
-      }
-
+    });
+
+  // 2. Close modal immediately
+  const modal = domElement.querySelector('#addFavouriteModal') as HTMLElement;
+  if (modal) {
+    const bootstrap = (window as any).bootstrap;
+    if (bootstrap?.Modal) {
+      bootstrap.Modal.getOrCreateInstance(modal).hide();
+    } else {
+      modal.classList.remove('show');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('modal-open');
+      document.querySelectorAll('.modal-backdrop').forEach((b) => b.remove());
     }
-
-
-      // =====================================================
-      // Close Modal
-      // =====================================================
-
-      const modal =
-        domElement.querySelector(
-          '#addFavouriteModal'
-        ) as HTMLElement;
-
-
-      if (modal) {
-
-        modal.classList.remove(
-          'show'
-        );
-
-
-        modal.style.display =
-          'none';
-
-
-        modal.setAttribute(
-          'aria-hidden',
-          'true'
-        );
-
-
-        document.body.classList.remove(
-          'modal-open'
-        );
-
-
-        const backdrop =
-          document.querySelector(
-            '.modal-backdrop'
-          );
-
-
-        if (backdrop) {
-
-          backdrop.remove();
-
-        }
-
-      }
-
-    } catch (error) {
-
-      console.error(
-        'Error updating favourites:',
-        error
-      );
-
-    }
-
   }
 
+  // 3. Work out what changed using the cache (no network)
+  const toDelete = this.favouritesCache.filter(
+    (f) => selectedIds.indexOf(f.LinkId) === -1
+  );
+  const existingLinkIds = this.favouritesCache.map((f) => f.LinkId);
+  const toAdd = selectedIds.filter(
+    (id) => existingLinkIds.indexOf(id) === -1
+  );
 
+  if (toDelete.length === 0 && toAdd.length === 0) {
+    return;
+  }
+
+  // 4. Update the UI right away (optimistic)
+  const activeTabValue = (
+    domElement.querySelector('.panel-title-filter-active') as HTMLElement
+  )?.getAttribute('data-filter-ql');
+
+  this.refreshFavouritesUI(domElement, selectedIds, activeTabValue);
+
+  // 5. Sync with SharePoint in parallel
+  try {
+    const userId = await this.getCurrentUserId(context);
+
+    const deletePromises = toDelete.map((f) =>
+      this.deleteFavourite(context, f.Id)
+    );
+
+    const addPromises = toAdd.map(async (linkId) => ({
+      Id: await this.createFavourite(context, userId, linkId),
+      LinkId: linkId
+    }));
+
+    const [, created] = await Promise.all([
+      Promise.all(deletePromises),
+      Promise.all(addPromises)
+    ]);
+
+    // 6. Update cache with the new server IDs
+    const deletedIds = toDelete.map((f) => f.Id);
+    this.favouritesCache = this.favouritesCache
+      .filter((f) => deletedIds.indexOf(f.Id) === -1)
+      .concat(created);
+
+  } catch (error) {
+    console.error('Error updating favourites:', error);
+
+    // Roll back to the real server state
+    await this.loadFavourites(context);
+    this.refreshFavouritesUI(
+      domElement,
+      this.getFavouriteIds(),
+      activeTabValue
+    );
+  }
+}
+
+private refreshFavouritesUI(
+  domElement: HTMLElement,
+  favouriteIds: number[],
+  activeTabValue?: string | null
+): void {
+  this.renderQuickLinks(this.context, domElement, this.quickLinksCache, favouriteIds);
+  this.renderFavouriteOptions(domElement, this.quickLinksCache, favouriteIds);
+  this.updateFavouriteTabVisibility(domElement, favouriteIds);
+
+  if (favouriteIds.length === 0) {
+    (domElement.querySelector('[data-filter-ql="quick-links"]') as HTMLElement)?.click();
+  } else if (activeTabValue) {
+    (domElement.querySelector(`[data-filter-ql="${activeTabValue}"]`) as HTMLElement)?.click();
+  }
+}
+
+
+     
   // =========================================================
   // Delete Favourite
   // =========================================================
