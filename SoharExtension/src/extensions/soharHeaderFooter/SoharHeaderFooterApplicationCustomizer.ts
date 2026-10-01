@@ -304,36 +304,34 @@ private async _getDepartments(): Promise<string[]> {
     const activeDepartments: any[] = data.value
       .filter((department: any) => department.Status === 'Active')
       .sort((a: any, b: any) => Number(a.SortOrder) - Number(b.SortOrder));
+const departmentItems: string[] = [];
+const itemsPerColumn: number = 4;
 
-    const columnCount: number = 3;
-    const perColumn: number = Math.ceil(activeDepartments.length / columnCount);
+for (let i = 0; i < activeDepartments.length; i += itemsPerColumn) {
 
-    const departmentItems: string[] = [];
+  const chunk = activeDepartments.slice(
+    i,
+    i + itemsPerColumn
+  );
 
-    for (let i = 0; i < columnCount; i++) {
+  departmentItems.push(
+    chunk.map((department: any) => {
 
-      const chunk = activeDepartments.slice(
-        i * perColumn,
-        (i + 1) * perColumn
-      );
+      const link = department.Link?.Url || '#';
 
-      departmentItems.push(
-        chunk.map((department: any) => {
+      return `
+        <li>
+          <a href="${link}" target="_blank" data-interception="off">
+            <span>${department.Title}</span>
+          </a>
+        </li>
+      `;
 
-          const link = department.Link?.Url || '#';
+    }).join('')
+  );
+}
 
-          return `
-            <li>
-              <a href="${link}" target="_blank" data-interception="off">
-                <span>${department.Title}</span>
-              </a>
-            </li>
-          `;
-        }).join('')
-      );
-    }
-
-    return departmentItems;
+return departmentItems;
 
   } catch (error) {
 
@@ -446,25 +444,29 @@ private _setupDepartmentMegaMenu(): void {
     return;
   }
 
-  departmentLink.addEventListener(
-    'click',
-    (event: Event) => {
+departmentLink.addEventListener(
+  'click',
+  (event: Event) => {
 
-      event.preventDefault();
-      event.stopPropagation();
 
-      const isOpen =
-        departmentMenu.classList.contains('active');
+    event.preventDefault();
+    event.stopPropagation();
 
-      departmentMenu.classList.toggle('active', !isOpen);
+    const isOpen =
+      departmentMenu.classList.contains('active');
 
-      departmentLink.setAttribute(
-        'aria-expanded',
-        (!isOpen).toString()
-      );
-    }
-  );
 
+    departmentMenu.classList.toggle(
+      'active',
+      !isOpen
+    );
+
+    departmentLink.setAttribute(
+      'aria-expanded',
+      (!isOpen).toString()
+    );
+  }
+);
   document.addEventListener(
     'click',
     (event: Event) => {
