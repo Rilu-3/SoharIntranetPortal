@@ -40,12 +40,14 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   private _bottomPlaceholder: PlaceholderContent | undefined;
 
+  private loader: HTMLElement | null = null;
+
 
   @override
 
   public async onInit(): Promise<void> {
   await this._loadCSS();
-  // this._addPageLoader();
+  this._addPageLoader();
 
   Log.info(
     LOG_SOURCE,
@@ -60,7 +62,36 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   return Promise.resolve();
 }
+// ============================================================
+// PAGE LOADER
+// ============================================================
 
+private _addPageLoader(): void {
+
+// const currentUrl = window.location.href;
+
+  // Prevent duplicate loader
+  if (document.getElementById('saLoader')) {
+    return;
+  }
+
+  // Create loader element
+  this.loader = document.createElement('div');
+  this.loader.className = 'sa-loader';
+  this.loader.id = 'saLoader';
+
+  // Add loader HTML
+  this.loader.innerHTML = `
+    <div class="sa-loader-inner">
+      <div class="sa-ring sa-ring--secondary"></div>
+      <div class="sa-ring sa-ring--primary"></div>
+      <img src="/sites/DevPortal/SiteAssets/resources/images/logo-mob.png" alt=""/>
+    </div>
+  `;
+
+  // Add loader to page
+  document.body.appendChild(this.loader);
+}
 
   private _loadHome(): void {
     const baseUrl: string =
