@@ -110,6 +110,7 @@ interface INewsItem {
 export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
   private newsCentreItems: INewsItem[] = [];
+  private newsCentreCategories: string[] = [];
 
   // Organizational Events (SharePoint) and My Events (Outlook)
   private events: IEventItem[] = [];
@@ -441,16 +442,27 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   private async _renderNewsAsync(apiUrl: string): Promise<void> {
     try {
-      const data: INewsItem[] = await this._getNewsData(apiUrl);
+      const [data, choices] = await Promise.all([
+        this._getNewsData(apiUrl),
+        this._getNewsCategories()
+      ]);
 
-      // Store the data (required later for tab filtering)
       this.newsCentreItems = data;
 
-      this.newsCentreRenderCategory('All');
-      this.newsCentreRenderCategory('Announcements');
-      this.newsCentreRenderCategory('Events');
-      this.newsCentreRenderCategory('News');
-      this.newsCentreRenderCategory('Circulars');
+      // Fallback: if the choices call failed, build categories from the items
+      let categories: string[] = choices;
+      if (!categories.length) {
+        categories = data
+          .map((item) => (item.Category || '').trim())
+          .filter((c, i, arr) => c !== '' && arr.indexOf(c) === i);
+      }
+      this.newsCentreCategories = categories;
+
+      this.newsCentreBuildTabsAndPanels();
+
+      ['All'].concat(this.newsCentreCategories).forEach((name) => {
+        this.newsCentreRenderCategory(name);
+      });
     } catch (error) {
       console.error('Error rendering News:', error);
     }
@@ -459,22 +471,12 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
   private newsCentreRenderCategory(category: string): void {
 
     // 1. Determine the panel
-    let panel: HTMLElement | null = null;
+    const tab = Array.prototype.slice
+      .call(this.domElement.querySelectorAll('#news-tabs .tab-title-pill'))
+      .filter((t: Element) => t.getAttribute('data-news-category') === category)[0] as Element | undefined;
 
-    if (category === 'All') {
-      panel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
-    } else if (category === 'Announcements') {
-      panel = this.domElement.querySelector('#news-panel-announcements') as HTMLElement | null;
-    } else if (category === 'Events') {
-      panel = this.domElement.querySelector('#news-panel-events') as HTMLElement | null;
-    } else if (category === 'News') {
-      panel = this.domElement.querySelector('#news-panel-news') as HTMLElement | null;
-    } else if (category === 'Circulars') {
-      panel = this.domElement.querySelector('#news-panel-circulars') as HTMLElement | null;
-    } else {
-      console.error(`Unknown News category: ${category}`);
-      return;
-    }
+    const panelId = tab ? tab.getAttribute('data-tab-news-id') : null;
+    const panel = panelId ? this.domElement.querySelector(`#${panelId}`) as HTMLElement | null : null;
 
     // 2. Check whether panel exists
     if (!panel) {
@@ -526,6 +528,56 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     container.innerHTML = allElementsHtml;
   }
 
+
+    private async _getNewsCategories(): Promise<string[]> {
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
+    const url = `${baseUrl}/_api/web/lists/getbytitle('News')/fields/getbyinternalnameortitle('Category')?$select=Choices`;
+
+    try {
+      const response: SPHttpClientResponse = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
+
+      if (!response.ok) {
+        throw new Error(`News categories failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.Choices || [];
+    } catch (error) {
+      console.error('Error loading News categories:', error);
+      return [];
+    }
+  }
+
+  private newsCentreBuildTabsAndPanels(): void {
+    const list = this.domElement.querySelector('#news-tabs .news-tabs-list');
+    if (!list) {
+      console.warn('News tabs list not found.');
+      return;
+    }
+
+    const names: string[] = ['All'].concat(this.newsCentreCategories);
+    let tabsHtml = '';
+    let panelsHtml = '';
+
+    names.forEach((name, index) => {
+      const panelId = `news-panel-${index}`;
+      const safeName = this.newsCentreEscapeHtml(name);
+
+      tabsHtml += NewsCentre.tabItemHtml
+        .replace(/__KEY_PANEL_ID__/g, panelId)
+        .replace(/__KEY_CATEGORY__/g, safeName)
+        .replace(/__KEY_LABEL__/g, safeName)
+        .replace(/__KEY_ACTIVE__/g, index === 0 ? 'tab-title-pill-active' : '');
+
+      panelsHtml += NewsCentre.panelHtml
+        .replace(/__KEY_PANEL_ID__/g, panelId)
+        .replace(/__KEY_PANEL_STYLE__/g, index === 0 ? 'style="display: block;"' : '');
+    });
+
+    list.innerHTML = tabsHtml;
+    list.insertAdjacentHTML('afterend', panelsHtml);
+  }
+
   private async _getNewsData(apiUrl: string): Promise<INewsItem[]> {
     try {
       const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
@@ -547,7 +599,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     return `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
   }
 
-  private newsCentreAttachTabEvents(): void {
+    private newsCentreAttachTabEvents(): void {
     const tabs = this.domElement.querySelectorAll('#news-tabs .tab-title-pill');
     const panels = this.domElement.querySelectorAll('#news-tabs .news-panel-tab-view');
 
@@ -576,39 +628,20 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
           return;
         }
 
-        let category = '';
-        if (targetId === 'news-panel-all') {
-          category = 'All';
-        } else if (targetId === 'news-panel-announcements') {
-          category = 'Announcements';
-        } else if (targetId === 'news-panel-events') {
-          category = 'Events';
-        } else if (targetId === 'news-panel-news') {
-          category = 'News';
-        } else if (targetId === 'news-panel-circulars') {
-          category = 'Circulars';
-        }
-
+        const category = tab.getAttribute('data-news-category') || '';
         if (category) {
           this.newsCentreRenderCategory(category);
         }
       });
     });
 
-    // Default tab state: All tab active
+    // Default state: first tab (All) active, only its panel visible
     tabs.forEach((tab) => { tab.classList.remove('tab-title-pill-active'); });
+    tabs[0].classList.add('tab-title-pill-active');
 
-    const defaultTab = this.domElement.querySelector('[data-tab-news-id="news-panel-all"]') as HTMLElement | null;
-    if (defaultTab) {
-      defaultTab.classList.add('tab-title-pill-active');
-    }
-
-    // Default panel state: show All panel only
     panels.forEach((panel) => { (panel as HTMLElement).style.display = 'none'; });
-
-    const allPanel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
-    if (allPanel) {
-      allPanel.style.display = 'block';
+    if (panels[0]) {
+      (panels[0] as HTMLElement).style.display = 'block';
     }
   }
 

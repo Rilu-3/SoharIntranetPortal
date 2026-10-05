@@ -28,6 +28,34 @@ export default class NewsCentre {
 
   /*
    * ============================================================
+   * DYNAMIC TAB (one per category)
+   * ============================================================
+
+   */
+  public static tabItemHtml: string = `
+    <li>
+      <div data-tab-news-id="__KEY_PANEL_ID__" data-news-category="__KEY_CATEGORY__" class="tab-title-pill __KEY_ACTIVE__">__KEY_LABEL__</div>
+    </li>
+  `;
+
+
+  /*
+   * ============================================================
+   * DYNAMIC PANEL (one per category)
+   * ============================================================
+
+   */
+  public static panelHtml: string = `
+    <div id="__KEY_PANEL_ID__" class="w-100 float-start news-panel-tab-view flex-grow-1"
+      __KEY_PANEL_STYLE__>
+      <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
+      </div>
+    </div>
+  `;
+
+
+  /*
+   * ============================================================
    * COMPLETE NEWS CENTRE HTML
    * ============================================================
 
@@ -41,55 +69,7 @@ export default class NewsCentre {
           News</span><img src="__KEY_URL_ARROW__" /></a>
     </div>
     <div id="news-tabs" class="w-100 float-start d-flex flex-column flex-grow-1 overflow-hidden">
-      <ul class="news-tabs-list px-2">
-        <li>
-          <div data-tab-news-id="news-panel-all" class="tab-title-pill tab-title-pill-active">All</div>
-        </li>
-        <li>
-          <div data-tab-news-id="news-panel-announcements" class="tab-title-pill">Announcements</div>
-        </li>
-        <li>
-          <div data-tab-news-id="news-panel-events" class="tab-title-pill">Events</div>
-        </li>
-        <li>
-          <div data-tab-news-id="news-panel-news" class="tab-title-pill">News</div>
-        </li>
-        <li>
-          <div data-tab-news-id="news-panel-circulars" class="tab-title-pill">Circulars</div>
-        </li>
-      </ul>
-
-      <div id="news-panel-all" class="w-100 float-start news-panel-tab-view flex-grow-1"
-        style="display: block;">
-        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
-          __KEY_ALL_ITEMS__
-        </div>
-      </div>
-
-      <div id="news-panel-announcements" class="w-100 float-start news-panel-tab-view flex-grow-1">
-        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
-          __KEY_ANNOUNCEMENT_ITEMS__
-        </div>
-      </div>
-
-      <div id="news-panel-events" class="w-100 float-start news-panel-tab-view flex-grow-1">
-        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
-          __KEY_EVENTS_ITEMS__
-        </div>
-      </div>
-
-      <div id="news-panel-news" class="w-100 float-start news-panel-tab-view flex-grow-1">
-        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
-          __KEY_NEWS_ITEMS__
-        </div>
-      </div>
-
-      <div id="news-panel-circulars" class="w-100 float-start news-panel-tab-view flex-grow-1">
-        <div class="w-100 d-flex flex-column float-start p-2 overflow-auto panel-card-news custom-scroll-view">
-          __KEY_CIRCULARS_ITEMS__
-        </div>
-      </div>
-
+      <ul class="news-tabs-list px-2"></ul>
     </div>
   </div>
 
