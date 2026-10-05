@@ -138,58 +138,48 @@ export default class Header {
 
                 </li>
 
-                <li class="nav-item d-lg-flex has-mega">
+              <li class="nav-item d-lg-flex has-mega">
 
-                  <a
-                    class="nav-link d-flex align-items-center gap-2"
-                    href="#"
-                    aria-haspopup="true"
-                    aria-expanded="false">
+  <a
+    class="nav-link d-flex align-items-center gap-2"
+    href="#"
+    aria-haspopup="true"
+    aria-expanded="false">
 
-                    <img
-                      class="nav-menu-icon"
-                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
-                      alt=""
-                    />
+    <img
+      class="nav-menu-icon"
+      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+      alt=""
+    />
 
-                    <span>Departments</span>
+    <span>Departments</span>
 
-                  </a>
+  </a>
 
-                  <div
-                    class="mega-panel"
-                    role="menu"
-                    aria-label="Department menu">
+  <div
+    class="mega-panel"
+    role="menu"
+    aria-label="Department menu">
 
-                    <div class="mega-panel-inner">
+    <div class="mega-panel-inner">
 
-                      <div class="mega-panel-content custom-scroll-view">
+      <div class="mega-panel-content custom-scroll-view">
 
-                        <div>
-                          <ul class="mega-links">
-                            ${this.departmentItems[0] || ''}
-                          </ul>
-                        </div>
+        ${this.departmentItems.map((items: string) => `
+          <div>
+            <ul class="mega-links">
+              ${items}
+            </ul>
+          </div>
+        `).join('')}
 
-                        <div>
-                          <ul class="mega-links">
-                            ${this.departmentItems[1] || ''}
-                          </ul>
-                        </div>
+      </div>
 
-                        <div>
-                          <ul class="mega-links">
-                            ${this.departmentItems[2] || ''}
-                          </ul>
-                        </div>
+    </div>
 
-                      </div>
+  </div>
 
-                    </div>
-
-                  </div>
-
-                </li>
+</li>
 
               </ul>
 
