@@ -59,7 +59,7 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   this._loadHome();
   await this._renderFooter();
-
+  this._hidePageLoader();
   return Promise.resolve();
 }
 // ============================================================
@@ -68,7 +68,14 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 private _addPageLoader(): void {
 
-// const currentUrl = window.location.href;
+  const currentUrl = window.location.href;
+
+  // Show loader only on Home.aspx
+  if (
+    currentUrl.toLowerCase().indexOf('/sites/devportal/sitepages/home.aspx') === -1
+  ) {
+    return;
+  }
 
   // Prevent duplicate loader
   if (document.getElementById('saLoader')) {
@@ -91,21 +98,38 @@ private _addPageLoader(): void {
 
   // Add loader to page
   document.body.appendChild(this.loader);
+
+  // Hide loader after 4 seconds
+  setTimeout(() => {
+    if (this.loader) {
+      this.loader.style.display = 'none';
+    }
+  }, 4000);
+}
+private _hidePageLoader(): void {
+
+  setTimeout(() => {
+
+    if (this.loader) {
+      this.loader.style.display = 'none';
+    }
+
+  }, 4000);
 }
 
-  private _loadHome(): void {
-    const baseUrl: string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
+  private async _loadHome(): Promise<void> {
 
-    SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/common.js`
-    )
-      .then(() =>
-        SPComponentLoader.loadScript(
-          `${baseUrl}/SiteAssets/resources/js/home.js`
-        )
-      );
-  }
+  const baseUrl: string =
+    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
+
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/common.js`
+  );
+
+  await SPComponentLoader.loadScript(
+    `${baseUrl}/SiteAssets/resources/js/home.js`
+  );
+}
 private async loadBootstrap(): Promise<void> {
  
    const baseUrl: string =
