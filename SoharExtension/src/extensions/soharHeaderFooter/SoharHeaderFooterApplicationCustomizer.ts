@@ -42,27 +42,10 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 
   @override
-  // public async onInit(): Promise<void> {
-  //   this._loadCSS();
 
-  //   Log.info(
-  //     LOG_SOURCE,
-  //     `Initialized ${strings.Title}`
-  //   );
-
-
-  //   // this._loadJS();
-  //    await this.loadBootstrap();
-  //   await this._renderHeader();
-
-  //   await this._renderFooter();
-
-  //   return Promise.resolve();
-    
-    
-  // }
   public async onInit(): Promise<void> {
   await this._loadCSS();
+  // this._addPageLoader();
 
   Log.info(
     LOG_SOURCE,
@@ -118,71 +101,7 @@ private async loadBootstrap(): Promise<void> {
   }
 
 }
-  // private _loadCSS(): void {
-  //   const baseUrl: string =
-  // 'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-  //   // Load all CSS files in parallel
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/home.css`
-  //   );
-
-  //   // Load scripts sequentially with proper dependency handling
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  //   )
-  //     .then(() =>
-  //       SPComponentLoader.loadScript(
-  //         `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  //       )
-  //     )
-  //     // .then(() =>
-  //     //   SPComponentLoader.loadScript(
-  //     //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  //     //   )
-  //     // )
-  //     //.then(() => SPComponentLoader.loadScript(`${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`))
-  //     .then(() =>
-  //       SPComponentLoader.loadScript(
-  //         `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  //       )
-  //     )
-  //     .then(() => this._loadHome());
-  // }
-
-
-
-  // ============================================================
-  // USER DESIGNATION FROM MICROSOFT ENTRA ID
-  // ============================================================
+ 
 private async _loadCSS(): Promise<void> {
   const baseUrl: string =
     'https://soharaluminium5.sharepoint.com/sites/DevPortal';
@@ -420,6 +339,8 @@ const departmentItems: string[] =
     this._setupDepartmentMegaMenu();
 
   }
+
+
 private _setupDepartmentMegaMenu(): void {
 
   if (!this._topPlaceholder) {
