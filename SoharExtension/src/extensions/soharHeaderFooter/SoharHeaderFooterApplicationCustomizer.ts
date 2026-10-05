@@ -444,29 +444,28 @@ private _setupDepartmentMegaMenu(): void {
     return;
   }
 
-departmentLink.addEventListener(
-  'click',
-  (event: Event) => {
+  departmentLink.addEventListener(
+    'click',
+    (event: Event) => {
 
+      event.preventDefault();
+      event.stopPropagation();
 
-    event.preventDefault();
-    event.stopPropagation();
+      const isOpen =
+        departmentMenu.classList.contains('show');
 
-    const isOpen =
-      departmentMenu.classList.contains('active');
+      departmentMenu.classList.toggle(
+        'show',
+        !isOpen
+      );
 
+      departmentLink.setAttribute(
+        'aria-expanded',
+        (!isOpen).toString()
+      );
+    }
+  );
 
-    departmentMenu.classList.toggle(
-      'active',
-      !isOpen
-    );
-
-    departmentLink.setAttribute(
-      'aria-expanded',
-      (!isOpen).toString()
-    );
-  }
-);
   document.addEventListener(
     'click',
     (event: Event) => {
@@ -477,7 +476,7 @@ departmentLink.addEventListener(
         )
       ) {
 
-        departmentMenu.classList.remove('active');
+        departmentMenu.classList.remove('show');
 
         departmentLink.setAttribute(
           'aria-expanded',
