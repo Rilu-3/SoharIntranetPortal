@@ -45,9 +45,11 @@ export default class SoharHeaderFooterApplicationCustomizer
 
   @override
 
-  public async onInit(): Promise<void> {
+public async onInit(): Promise<void> {
+ 
+
   await this._loadCSS();
-  this._addPageLoader();
+   this._addPageLoader();
 
   Log.info(
     LOG_SOURCE,
@@ -55,11 +57,16 @@ export default class SoharHeaderFooterApplicationCustomizer
   );
 
   await this.loadBootstrap();
+
   await this._renderHeader();
 
-  this._loadHome();
+  await this._loadHome();
+
   await this._renderFooter();
-  this._hidePageLoader();
+
+  // Check page elements and remove loader
+  await this.checkAllElementsLoaded();
+
   return Promise.resolve();
 }
 // ============================================================
@@ -68,43 +75,118 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 private _addPageLoader(): void {
 
+  const currentUrl = window.location.href.toLowerCase();
+
+  // Display loader only inside DevPortal
+  if (currentUrl.indexOf('/sites/devportal/') === -1) {
+    return;
+  }
+
+  // Prevent duplicate loader
+  if (document.getElementById('saLoader')) {
+    return;
+  }
+
+  // Create loader element
   this.loader = document.createElement('div');
   this.loader.className = 'sa-loader';
   this.loader.id = 'saLoader';
 
+  // Add loader HTML
   this.loader.innerHTML = `
     <div class="sa-loader-inner">
       <div class="sa-ring sa-ring--secondary"></div>
       <div class="sa-ring sa-ring--primary"></div>
-      <img src="/sites/DevPortal/SiteAssets/resources/images/logo-mob.png" alt=""/>
+      <img
+        src="/sites/DevPortal/SiteAssets/resources/images/logo-mob.png"
+        alt=""
+      />
     </div>
   `;
 
+  // Add loader to page
   document.body.appendChild(this.loader);
-
-  const currentUrl = window.location.href.toLowerCase();
-
-  if (
-    currentUrl.indexOf('/sites/devportal/sitepages/home.aspx') !== -1
-  ) {
-    window.addEventListener('load', () => {
-      if (this.loader) {
-        this.loader.style.display = 'none';
-      }
-    });
-  }
 }
-private _hidePageLoader(): void {
 
-  setTimeout(() => {
 
-    if (this.loader) {
-      this.loader.style.display = 'none';
+private async checkAllElementsLoaded(): Promise<void> {
+
+  try {
+
+    // If loader was not created, there is nothing to do
+    if (!this.loader) {
+      return;
     }
 
-  }, 4000);
+    // Wait for the SharePoint page canvas
+    await this.waitForElement('.SPCanvas');
+
+    // Keep loader visible for 3 seconds
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 3000);
+    });
+
+    // Remove loader
+    this.removeLoader();
+
+  } catch (error) {
+
+    console.error(
+      'Error while waiting for elements:',
+      error
+    );
+
+    // Remove loader even if an error occurs
+    this.removeLoader();
+  }
 }
 
+
+private async waitForElement(
+  selector: string
+): Promise<Element | null> {
+
+  return new Promise<Element | null>((resolve) => {
+
+    const element = document.querySelector(selector);
+
+    if (element) {
+      resolve(element);
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+
+      const element = document.querySelector(selector);
+
+      if (element) {
+        observer.disconnect();
+        resolve(element);
+      }
+    });
+
+    // Maximum 10 seconds
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(null);
+    }, 10000);
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  });
+}
+
+private removeLoader(): void {
+
+  if (this.loader && document.body.contains(this.loader)) {
+
+    document.body.removeChild(this.loader);
+
+    this.loader = null;
+  }
+}
   private async _loadHome(): Promise<void> {
 
   const baseUrl: string =
@@ -451,14 +533,14 @@ private _setupDepartmentMegaMenu(): void {
   );
 }
 
-private _setupSearchFunctionality(): void {
+   private _setupSearchFunctionality(): void {
 
-  if (
-    !this._topPlaceholder ||
-    !this._topPlaceholder.domElement
-  ) {
-    return;
-  }
+            if (
+              !this._topPlaceholder ||
+              !this._topPlaceholder.domElement
+            ) {
+              return;
+            }
 
   const inputMainSearchBox =
     this._topPlaceholder.domElement.querySelector(
@@ -482,10 +564,10 @@ private _setupSearchFunctionality(): void {
    if (searchKey) {
   const siteUrl: string = this.context.pageContext.web.absoluteUrl;
 
-  window.open(
-    `${siteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-    '_blank'
-  );
+window.open(
+  `${siteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
+  '_blank'
+);
 }
   };
 
