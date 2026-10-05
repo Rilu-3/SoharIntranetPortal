@@ -59,10 +59,20 @@ export interface IEventItem {
 interface IOutlookEvent {
   id?: string;
   subject?: string;
-  start?: { dateTime?: string };
-  end?: { dateTime?: string };
-  location?: { displayName?: string };
-  onlineMeeting?: { joinUrl?: string };
+  start?: {
+    dateTime?: string;
+    timeZone?: string;
+  };
+  end?: {
+    dateTime?: string;
+    timeZone?: string;
+  };
+  location?: {
+    displayName?: string;
+  };
+  onlineMeeting?: {
+    joinUrl?: string;
+  };
 }
 
 interface IAnnouncement {
@@ -739,47 +749,47 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     }
   }
 
-  private async loadMyEventDates(year: number, month: number): Promise<void> {
-    try {
-      const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
-      const startDate = new Date(year, month, 1, 0, 0, 0);
-      const endDate = new Date(year, month + 1, 1, 0, 0, 0);
+private async loadMyEventDates(year: number, month: number): Promise<void> {
+  try {
+    const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
+    const startDate = new Date(year, month, 1, 0, 0, 0);
+    const endDate = new Date(year, month + 1, 1, 0, 0, 0);
+    const response = await client.api('/me/calendar/calendarView').header('Prefer', 'outlook.timezone="India Standard Time"').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('start,subject').orderby('start/dateTime').get();
 
-      const response = await client.api('/me/calendar/calendarView').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('start,subject').orderby('start/dateTime').get();
+    this.myEventDates = [];
+    this.myEventTitles = {};
 
-      this.myEventDates = [];
-      this.myEventTitles = {};
+    (response.value || []).forEach((event: IOutlookEvent) => {
+      if (!event.start?.dateTime) {
+        return;
+      }
 
-      (response.value || []).forEach((event: IOutlookEvent) => {
-        if (!event.start?.dateTime) {
-          return;
+      const dateKey = this.getDateKey(event.start.dateTime);
+
+      if (!dateKey) {
+        return;
+      }
+
+      if (this.myEventDates.indexOf(dateKey) === -1) {
+        this.myEventDates.push(dateKey);
+      }
+
+      const title = event.subject || '';
+
+      if (title) {
+        if (this.myEventTitles[dateKey]) {
+          this.myEventTitles[dateKey] += `, ${title}`;
+        } else {
+          this.myEventTitles[dateKey] = title;
         }
-
-        const dateKey = this.getDateKey(event.start.dateTime);
-        if (!dateKey) {
-          return;
-        }
-
-        if (this.myEventDates.indexOf(dateKey) === -1) {
-          this.myEventDates.push(dateKey);
-        }
-
-        const title = event.subject || '';
-        if (title) {
-          if (this.myEventTitles[dateKey]) {
-            this.myEventTitles[dateKey] += `, ${title}`;
-          } else {
-            this.myEventTitles[dateKey] = title;
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error loading Outlook event dates:', error);
-      this.myEventDates = [];
-      this.myEventTitles = {};
-    }
+      }
+    });
+  } catch (error) {
+    console.error('Error loading Outlook event dates:', error);
+    this.myEventDates = [];
+    this.myEventTitles = {};
   }
-
+}
   private getDateKey(dateValue: string): string {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
@@ -790,31 +800,21 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ==================== LOAD MY EVENTS ====================
 
-  private async loadMyEvents(year: number, month: number, day: number): Promise<void> {
-    try {
-      const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
-      const startDate = new Date(year, month, day, 0, 0, 0);
-      const endDate = new Date(year, month, day + 1, 0, 0, 0);
+private async loadMyEvents(year: number, month: number, day: number): Promise<void> {
+  try {
+    const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
+    const startDate = new Date(year, month, day, 0, 0, 0);
+    const endDate = new Date(year, month, day + 1, 0, 0, 0);
+    const response = await client.api('/me/calendar/calendarView').header('Prefer', 'outlook.timezone="India Standard Time"').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('id,subject,start,end,location,onlineMeeting').orderby('start/dateTime').get();
 
-      const response = await client.api('/me/calendar/calendarView').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('id,subject,start,end,location,onlineMeeting').orderby('start/dateTime').get();
-
-      this.myEvents = (response.value || []).map((event: IOutlookEvent, index: number): IEventItem => {
-        return {
-          Id: index + 1,
-          Title: event.subject || '',
-          EventDate: event.start?.dateTime || '',
-          StartTime: event.start?.dateTime || '',
-          EndTime: event.end?.dateTime || '',
-          Location: event.location?.displayName || '',
-          Status: 'Active',
-          TeamsUrl: event.onlineMeeting?.joinUrl || ''
-        };
-      });
-    } catch (error) {
-      console.error('Error loading Outlook Calendar events:', error);
-      this.myEvents = [];
-    }
+    this.myEvents = (response.value || []).map((event: IOutlookEvent, index: number): IEventItem => {
+      return { Id: index + 1, Title: event.subject || '', EventDate: event.start?.dateTime || '', StartTime: event.start?.dateTime || '', EndTime: event.end?.dateTime || '', Location: event.location?.displayName || '', Status: 'Active', TeamsUrl: event.onlineMeeting?.joinUrl || '' };
+    });
+  } catch (error) {
+    console.error('Error loading Outlook Calendar events:', error);
+    this.myEvents = [];
   }
+}
 
   // ==================== RENDER UPCOMING EVENTS ====================
 
@@ -902,32 +902,49 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     return `${start} – ${end}`;
   }
 
-  private parseSharePointTime(timeValue: string): string {
-    if (!timeValue) {
-      return '';
-    }
-
-    if (timeValue.indexOf('T') !== -1) {
-      const date = new Date(timeValue);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-      }
-    }
-
-    const match = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-    if (match) {
-      const hours = parseInt(match[1], 10);
-      const minutes = parseInt(match[2], 10);
-
-      if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-        const period = hours >= 12 ? 'PM' : 'AM';
-        const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-        return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
-      }
-    }
-
-    return timeValue;
+private parseSharePointTime(timeValue: string): string {
+  if (!timeValue) {
+    return '';
   }
+
+  if (timeValue.indexOf('T') !== -1) {
+    const timePart = timeValue.split('T')[1];
+
+    if (timePart) {
+      const match = timePart.match(/^(\d{1,2}):(\d{2})/);
+
+      if (match) {
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+
+        if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+
+          return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
+        }
+      }
+    }
+  }
+
+  // Handle SharePoint time values
+  // Example: 13:00:00
+  const match = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+
+  if (match) {
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+
+      return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
+    }
+  }
+
+  return timeValue;
+}
 
   // ==================== INITIALIZE EVENT TABS ====================
 
