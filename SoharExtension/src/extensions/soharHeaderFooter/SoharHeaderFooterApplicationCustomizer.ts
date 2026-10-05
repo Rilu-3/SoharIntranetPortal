@@ -68,26 +68,10 @@ export default class SoharHeaderFooterApplicationCustomizer
 
 private _addPageLoader(): void {
 
-  const currentUrl = window.location.href;
-
-  // Show loader only on Home.aspx
-  if (
-    currentUrl.toLowerCase().indexOf('/sites/devportal/sitepages/home.aspx') === -1
-  ) {
-    return;
-  }
-
-  // Prevent duplicate loader
-  if (document.getElementById('saLoader')) {
-    return;
-  }
-
-  // Create loader element
   this.loader = document.createElement('div');
   this.loader.className = 'sa-loader';
   this.loader.id = 'saLoader';
 
-  // Add loader HTML
   this.loader.innerHTML = `
     <div class="sa-loader-inner">
       <div class="sa-ring sa-ring--secondary"></div>
@@ -96,15 +80,19 @@ private _addPageLoader(): void {
     </div>
   `;
 
-  // Add loader to page
   document.body.appendChild(this.loader);
 
-  // Hide loader after 4 seconds
-  setTimeout(() => {
-    if (this.loader) {
-      this.loader.style.display = 'none';
-    }
-  }, 4000);
+  const currentUrl = window.location.href.toLowerCase();
+
+  if (
+    currentUrl.indexOf('/sites/devportal/sitepages/home.aspx') !== -1
+  ) {
+    window.addEventListener('load', () => {
+      if (this.loader) {
+        this.loader.style.display = 'none';
+      }
+    });
+  }
 }
 private _hidePageLoader(): void {
 
