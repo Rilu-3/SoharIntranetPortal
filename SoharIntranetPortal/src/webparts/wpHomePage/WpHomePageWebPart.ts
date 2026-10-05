@@ -1250,11 +1250,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
         // }
 
         const createddate = this.formatDates(item.Created);
-
+        const description=this._getPlainText(item.ShortDescription);
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         allElementsHtml += singleElementHtml;
@@ -1279,11 +1279,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
       data.forEach((item) => {
         const createddate = this.formatDates(item.Created);
-
+        const description=this._getPlainText(item.Description);
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         allElementsHtml += singleElementHtml;
@@ -1919,7 +1919,16 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     this.setupSocialMediaTutorialLinkObserver();
   }
-
+    private _getPlainText(html: string): string {
+    if (!html) {
+      return "";
+    }
+    const doc: Document = new DOMParser().parseFromString(html, "text/html");
+    return (doc.body.textContent || "")
+      .replace(/\u200B/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
   // ==================== INITIALIZE WEB PART ====================
 
   protected async onInit(): Promise<void> {
