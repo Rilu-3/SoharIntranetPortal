@@ -1,3 +1,4 @@
+
 export default class Header {
 
   constructor(
@@ -5,8 +6,8 @@ export default class Header {
     private userName: string,
     private designation: string,
     private profilePhoto: string,
-    private departmentItems: string
-  ) {}
+    private departmentItems: any[]
+  ) { }
 
   public render(): string {
 
@@ -19,9 +20,11 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand" href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-                target="_blank"
-                data-interception="off">
+            <a
+              class="navbar-brand"
+              href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+              target="_blank"
+              data-interception="off">
 
               <img
                 class="logo-desktop"
@@ -41,7 +44,7 @@ export default class Header {
                 type="text"
                 class="form-control"
                 id="inputGlobalSearchBox"
-                placeholder="Search people, documents, pages..."
+                placeholder="Search..."
               >
 
               <button
@@ -119,6 +122,8 @@ export default class Header {
                 class="navbar-nav my-2 my-lg-0 navbar-nav-scroll gap-lg-3"
                 style="--bs-scroll-height: 400px;">
 
+                <!-- Home -->
+
                 <li class="nav-item d-lg-flex">
 
                   <a
@@ -138,19 +143,17 @@ export default class Header {
 
                 </li>
 
+                <!-- Departments -->
+
                 <li class="nav-item d-lg-flex dropdown">
 
-                  <a 
-                      class="nav-link dropdown-toggle d-flex align-items-center gap-2"
-                                href="#"
-                                target="_blank"
-                                data-interception="off"
-                                id="navbarScrollingDropdown"
-                                role="button"
-                                aria-expanded="false"
-                                data-bs-toggle="dropdown" > 
-                      
-                    
+                  <a
+                    class="nav-link dropdown-toggle d-flex align-items-center gap-2"
+                    href="#"
+                    id="navbarScrollingDropdown"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
 
                     <img
                       class="nav-menu-icon"
@@ -164,18 +167,45 @@ export default class Header {
                       class="dropdown-arrow-nav"
                       src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
                       alt=""
-                      
                     />
 
                   </a>
 
-                  <ul
+                  <div
                     class="dropdown-menu"
                     aria-labelledby="navbarScrollingDropdown">
 
-                    ${this.departmentItems}
+                    <input
+                      type="text"
+                      class="form-control search-dept-dropdown"
+                      placeholder="Search departments..."
+                    >
 
-                  </ul>
+                    <ul class="custom-scroll-view dept-dropdown">
+
+                      ${this.departmentItems.map((department: any) => {
+
+                        const link = department.Link?.Url || '#';
+
+                        return `
+                          <li>
+                            <a
+                              class="dropdown-item text-sm"
+                              href="${link}"
+                              target="_blank"
+                              data-interception="off">
+
+                              <span>${department.Title}</span>
+
+                            </a>
+                          </li>
+                        `;
+
+                      }).join('')}
+
+                    </ul>
+
+                  </div>
 
                 </li>
 
