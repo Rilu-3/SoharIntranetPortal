@@ -317,25 +317,26 @@ private async _loadCSS(): Promise<void> {
   // DEPARTMENTS
   // ============================================================
 
-private async _getDepartments(): Promise<string[]> {
+private async _getDepartments(): Promise<any[]> {
 
   const siteUrl: string =
     'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
   const url =
-    `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder`;
+    `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder&$orderby=SortOrder asc`;
 
   try {
 
-    const response = await this.context.spHttpClient.get(
-      url,
-      SPHttpClient.configurations.v1,
-      {
-        headers: {
-          'Accept': 'application/json;odata=nometadata'
+    const response =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            'Accept': 'application/json;odata=nometadata'
+          }
         }
-      }
-    );
+      );
 
     if (!response.ok) {
       throw new Error(
@@ -343,48 +344,27 @@ private async _getDepartments(): Promise<string[]> {
       );
     }
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
-    const activeDepartments: any[] = data.value
-      .filter((department: any) => department.Status === 'Active')
-      .sort((a: any, b: any) => Number(a.SortOrder) - Number(b.SortOrder));
-const departmentItems: string[] = [];
-const itemsPerColumn: number = 4;
+    const activeDepartments =
+      data.value.filter(
+        (department: any) =>
+          department.Status === 'Active'
+      );
 
-for (let i = 0; i < activeDepartments.length; i += itemsPerColumn) {
-
-  const chunk = activeDepartments.slice(
-    i,
-    i + itemsPerColumn
-  );
-
-  departmentItems.push(
-    chunk.map((department: any) => {
-
-      const link = department.Link?.Url || '#';
-
-      return `
-        <li>
-          <a href="${link}" target="_blank" data-interception="off">
-            <span>${department.Title}</span>
-          </a>
-        </li>
-      `;
-
-    }).join('')
-  );
-}
-
-return departmentItems;
+    return activeDepartments;
 
   } catch (error) {
 
     Log.error(
       LOG_SOURCE,
-      error instanceof Error ? error : new Error(String(error))
+      error instanceof Error
+        ? error
+        : new Error(String(error))
     );
 
-    return ['', '', ''];
+    return [];
   }
 }
   // ============================================================
@@ -465,7 +445,6 @@ const departmentItems: string[] =
 
   }
 
-
 private _setupDepartmentMegaMenu(): void {
 
   if (!this._topPlaceholder) {
@@ -486,10 +465,19 @@ private _setupDepartmentMegaMenu(): void {
       '.nav-link'
     ) as HTMLElement;
 
-  if (!departmentLink) {
+  const dropdownMenu =
+    departmentMenu.querySelector(
+      '.dropdown-menu'
+    ) as HTMLElement;
+
+  if (
+    !departmentLink ||
+    !dropdownMenu
+  ) {
     return;
   }
 
+  // Open and close the dropdown
   departmentLink.addEventListener(
     'click',
     (event: Event) => {
@@ -498,9 +486,9 @@ private _setupDepartmentMegaMenu(): void {
       event.stopPropagation();
 
       const isOpen =
-        departmentMenu.classList.contains('show');
+        dropdownMenu.classList.contains('show');
 
-      departmentMenu.classList.toggle(
+      dropdownMenu.classList.toggle(
         'show',
         !isOpen
       );
@@ -512,6 +500,7 @@ private _setupDepartmentMegaMenu(): void {
     }
   );
 
+  // Close when clicking outside
   document.addEventListener(
     'click',
     (event: Event) => {
@@ -522,7 +511,7 @@ private _setupDepartmentMegaMenu(): void {
         )
       ) {
 
-        departmentMenu.classList.remove('show');
+        dropdownMenu.classList.remove('show');
 
         departmentLink.setAttribute(
           'aria-expanded',
@@ -531,8 +520,59 @@ private _setupDepartmentMegaMenu(): void {
       }
     }
   );
-}
 
+  // Department search
+  const searchInput =
+    departmentMenu.querySelector(
+      '.search-dept-dropdown'
+    ) as HTMLInputElement;
+
+  const departmentList =
+    departmentMenu.querySelector(
+      '.dept-dropdown'
+    ) as HTMLUListElement;
+
+  if (
+    !searchInput ||
+    !departmentList
+  ) {
+    return;
+  }
+
+  searchInput.addEventListener(
+    'input',
+    () => {
+
+      const searchValue =
+        searchInput.value
+          .trim()
+          .toLowerCase();
+
+      const departmentItems =
+        departmentList.querySelectorAll('li');
+
+      departmentItems.forEach(
+        (item: Element) => {
+
+          const departmentName =
+            item.textContent
+              ?.trim()
+              .toLowerCase() || '';
+
+          const departmentItem =
+            item as HTMLElement;
+
+          departmentItem.style.display =
+            departmentName.indexOf(
+              searchValue
+            ) !== -1
+              ? ''
+              : 'none';
+        }
+      );
+    }
+  );
+}
    private _setupSearchFunctionality(): void {
 
             if (

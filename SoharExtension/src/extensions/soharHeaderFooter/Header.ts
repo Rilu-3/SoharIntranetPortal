@@ -5,7 +5,7 @@ export default class Header {
     private userName: string,
     private designation: string,
     private profilePhoto: string,
-    private departmentItems: string[]
+    private departmentItems: any[]
   ) { }
 
   public render(): string {
@@ -19,7 +19,9 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand" href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+            <a
+              class="navbar-brand"
+              href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
               target="_blank"
               data-interception="off">
 
@@ -119,6 +121,8 @@ export default class Header {
                 class="navbar-nav my-2 my-lg-0 navbar-nav-scroll gap-lg-3"
                 style="--bs-scroll-height: 400px;">
 
+                <!-- Home -->
+
                 <li class="nav-item d-lg-flex">
 
                   <a
@@ -138,48 +142,65 @@ export default class Header {
 
                 </li>
 
-              <li class="nav-item d-lg-flex has-mega">
+                <!-- Departments -->
 
-  <a
-    class="nav-link d-flex align-items-center gap-2"
-    href="#"
-    aria-haspopup="true"
-    aria-expanded="false">
+                <li class="nav-item has-mega">
 
-    <img
-      class="nav-menu-icon"
-      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
-      alt=""
-    />
+                  <a
+                    class="nav-link d-flex align-items-center gap-2"
+                    href="#"
+                    aria-haspopup="true"
+                    aria-expanded="false">
 
-    <span>Departments</span>
+                    <img
+                      class="nav-menu-icon"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+                      alt=""
+                    />
 
-  </a>
+                    <span>Departments</span>
 
-  <div
-    class="mega-panel"
-    role="menu"
-    aria-label="Department menu">
+                  </a>
 
-    <div class="mega-panel-inner">
+                  <div
+                    class="dropdown-menu"
+                    aria-labelledby="navbarScrollingDropdown">
 
-      <div class="mega-panel-content custom-scroll-view">
+                    <input
+                      type="text"
+                      class="form-control search-dept-dropdown"
+                      placeholder="Search departments...">
 
-        ${this.departmentItems.map((items: string) => `
-          <div>
-            <ul class="mega-links">
-              ${items}
-            </ul>
-          </div>
-        `).join('')}
+                    <ul class="custom-scroll-view dept-dropdown">
 
-      </div>
+                      ${this.departmentItems.map((department: any) => {
 
-    </div>
+                        const link =
+                          department.Link?.Url || '#';
 
-  </div>
+                        return `
+                          <li>
 
-</li>
+                            <a
+                              class="dropdown-item text-sm"
+                              href="${link}"
+                              target="_blank"
+                              data-interception="off">
+
+                              <span>${department.Title}</span>
+
+                            </a>
+
+                          </li>
+                        `;
+
+                      }).join('')}
+
+                    </ul>
+
+                  </div>
+
+                </li>
 
               </ul>
 
