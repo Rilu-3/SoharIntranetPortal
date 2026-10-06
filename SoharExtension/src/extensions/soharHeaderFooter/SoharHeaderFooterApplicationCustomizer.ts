@@ -302,27 +302,107 @@ private async _getDepartments(): Promise<any[]> {
   }
 
   private _setupDepartmentMegaMenu(): void {
-    const departmentMenu: HTMLElement | null = this._getDepartmentMenu();
-    const departmentLink: HTMLElement | null = departmentMenu ? departmentMenu.querySelector('.nav-link') as HTMLElement : null;
 
-    if (!departmentMenu || !departmentLink) {
-      return;
-    }
+  const departmentMenu: HTMLElement | null =
+    this._getDepartmentMenu();
 
-    departmentLink.addEventListener('click', (event: Event) => {
+  const departmentLink: HTMLElement | null =
+    departmentMenu
+      ? departmentMenu.querySelector(
+          '.nav-link'
+        ) as HTMLElement
+      : null;
+
+  const searchInput: HTMLInputElement | null =
+    departmentMenu
+      ? departmentMenu.querySelector(
+          '.search-dept-dropdown'
+        ) as HTMLInputElement
+      : null;
+
+  const departmentItems: NodeListOf<HTMLElement> =
+    departmentMenu
+      ? departmentMenu.querySelectorAll(
+          '.dept-dropdown li'
+        )
+      : ([] as unknown as NodeListOf<HTMLElement>);
+
+  if (
+    !departmentMenu ||
+    !departmentLink
+  ) {
+    return;
+  }
+
+  departmentLink.addEventListener(
+    'click',
+    (event: Event) => {
+
       event.preventDefault();
       event.stopPropagation();
 
-      const isOpen: boolean = departmentMenu.classList.contains('show');
+      const isOpen: boolean =
+        departmentMenu.classList.contains(
+          'show'
+        );
 
-      departmentMenu.classList.toggle('show', !isOpen);
-      departmentLink.setAttribute('aria-expanded', (!isOpen).toString());
-    });
+      departmentMenu.classList.toggle(
+        'show',
+        !isOpen
+      );
 
-    // Register the outside-click listener only once
-    document.removeEventListener('click', this._onDocumentClick);
-    document.addEventListener('click', this._onDocumentClick);
+      departmentLink.setAttribute(
+        'aria-expanded',
+        (!isOpen).toString()
+      );
+    }
+  );
+
+  // Department search/filter
+  if (searchInput) {
+
+    searchInput.addEventListener(
+      'input',
+      () => {
+
+        const searchValue: string =
+          searchInput.value
+            .trim()
+            .toLowerCase();
+
+        departmentItems.forEach(
+          (item: HTMLElement) => {
+
+            const departmentName: string =
+              item.textContent
+                ? item.textContent
+                    .trim()
+                    .toLowerCase()
+                : '';
+
+            item.style.display =
+              departmentName.indexOf(
+                searchValue
+              ) !== -1
+                ? ''
+                : 'none';
+          }
+        );
+      }
+    );
   }
+
+  // Register the outside-click listener only once
+  document.removeEventListener(
+    'click',
+    this._onDocumentClick
+  );
+
+  document.addEventListener(
+    'click',
+    this._onDocumentClick
+  );
+}
 
   private _onDocumentClick = (event: Event): void => {
     const departmentMenu: HTMLElement | null = this._getDepartmentMenu();
