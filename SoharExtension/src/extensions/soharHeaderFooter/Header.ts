@@ -10,6 +10,8 @@ export default class Header {
 
   public render(): string {
 
+    const homeUrl: string = `${this.siteUrl}/SitePages/Home.aspx?env=WebViewList`;
+
     return `
       <!-- Widget start here -->
 
@@ -19,18 +21,18 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand" href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-              target="_blank"
-              data-interception="off">
+            <a class="navbar-brand" href="${homeUrl}">
 
               <img
                 class="logo-desktop"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo.png"
+                alt="Sohar Aluminium"
               />
 
               <img
                 class="logo-mob"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo-mob.png"
+                alt="Sohar Aluminium"
               />
 
             </a>
@@ -42,6 +44,7 @@ export default class Header {
                 class="form-control"
                 id="inputGlobalSearchBox"
                 placeholder="Search..."
+                autocomplete="off"
               >
 
               <button
@@ -49,7 +52,9 @@ export default class Header {
                 type="button"
                 aria-label="Search">
 
-                <i class="bi bi-search"></i>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                </svg>
 
               </button>
 
@@ -66,6 +71,7 @@ export default class Header {
                   <img
                     class="nav-avatar"
                     src="${this.profilePhoto}"
+                    alt=""
                   />
 
                   <div
@@ -124,7 +130,7 @@ export default class Header {
                   <a
                     class="nav-link active-nav-link d-flex align-items-center gap-2"
                     aria-current="page"
-                    href="#">
+                    href="${homeUrl}">
 
                     <img
                       class="nav-menu-icon"
@@ -138,48 +144,48 @@ export default class Header {
 
                 </li>
 
-              <li class="nav-item d-lg-flex has-mega">
+                <li class="nav-item d-lg-flex has-mega">
 
-  <a
-    class="nav-link d-flex align-items-center gap-2"
-    href="#"
-    aria-haspopup="true"
-    aria-expanded="false">
+                  <a
+                    class="nav-link d-flex align-items-center gap-2"
+                    href="#"
+                    aria-haspopup="true"
+                    aria-expanded="false">
 
-    <img
-      class="nav-menu-icon"
-      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
-      alt=""
-    />
+                    <img
+                      class="nav-menu-icon"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+                      alt=""
+                    />
 
-    <span>Departments</span>
+                    <span>Departments</span>
 
-  </a>
+                  </a>
 
-  <div
-    class="mega-panel"
-    role="menu"
-    aria-label="Department menu">
+                  <div
+                    class="mega-panel"
+                    role="menu"
+                    aria-label="Department menu">
 
-    <div class="mega-panel-inner">
+                    <div class="mega-panel-inner">
 
-      <div class="mega-panel-content custom-scroll-view">
+                      <div class="mega-panel-content custom-scroll-view">
 
-        ${this.departmentItems.map((items: string) => `
-          <div>
-            <ul class="mega-links">
-              ${items}
-            </ul>
-          </div>
-        `).join('')}
+                        ${this.departmentItems.map((items: string) => `
+                          <div>
+                            <ul class="mega-links">
+                              ${items}
+                            </ul>
+                          </div>
+                        `).join('')}
 
-      </div>
+                      </div>
 
-    </div>
+                    </div>
 
-  </div>
+                  </div>
 
-</li>
+                </li>
 
               </ul>
 

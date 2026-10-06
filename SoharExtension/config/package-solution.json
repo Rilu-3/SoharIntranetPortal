@@ -3,7 +3,7 @@
   "solution": {
     "name": "sohar-extension-client-side-solution",
     "id": "0daf3a3d-c27c-45df-98b0-e8c449c6634e",
-    "version": "1.0.0.1",
+    "version": "1.0.0.2",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -30,7 +30,7 @@
         "title": "Application Extension - Deployment of custom action",
         "description": "Deploys a custom action with ClientSideComponentId association",
         "id": "2c52676d-9cde-4da7-bb13-e57f6ec35925",
-        "version": "1.0.0.0",
+        "version": "1.0.0.2",
         "assets": {
           "elementManifests": [
             "elements.xml",

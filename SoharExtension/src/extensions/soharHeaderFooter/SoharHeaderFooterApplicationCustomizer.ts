@@ -1,880 +1,523 @@
 import { override } from '@microsoft/decorators';
-
 import { Log } from '@microsoft/sp-core-library';
-
-import {
-  BaseApplicationCustomizer,
-  PlaceholderContent,
-  PlaceholderName,
-
-} from '@microsoft/sp-application-base';
-
-import {
-  MSGraphClientV3
-} from '@microsoft/sp-http';
-
+import { BaseApplicationCustomizer, PlaceholderContent, PlaceholderName } from '@microsoft/sp-application-base';
+import { MSGraphClientV3, SPHttpClient } from '@microsoft/sp-http';
 import { SPComponentLoader } from '@microsoft/sp-loader';
-
-import { SPHttpClient } from '@microsoft/sp-http';
-
+import { escape } from '@microsoft/sp-lodash-subset';
 import * as strings from 'SoharHeaderFooterApplicationCustomizerStrings';
-
 import Header from './Header';
 import Footer from './Footer';
 
-
-const LOG_SOURCE: string =
-  'SoharHeaderFooterApplicationCustomizer';
-
+const LOG_SOURCE: string = 'SoharHeaderFooterApplicationCustomizer';
+const SITE_URL: string = 'https://soharaluminium5.sharepoint.com/sites/DevPortal';
+const RESOURCES_URL: string = `${SITE_URL}/SiteAssets/resources`;
+const LOADER_DURATION_MS: number = 3000;
 
 export interface ISoharHeaderFooterApplicationCustomizerProperties {
   testMessage: string;
 }
 
-
-export default class SoharHeaderFooterApplicationCustomizer
-  extends BaseApplicationCustomizer<ISoharHeaderFooterApplicationCustomizerProperties> {
-
+export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicationCustomizer<ISoharHeaderFooterApplicationCustomizerProperties> {
 
   private _topPlaceholder: PlaceholderContent | undefined;
-
   private _bottomPlaceholder: PlaceholderContent | undefined;
+  private _loader: HTMLElement | null = null;
 
+  // Cached data so header/footer can be restored after page navigation
+  private _designation: string = '';
+  private _departmentItems: string[] = [];
+  private _footerHtml: string = '';
+  private _isInitialised: boolean = false;
 
   @override
-  // public async onInit(): Promise<void> {
-  //   this._loadCSS();
+  public onInit(): Promise<void> {
+    Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
+        if (this._isSearchPage()) {
+      document.documentElement.classList.add('sa-search-page');
+    }
+    // 1. Inject stylesheets first so the loader is styled
+    this._loadStyles();
 
-  //   Log.info(
-  //     LOG_SOURCE,
-  //     `Initialized ${strings.Title}`
-  //   );
+    // 2. Show loader on the home page only, removed after exactly 3 seconds
+    this._addPageLoader();
+    window.setTimeout(() => this._removeLoader(), LOADER_DURATION_MS);
 
+    // 3. Restore header/footer after SharePoint page navigation
+    this.context.application.navigatedEvent.add(this, this._onNavigated);
 
-  //   // this._loadJS();
-  //    await this.loadBootstrap();
-  //   await this._renderHeader();
+    // 4. Render everything without blocking SharePoint
+    this._initialise().catch((error: unknown) => {
+      Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(String(error)));
+    });
 
-  //   await this._renderFooter();
-
-  //   return Promise.resolve();
-    
-    
-  // }
-  public async onInit(): Promise<void> {
-  await this._loadCSS();
-
-  Log.info(
-    LOG_SOURCE,
-    `Initialized ${strings.Title}`
-  );
-
-  await this.loadBootstrap();
-  await this._renderHeader();
-
-  this._loadHome();
-  await this._renderFooter();
-
-  return Promise.resolve();
-}
-
-
-  private _loadHome(): void {
-    const baseUrl: string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-    SPComponentLoader.loadScript(
-      `${baseUrl}/SiteAssets/resources/js/common.js`
-    )
-      .then(() =>
-        SPComponentLoader.loadScript(
-          `${baseUrl}/SiteAssets/resources/js/home.js`
-        )
-      );
+    return Promise.resolve();
   }
-private async loadBootstrap(): Promise<void> {
- 
-   const baseUrl: string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-  const win: any = window;
- 
-  const bootstrap = await SPComponentLoader.loadScript<any>(
-    `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  );
- 
-  if (bootstrap?.Modal) {
-    win.bootstrap = bootstrap;
- 
-    const original = bootstrap.Modal.getOrCreateInstance;
- 
-    if (typeof original === 'function') {
-      bootstrap.Modal.getOrCreateInstance = function (
-        element: Element,
-        config?: any
-      ) {
-        return original.call(bootstrap.Modal, element, config);
-      };
+
+  @override
+  protected onDispose(): void {
+    this.context.application.navigatedEvent.remove(this, this._onNavigated);
+    document.removeEventListener('click', this._onDocumentClick);
+    this._removeLoader();
+  }
+
+  // ============================================================
+  // INITIALISATION (parallel loading, correct render order)
+  // ============================================================
+
+  private async _initialise(): Promise<void> {
+    // Start all independent work in parallel
+    const scriptsPromise: Promise<void> = this._loadScripts();
+    const headerDataPromise: Promise<[string, string[]]> = Promise.all([this._getUserDesignation(), this._getDepartments()]);
+    const footerItemsPromise: Promise<any[]> = this._getFooterItems();
+
+    // Header: render as soon as its data is ready
+    const [designation, departmentItems] = await headerDataPromise;
+    this._designation = designation;
+    this._departmentItems = departmentItems;
+    this._renderHeader();
+
+    // Footer: render once data and the footer target are ready
+    this._footerHtml = this._buildFooterHtml(await footerItemsPromise);
+    await this._waitForElement(this._getFooterTargetSelector());
+    this._renderFooter();
+
+    // Page scripts run after header/footer HTML exists
+    await scriptsPromise;
+    await this._loadPageScripts();
+
+    this._isInitialised = true;
+  }
+
+  private _onNavigated(): void {
+    if (!this._isInitialised) {
+      return;
+    }
+
+    // Re-render header if its placeholder was removed
+    if (!this._topPlaceholder || !document.body.contains(this._topPlaceholder.domElement)) {
+      this._topPlaceholder = undefined;
+      this._renderHeader();
+    }
+
+    // Canvas is re-rendered on navigation, so re-place the footer
+    this._waitForElement(this._getFooterTargetSelector()).then(() => this._renderFooter()).catch(() => { /* ignore */ });
+  }
+
+  // ============================================================
+  // RESOURCES
+  // ============================================================
+
+  private _loadStyles(): void {
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/variable.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/bootstrap.min.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/jquery-ui.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/swiper-bundle.min.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/font-size.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/custom.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/sp-custom.css`);
+    SPComponentLoader.loadCss(`${RESOURCES_URL}/css/home.css`);
+  }
+
+  private async _loadScripts(): Promise<void> {
+    // jQuery -> jQuery UI must be sequential; Bootstrap and Swiper are independent
+    const jQueryChain = async (): Promise<void> => {
+      await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-3.6.0.js`);
+
+      // Save the original jQuery instance
+      (window as any).soharJQuery = (window as any).jQuery;
+
+      await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-ui.js`);
+    };
+
+    await Promise.all([
+      jQueryChain(),
+      this._loadBootstrap(),
+      SPComponentLoader.loadScript(`${RESOURCES_URL}/js/swiper-bundle.min.js`)
+    ]);
+  }
+
+  private async _loadBootstrap(): Promise<void> {
+    const win: any = window;
+    const bootstrap = await SPComponentLoader.loadScript<any>(`${RESOURCES_URL}/js/bootstrap.bundle.min.js`);
+
+    if (bootstrap?.Modal) {
+      win.bootstrap = bootstrap;
+
+      const original = bootstrap.Modal.getOrCreateInstance;
+
+      if (typeof original === 'function') {
+        bootstrap.Modal.getOrCreateInstance = function (element: Element, config?: any) {
+          return original.call(bootstrap.Modal, element, config);
+        };
+      }
     }
   }
 
-}
-  // private _loadCSS(): void {
-  //   const baseUrl: string =
-  // 'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-  //   // Load all CSS files in parallel
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/variable.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/font-size.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/custom.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-  //   );
-
-  //   SPComponentLoader.loadCss(
-  //     `${baseUrl}/SiteAssets/resources/css/home.css`
-  //   );
-
-  //   // Load scripts sequentially with proper dependency handling
-  //   SPComponentLoader.loadScript(
-  //     `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  //   )
-  //     .then(() =>
-  //       SPComponentLoader.loadScript(
-  //         `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  //       )
-  //     )
-  //     // .then(() =>
-  //     //   SPComponentLoader.loadScript(
-  //     //     `${baseUrl}/SiteAssets/resources/js/bootstrap.bundle.min.js`
-  //     //   )
-  //     // )
-  //     //.then(() => SPComponentLoader.loadScript(`${baseUrl}/SiteAssets/resources/js/jquery.marquee.min.js`))
-  //     .then(() =>
-  //       SPComponentLoader.loadScript(
-  //         `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  //       )
-  //     )
-  //     .then(() => this._loadHome());
-  // }
-
-
+  private async _loadPageScripts(): Promise<void> {
+    await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/common.js`);
+    await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/home.js`);
+  }
 
   // ============================================================
-  // USER DESIGNATION FROM MICROSOFT ENTRA ID
+  // PAGE LOADER
   // ============================================================
-private async _loadCSS(): Promise<void> {
-  const baseUrl: string =
-    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
-  // Load all CSS files
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/variable.css`
-  );
+  private _addPageLoader(): void {
+    // Display loader only on the DevPortal home page
+    const path: string = window.location.pathname.toLowerCase().replace(/\/$/, '');
+    const isHomePage: boolean = path === '/sites/devportal/sitepages/home.aspx' || path === '/sites/devportal';
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/bootstrap.min.css`
-  );
+    if (!isHomePage) {
+      return;
+    }
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/jquery-ui.css`
-  );
+    // Prevent duplicate loader
+    if (document.getElementById('saLoader')) {
+      return;
+    }
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/swiper-bundle.min.css`
-  );
+    this._loader = document.createElement('div');
+    this._loader.className = 'sa-loader';
+    this._loader.id = 'saLoader';
+    this._loader.innerHTML = `
+      <div class="sa-loader-inner">
+        <div class="sa-ring sa-ring--secondary"></div>
+        <div class="sa-ring sa-ring--primary"></div>
+        <img src="${RESOURCES_URL}/images/logo-mob.png" alt="" />
+      </div>
+    `;
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/font-size.css`
-  );
+    document.body.appendChild(this._loader);
+  }
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/custom.css`
-  );
+  private _removeLoader(): void {
+    if (this._loader && document.body.contains(this._loader)) {
+      document.body.removeChild(this._loader);
+    }
+    this._loader = null;
+  }
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/sp-custom.css`
-  );
+  private _waitForElement(selector: string, timeoutMs: number = 10000): Promise<Element | null> {
+    return new Promise<Element | null>((resolve) => {
+      const existing: Element | null = document.querySelector(selector);
 
-  SPComponentLoader.loadCss(
-    `${baseUrl}/SiteAssets/resources/css/home.css`
-  );
+      if (existing) {
+        resolve(existing);
+        return;
+      }
 
-  // Load jQuery 3.6.0
-  await SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery-3.6.0.js`
-  );
+      const observer: MutationObserver = new MutationObserver(() => {
+        const element: Element | null = document.querySelector(selector);
 
-  // Save the original jQuery instance
-  (window as any).soharJQuery = (window as any).jQuery;
+        if (element) {
+          observer.disconnect();
+          resolve(element);
+        }
+      });
 
-  // Load jQuery UI
-  await SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/jquery-ui.js`
-  );
+      observer.observe(document.body, { childList: true, subtree: true });
 
-  // Load Swiper
-  await SPComponentLoader.loadScript(
-    `${baseUrl}/SiteAssets/resources/js/swiper-bundle.min.js`
-  );
-}
+      window.setTimeout(() => {
+        observer.disconnect();
+        resolve(null);
+      }, timeoutMs);
+    });
+  }
+
+  // ============================================================
+  // HEADER DATA
+  // ============================================================
 
   private async _getUserDesignation(): Promise<string> {
-
     try {
-
-      const client: MSGraphClientV3 =
-        await this.context.msGraphClientFactory.getClient('3');
-
-      const user =
-        await client
-          .api('/me')
-          .select('jobTitle')
-          .get();
-
+      const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
+      const user = await client.api('/me').select('jobTitle').get();
 
       return user.jobTitle || '';
-
     } catch (error) {
-
-      Log.error(
-        LOG_SOURCE,
-        error instanceof Error
-          ? error
-          : new Error(String(error))
-      );
-
+      Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(String(error)));
       return '';
     }
   }
 
-
-  // ============================================================
-  // DEPARTMENTS
-  // ============================================================
-
-private async _getDepartments(): Promise<string[]> {
-
-  const siteUrl: string =
-    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-  const url =
-    `${siteUrl}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder`;
-
-  try {
-
-    const response = await this.context.spHttpClient.get(
-      url,
-      SPHttpClient.configurations.v1,
-      {
-        headers: {
-          'Accept': 'application/json;odata=nometadata'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to load Departments: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = await response.json();
-
-    const activeDepartments: any[] = data.value
-      .filter((department: any) => department.Status === 'Active')
-      .sort((a: any, b: any) => Number(a.SortOrder) - Number(b.SortOrder));
-const departmentItems: string[] = [];
-const itemsPerColumn: number = 4;
-
-for (let i = 0; i < activeDepartments.length; i += itemsPerColumn) {
-
-  const chunk = activeDepartments.slice(
-    i,
-    i + itemsPerColumn
-  );
-
-  departmentItems.push(
-    chunk.map((department: any) => {
-
-      const link = department.Link?.Url || '#';
-
-      return `
-        <li>
-          <a href="${link}" target="_blank" data-interception="off">
-            <span>${department.Title}</span>
-          </a>
-        </li>
-      `;
-
-    }).join('')
-  );
-}
-
-return departmentItems;
-
-  } catch (error) {
-
-    Log.error(
-      LOG_SOURCE,
-      error instanceof Error ? error : new Error(String(error))
-    );
-
-    return ['', '', ''];
-  }
-}
-  // ============================================================
-  // RENDER HEADER
-  // ============================================================
-
-  private async _renderHeader(): Promise<void> {
-
-    if (!this._topPlaceholder) {
-
-      this._topPlaceholder =
-        this.context.placeholderProvider.tryCreateContent(
-          PlaceholderName.Top,
-          {
-            onDispose: () => {
-
-              Log.info(
-                LOG_SOURCE,
-                'Top placeholder disposed'
-              );
-
-            }
-          }
-        );
-    }
-
-
-    if (!this._topPlaceholder) {
-
-      Log.error(
-        LOG_SOURCE,
-        new Error('Top placeholder was not created')
-      );
-
-      return;
-    }
-
-
-    const siteUrl: string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-
-    const userName: string =
-      this.context.pageContext.user.displayName;
-
-
-    const userEmail: string =
-      this.context.pageContext.user.email;
-
-
-    const profilePhoto: string =
-      `${siteUrl}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
-
-
-    const designation: string =
-      await this._getUserDesignation();
-
-
-const departmentItems: string[] =
-  await this._getDepartments();
-
-
-    const header: Header =
-      new Header(
-        siteUrl,
-        userName,
-        designation,
-        profilePhoto,
-        departmentItems
-      );
-
-
-    this._topPlaceholder.domElement.innerHTML =
-      header.render();
-
-    this._setupSearchFunctionality();
-    this._setupDepartmentMegaMenu();
-
-  }
-private _setupDepartmentMegaMenu(): void {
-
-  if (!this._topPlaceholder) {
-    return;
-  }
-
-  const departmentMenu =
-    this._topPlaceholder.domElement.querySelector(
-      '.has-mega'
-    ) as HTMLElement;
-
-  if (!departmentMenu) {
-    return;
-  }
-
-  const departmentLink =
-    departmentMenu.querySelector(
-      '.nav-link'
-    ) as HTMLElement;
-
-  if (!departmentLink) {
-    return;
-  }
-
-departmentLink.addEventListener(
-  'click',
-  (event: Event) => {
-
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const isOpen =
-      departmentMenu.classList.contains('active');
-
-
-    departmentMenu.classList.toggle(
-      'active',
-      !isOpen
-    );
-
-    departmentLink.setAttribute(
-      'aria-expanded',
-      (!isOpen).toString()
-    );
-  }
-);
-  document.addEventListener(
-    'click',
-    (event: Event) => {
-
-      if (
-        !departmentMenu.contains(
-          event.target as Node
-        )
-      ) {
-
-        departmentMenu.classList.remove('active');
-
-        departmentLink.setAttribute(
-          'aria-expanded',
-          'false'
-        );
-      }
-    }
-  );
-}
-
-private _setupSearchFunctionality(): void {
-
-  if (
-    !this._topPlaceholder ||
-    !this._topPlaceholder.domElement
-  ) {
-    return;
-  }
-
-  const inputMainSearchBox =
-    this._topPlaceholder.domElement.querySelector(
-      '#inputGlobalSearchBox'
-    ) as HTMLInputElement;
-
-  const searchButton =
-    this._topPlaceholder.domElement.querySelector(
-      '.search-icon-btn'
-    ) as HTMLButtonElement;
-
-  if (!inputMainSearchBox) {
-    return;
-  }
-
-  const performSearch = (): void => {
-
-    const searchKey: string =
-      inputMainSearchBox.value.trim();
-
-   if (searchKey) {
-  const siteUrl: string = this.context.pageContext.web.absoluteUrl;
-
-  window.open(
-    `${siteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`,
-    '_blank'
-  );
-}
-  };
-
-  inputMainSearchBox.addEventListener(
-    'keydown',
-    (event: KeyboardEvent) => {
-
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        performSearch();
-      }
-    }
-  );
-
-  if (searchButton) {
-    searchButton.addEventListener(
-      'click',
-      () => {
-        performSearch();
-      }
-    );
-  }
-}
-  // ============================================================
-  // GET FOOTER ITEMS FROM SHAREPOINT
-  // ============================================================
-
-  private async _getFooterItems(): Promise<any[]> {
-
-    const siteUrl :
-      string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Footer')/items` +
-      `?$select=Id,ContactDetails,Category,Status,Icon` +
-      `&$orderby=Id asc`;
-
+  private async _getDepartments(): Promise<string[]> {
+    const url: string = `${SITE_URL}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder&$filter=Status eq 'Active'&$orderby=SortOrder asc`;
 
     try {
-
-      const response =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept':
-                'application/json;odata=nometadata'
-            }
-          }
-        );
-
+      const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
-
-        throw new Error(
-          `Failed to load Footer: ${response.status}`
-        );
+        throw new Error(`Failed to load Departments: ${response.status} ${response.statusText}`);
       }
 
+      const data = await response.json();
+      const departments: any[] = data.value || [];
+      const departmentItems: string[] = [];
 
-      const data =
-        await response.json();
+      // Always split departments evenly into a fixed number of columns
+      const columnCount: number = 4;
+      const itemsPerColumn: number = Math.max(1, Math.ceil(departments.length / columnCount));
 
+      for (let i = 0; i < departments.length; i += itemsPerColumn) {
+        const chunk: any[] = departments.slice(i, i + itemsPerColumn);
 
-      return data.value || [];
+        departmentItems.push(chunk.map((department: any) => {
+          const title: string = escape(department.Title || '');
+          const link: string = department.Link?.Url ? escape(department.Link.Url) : '';
 
+          // No link -> plain item, no empty new tab
+          return link
+            ? `<li><a href="${link}" target="_blank" data-interception="off"><span>${title}</span></a></li>`
+            : `<li><a href="#" onclick="return false;"><span>${title}</span></a></li>`;
+        }).join(''));
+      }
 
+      return departmentItems;
     } catch (error) {
-
+      Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(String(error)));
       return [];
     }
   }
 
-
   // ============================================================
-  // RENDER FOOTER ITEMS
+  // RENDER HEADER
   // ============================================================
 
- private _renderFooterItems(items: any[]): string {
-
-  const baseUrl: string =
-    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
-
-  return items.map((item: any) => {
-
-    const contactDetails =
-      item.ContactDetails || '';
-
-    let imageUrl = '';
-
-    if (item.Icon) {
-
-      const imgData =
-        JSON.parse(item.Icon);
-
-      imageUrl =
-        `${baseUrl}/Lists/Footer/Attachments/${item.Id}/${imgData.fileName}`;
+  private _renderHeader(): void {
+    if (!this._topPlaceholder) {
+      this._topPlaceholder = this.context.placeholderProvider.tryCreateContent(PlaceholderName.Top, { onDispose: () => { Log.info(LOG_SOURCE, 'Top placeholder disposed'); } });
     }
 
-    return Footer.itemTemplate
-      .replace(
-        '__ICON_URL__',
-        imageUrl
-      )
-      .replace(
-        '__CONTACT_DETAILS__',
-        contactDetails
-      );
+    if (!this._topPlaceholder) {
+      Log.error(LOG_SOURCE, new Error('Top placeholder was not created'));
+      return;
+    }
 
-  }).join('');
-}
+    const userName: string = escape(this.context.pageContext.user.displayName || '');
+    const userEmail: string = this.context.pageContext.user.email || '';
+    const profilePhoto: string = `${SITE_URL}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
+    const header: Header = new Header(SITE_URL, userName, escape(this._designation), profilePhoto, this._departmentItems);
+
+    this._topPlaceholder.domElement.innerHTML = header.render();
+
+    this._setupSearchFunctionality();
+    this._setupDepartmentMegaMenu();
+  }
+
+  private _setupDepartmentMegaMenu(): void {
+    const departmentMenu: HTMLElement | null = this._getDepartmentMenu();
+    const departmentLink: HTMLElement | null = departmentMenu ? departmentMenu.querySelector('.nav-link') as HTMLElement : null;
+
+    if (!departmentMenu || !departmentLink) {
+      return;
+    }
+
+    departmentLink.addEventListener('click', (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const isOpen: boolean = departmentMenu.classList.contains('show');
+
+      departmentMenu.classList.toggle('show', !isOpen);
+      departmentLink.setAttribute('aria-expanded', (!isOpen).toString());
+    });
+
+    // Register the outside-click listener only once
+    document.removeEventListener('click', this._onDocumentClick);
+    document.addEventListener('click', this._onDocumentClick);
+  }
+
+  private _onDocumentClick = (event: Event): void => {
+    const departmentMenu: HTMLElement | null = this._getDepartmentMenu();
+
+    if (departmentMenu && !departmentMenu.contains(event.target as Node)) {
+      departmentMenu.classList.remove('show');
+
+      const departmentLink: HTMLElement | null = departmentMenu.querySelector('.nav-link') as HTMLElement;
+      if (departmentLink) {
+        departmentLink.setAttribute('aria-expanded', 'false');
+      }
+    }
+  };
+
+  private _getDepartmentMenu(): HTMLElement | null {
+    return this._topPlaceholder ? this._topPlaceholder.domElement.querySelector('.has-mega') as HTMLElement : null;
+  }
+
+  private _setupSearchFunctionality(): void {
+    if (!this._topPlaceholder) {
+      return;
+    }
+
+    const inputMainSearchBox = this._topPlaceholder.domElement.querySelector('#inputGlobalSearchBox') as HTMLInputElement;
+    const searchButton = this._topPlaceholder.domElement.querySelector('.search-icon-btn') as HTMLButtonElement;
+
+    if (!inputMainSearchBox) {
+      return;
+    }
+
+    const performSearch = (): void => {
+      const searchKey: string = inputMainSearchBox.value.trim();
+
+      if (searchKey) {
+        window.open(`${SITE_URL}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`, '_blank');
+      }
+    };
+
+    inputMainSearchBox.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        performSearch();
+      }
+    });
+
+    if (searchButton) {
+      searchButton.addEventListener('click', (event: Event) => {
+        event.preventDefault();
+        performSearch();
+      });
+    }
+  }
+
+  // ============================================================
+  // FOOTER DATA
+  // ============================================================
+
+  private async _getFooterItems(): Promise<any[]> {
+    const url: string = `${SITE_URL}/_api/web/lists/getbytitle('Footer')/items?$select=Id,ContactDetails,Category,Status,Icon&$orderby=Id asc`;
+
+    try {
+      const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load Footer: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.value || [];
+    } catch (error) {
+      Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(String(error)));
+      return [];
+    }
+  }
+
+  private _getFooterIconUrl(item: any): string {
+    if (!item.Icon) {
+      return '';
+    }
+
+    try {
+      const img: any = JSON.parse(item.Icon);
+
+      if (img.serverRelativeUrl) {
+        return (img.serverUrl || window.location.origin) + encodeURI(img.serverRelativeUrl);
+      }
+
+      if (img.fileName) {
+        return `${SITE_URL}/Lists/Footer/Attachments/${item.Id}/${encodeURIComponent(img.fileName)}`;
+      }
+    } catch (error) {
+      Log.warn(LOG_SOURCE, `Invalid footer icon for item ${item.Id}`);
+    }
+
+    return '';
+  }
+
+  private _renderFooterItems(items: any[]): string {
+    return items.map((item: any) => {
+      const contactDetails: string = item.ContactDetails || '';
+      const imageUrl: string = this._getFooterIconUrl(item);
+
+      return Footer.itemTemplate.replace('__ICON_URL__', () => imageUrl).replace('__CONTACT_DETAILS__', () => contactDetails);
+    }).join('');
+  }
+
+  private _buildFooterHtml(footerItems: any[]): string {
+    const normalise = (value: any): string => String(value || '').trim().toLowerCase();
+
+    const activeItems: any[] = footerItems.filter((item: any) => normalise(item.Status) === 'active');
+    const importantContacts: any[] = activeItems.filter((item: any) => normalise(item.Category) === 'important contacts');
+    const medicalServices: any[] = activeItems.filter((item: any) => normalise(item.Category) === 'medical services');
+
+    return Footer.html
+      .replace('__IMPORTANT_CONTACTS__', () => this._renderFooterItems(importantContacts))
+      .replace('__MEDICAL_SERVICES__', () => this._renderFooterItems(medicalServices))
+      .replace('__CURRENT_YEAR__', new Date().getFullYear().toString());
+  }
 
   // ============================================================
   // RENDER FOOTER
   // ============================================================
 
+  private _isSearchPage(): boolean {
+    return window.location.pathname.toLowerCase().indexOf('/_layouts/15/search.aspx') !== -1;
+  }
 
-private async _renderFooter(): Promise<void> {
+  // Search page has no .SPCanvas; it has its own Bottom placeholder
+  private _getFooterTargetSelector(): string {
+    return this._isSearchPage()
+      ? 'div[data-sp-placeholder="Bottom"].sp-placeholder-bottom:not(#spBottomPlaceholder)'
+      : '.SPCanvas';
+  }
 
-  // Get Footer Items from SharePoint
-  const footerItems =
-    await this._getFooterItems();
-
-
-  // Get only Active items
-  const activeItems =
-    footerItems.filter(
-      (item: any) =>
-        String(item.Status || '')
-          .trim()
-          .toLowerCase() === 'active'
-    );
-
-
-  // Important Contacts
-  const importantContacts =
-    activeItems.filter(
-      (item: any) =>
-        String(item.Category || '')
-          .trim()
-          .toLowerCase() ===
-        'important contacts'
-    );
-
-
-  // Medical Services
-  const medicalServices =
-    activeItems.filter(
-      (item: any) =>
-        String(item.Category || '')
-          .trim()
-          .toLowerCase() ===
-        'medical services'
-    );
-
-
-  // Render Important Contacts Items
-  const importantContactsHtml =
-    this._renderFooterItems(
-      importantContacts
-    );
-
-
-  // Render Medical Services Items
-  const medicalServicesHtml =
-    this._renderFooterItems(
-      medicalServices
-    );
-
-
-  // Create Footer HTML
-  const footerHTML =
-    Footer.html
-      .replace(
-        '__IMPORTANT_CONTACTS__',
-        importantContactsHtml
-      )
-      .replace(
-        '__MEDICAL_SERVICES__',
-        medicalServicesHtml
-      )
-      .replace(
-        '__CURRENT_YEAR__',
-        new Date().getFullYear().toString()
-      );
-
-
-  // Check if the current page is the SharePoint Search page
-  const isSearchPage =
-    window.location.pathname
-      .toLowerCase()
-      .indexOf('/_layouts/15/search.aspx') !== -1;
-
-
-  // Search Page Footer
-  if (isSearchPage) {
-
-    // Find the empty Bottom placeholder inside the Search layout
-    const candidates =
-      document.querySelectorAll(
-        'div[data-sp-placeholder="Bottom"].sp-placeholder-bottom'
-      );
-
-
-    let searchPlaceholder: HTMLElement | null = null;
-
-
-    for (
-      let i = 0;
-      i < candidates.length;
-      i++
-    ) {
-
-      const element =
-        candidates[i] as HTMLElement;
-
-
-      if (
-        element.id !== 'spBottomPlaceholder' &&
-        element.children.length === 0
-      ) {
-
-        searchPlaceholder =
-          element;
-
-        break;
-      }
-    }
-
-
-    // Render footer inside the Search page placeholder
-    if (searchPlaceholder) {
-
-      searchPlaceholder.innerHTML =
-        footerHTML;
-
-
-      // Remove the outer SPFx Bottom placeholder
-      // to prevent duplicate footer
-      const spfxBottom =
-        document.getElementById(
-          'spBottomPlaceholder'
-        );
-
-
-      if (spfxBottom) {
-        spfxBottom.remove();
-      }
-
-
-      // Clear the cached placeholder reference
-      // because the DOM element has been removed
-      if (this._bottomPlaceholder) {
-        this._bottomPlaceholder = undefined;
-      }
-
-
+  private _renderFooter(): void {
+    if (!this._footerHtml) {
       return;
     }
-  }
 
+    if (this._isSearchPage()) {
+      // 1. Find the bottom placeholder INSIDE the search layout
+      //    (empty, or already holding our footer after a re-render)
+      const candidates: NodeListOf<Element> = document.querySelectorAll('div[data-sp-placeholder="Bottom"].sp-placeholder-bottom');
+      let searchPlaceholder: HTMLElement | null = null;
 
-  // Default path for all other SharePoint pages
+      for (let i = 0; i < candidates.length; i++) {
+        const element: HTMLElement = candidates[i] as HTMLElement;
 
-
-  // Create Bottom Placeholder
-  if (!this._bottomPlaceholder) {
-
-    this._bottomPlaceholder =
-      this.context.placeholderProvider.tryCreateContent(
-        PlaceholderName.Bottom,
-        {
-          onDispose: () => {
-
-            Log.info(
-              LOG_SOURCE,
-              'Bottom placeholder disposed'
-            );
-
-          }
+        if (element.id !== 'spBottomPlaceholder' && (element.children.length === 0 || element.querySelector('.pre-footer-info'))) {
+          searchPlaceholder = element;
+          break;
         }
-      );
-  }
-
-
-  // Check Bottom Placeholder
-  if (
-    !this._bottomPlaceholder ||
-    !this._bottomPlaceholder.domElement
-  ) {
-
-    Log.error(
-      LOG_SOURCE,
-      new Error(
-        'Bottom placeholder was not created'
-      )
-    );
-
-    return;
-  }
-
-
-  // Render Footer
-  this._bottomPlaceholder.domElement.innerHTML =
-    footerHTML;
-
-
-  // Move the existing footer placeholder into SharePoint Canvas
-  const spCanvasElement =
-    document.querySelector('.SPCanvas div');
-
-
-  if (spCanvasElement) {
-
-    // Remove duplicate footer placeholders already inside Canvas
-    const existingFooters =
-      spCanvasElement.querySelectorAll(
-        '#bottomPlaceholder'
-      );
-
-
-    existingFooters.forEach(
-      (footer: Element) => {
-
-        if (
-          footer !==
-          this._bottomPlaceholder!.domElement
-        ) {
-
-          footer.remove();
-        }
-
       }
-    );
 
+      if (searchPlaceholder) {
+        searchPlaceholder.innerHTML = this._footerHtml;
 
-    // Move the actual Bottom Placeholder
-    if (
-      this._bottomPlaceholder.domElement.parentElement !==
-      spCanvasElement
-    ) {
+        // 2. Remove the outer SPFx bottom placeholder so there are not TWO footers
+        const spfxBottom: HTMLElement | null = document.getElementById('spBottomPlaceholder');
+        if (spfxBottom) {
+          spfxBottom.remove();
+        }
 
-      spCanvasElement.appendChild(
-        this._bottomPlaceholder.domElement
-      );
+        // Clear the cached reference so it is not reused after removal
+        this._bottomPlaceholder = undefined;
+        return;
+      }
+    }
 
+    // Default path for all other pages
+    if (!this._bottomPlaceholder) {
+      this._bottomPlaceholder = this.context.placeholderProvider.tryCreateContent(PlaceholderName.Bottom, { onDispose: () => { Log.info(LOG_SOURCE, 'Bottom placeholder disposed'); } });
+    }
+
+    if (this._bottomPlaceholder && this._bottomPlaceholder.domElement) {
+      const footerElement: HTMLElement = this._bottomPlaceholder.domElement;
+      footerElement.innerHTML = this._footerHtml;
+
+      const spCanvasElement: Element | null = document.querySelector('.SPCanvas div');
+
+      if (spCanvasElement) {
+        const existingFooter: Element | null = spCanvasElement.querySelector('#bottomPlaceholder');
+
+        if (existingFooter && existingFooter !== footerElement) {
+          existingFooter.remove();
+        }
+
+        spCanvasElement.appendChild(footerElement);
+      }
+    } else {
+      Log.error(LOG_SOURCE, new Error('Could not load bottom placeholder'));
     }
   }
-}
-
 }
