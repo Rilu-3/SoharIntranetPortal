@@ -161,6 +161,51 @@ export default class Header {
                       alt=""
                     />
 
+                    <span>Departments</span>
+
+                    <img
+                      class="dropdown-arrow-nav"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
+                      alt=""
+                    />
+
+                  </a>
+
+                  <div
+                    class="dropdown-menu"
+                    aria-labelledby="navbarScrollingDropdown">
+
+                    <input
+                      type="text"
+                      class="form-control search-dept-dropdown"
+                      placeholder="Search departments..."
+                    >
+
+                    <ul class="custom-scroll-view dept-dropdown">
+
+                      ${this.departmentItems.map((department: any) => {
+
+                        const link = department.Link?.Url || '#';
+
+                        return `
+                          <li>
+                            <a
+                              class="dropdown-item text-sm"
+                              href="${link}"
+                              target="_blank"
+                              data-interception="off">
+
+                              <span>${department.Title}</span>
+
+                            </a>
+                          </li>
+                        `;
+
+                      }).join('')}
+
+                    </ul>
+
+                  </div>
 
                 </li>
 
