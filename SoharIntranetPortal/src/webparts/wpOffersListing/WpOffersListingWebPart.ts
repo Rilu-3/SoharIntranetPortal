@@ -76,7 +76,7 @@ export default class WpOffersListingWebPart extends BaseClientSideWebPart<IWpOff
         title: escape(item.Title || ""),
         description: escape(this._getPlainText(item.Description || "")),
         imageUrl: this._getImageUrl(item, "Offers") || defaultImageUrl,
-        detailsUrl: `${webUrl}/SitePages/OfferDetails.aspx?OfferDetailID=${item.ID}`
+        detailsUrl: `${webUrl}/SitePages/OfferDetails.aspx?OfferDetailID=${item.ID}&env=WebViewList`
       };
       html += wpOffersListing.cardHtml(view);
     }

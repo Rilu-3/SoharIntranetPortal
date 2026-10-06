@@ -75,7 +75,7 @@ export default class WpAnnouncementListingWebPart extends BaseClientSideWebPart<
         title: escape(item.Title || ""),
         description: escape(this._getPlainText(item.ShortDescription || "")),
         imageUrl: this._getImageUrl(item, "Announcements") || defaultImageUrl,
-        detailsUrl: `${webUrl}/SitePages/AnnouncementDetails.aspx?AnnoDetailID=${item.ID}`
+        detailsUrl: `${webUrl}/SitePages/AnnouncementDetails.aspx?AnnoDetailID=${item.ID}&env=WebViewList`
       };
       html += wpAnnouncementListing.cardHtml(view);
     }

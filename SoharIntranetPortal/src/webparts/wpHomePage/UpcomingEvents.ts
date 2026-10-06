@@ -82,7 +82,7 @@ export default class UpcomingEvents {
  
               <a
                 href="https://outlook.office.com/calendar/"
-                target="_blank"
+                target="_self"
                 data-interception="off"
                 rel="noopener noreferrer"
                 class="link-arrow text-color-link">
@@ -123,7 +123,7 @@ export default class UpcomingEvents {
  
               <a
                 href="__KEY_URL_UPCOMING__"
-                target="_blank"
+                target="_self"
                 data-interception="off"
                 rel="noopener noreferrer"
                 class="link-arrow text-color-link">

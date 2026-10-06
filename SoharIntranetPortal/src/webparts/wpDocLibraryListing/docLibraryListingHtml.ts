@@ -1,13 +1,11 @@
-export interface IBirthdayCardView {
+export interface IDocLibraryRowView {
   title: string;
-  imageUrl: string;
-  month: string;
-  day: string;
+  link: string;
 }
 
-export default class wpBirthdayListing {
+export default class wpDocLibraryListing {
 
-  // Page wrapper (header + row-wise birthday list, same as home page panel)
+  // Page wrapper (header + row-wise list, same as birthday listing)
   public static wrapperHtml(homeUrl: string, content: string): string {
     return `
       <div class="main-wrapper w-100 float-start min-h-screen-wrapper minWidthclass">
@@ -29,16 +27,16 @@ export default class wpBirthdayListing {
                           <span>Home</span>
                         </a>
                       </li>
-                      <li class="breadcrumb-item" aria-current="page">Listing</li>
+                      <li class="breadcrumb-item" aria-current="page">Library</li>
                     </ol>
                   </div>
-                  <p class="font-bold font-bold text-lg md-text-xl text-color-primary">BIRTHDAYS</p>
+                  <p class="font-bold font-bold text-lg md-text-xl text-color-primary">DOCUMENT LIBRARY</p>
                 </div>
               </div>
 
               <div class="w-100 float-start mt-3">
                 <div class="panel-card px-2 py-4">
-                  <div class="w-100 d-flex flex-column float-start px-2" id="IdBirthdayList">
+                  <div class="w-100 d-flex flex-column float-start px-2" id="IdDocLibraryList">
                     ${content}
                   </div>
                 </div>
@@ -60,43 +58,26 @@ export default class wpBirthdayListing {
 
   // No records
   public static noRecordHtml: string = `
-    <div class="w-100 minWidthclass">
+    <div class="w-100">
       <p class="text-color-desc text-sm">No records found</p>
     </div>`;
 
-  // Single birthday row (same markup as home page birthday item)
-  public static cardHtml(data: IBirthdayCardView): string {
-    return `
-      <div class="birthday-item">
+  // Document icon (replaces avatar)
+  private static iconHtml: string = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="var(--color-secondary)" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+      <path d="M4.5 12.5A.5.5 0 0 1 5 12h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0-2A.5.5 0 0 1 5 10h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0-2A.5.5 0 0 1 5 8h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"/>
+    </svg>`;
 
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          fill="currentColor"
-          class="bi bi-stars birthday-deco"
-          viewBox="0 0 16 16"
-        >
-          <path
-            d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a.145.145 0 0 1 0-.274l-.774.258c-.346.115-.617.386-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"
-          />
-        </svg>
+  // Single document library row
+  public static rowHtml(data: IDocLibraryRowView): string {
+    const innerHtml: string = `
+      ${wpDocLibraryListing.iconHtml}
+      <p class="birthday-name">${data.title}</p>`;
 
-        <img
-          src="${data.imageUrl}"
-          class="birthday-avatar"
-          alt="${data.title}"
-        >
-
-        <p class="birthday-name">
-          ${data.title}
-        </p>
-
-        <div class="birthday-date d-flex">
-          <span>${data.month}</span>
-          <span>${data.day}</span>
-        </div>
-
-      </div>`;
+    // Clickable row only when a link exists
+    return data.link
+      ? `<a href="${data.link}" class="birthday-item text-decoration-none" target="_self" data-interception="off">${innerHtml}</a>`
+      : `<div class="birthday-item">${innerHtml}</div>`;
   }
 }

@@ -110,6 +110,7 @@ interface INewsItem {
 export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
   private newsCentreItems: INewsItem[] = [];
+  private newsCentreCategories: string[] = [];
 
   // Organizational Events (SharePoint) and My Events (Outlook)
   private events: IEventItem[] = [];
@@ -159,6 +160,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     new Swiper(".banner-swiper", {
       pagination: { el: ".swiper-pagination", clickable: true },
       navigation: { nextEl: ".banner-slide-next", prevEl: ".banner-slide-prev" },
+      speed: 1000,autoplay: {delay: 3000,disableOnInteraction: false}
     });
   }
 
@@ -341,7 +343,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     // 2. Static links
     const birthdayViewAll = this.domElement.querySelector('.birthday-view-all') as HTMLAnchorElement;
     if (birthdayViewAll) {
-      birthdayViewAll.href = `${baseUrl}/SitePages/Upcoming-Birthdys.aspx`;
+      birthdayViewAll.href = `${baseUrl}/SitePages/Upcoming-Birthdys.aspx?env=WebViewList`;
     }
 
     const birthdayArrow = this.domElement.querySelector('.birthday-view-all-arrow') as HTMLImageElement;
@@ -422,7 +424,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     }
 
     if (viewAllLink) {
-      viewAllLink.href = `${baseUrl}/SitePages/News-List.aspx`;
+      viewAllLink.href = `${baseUrl}/SitePages/News-List.aspx?env=WebViewList`;
     } else {
       console.warn('News View All link not found.');
     }
@@ -442,16 +444,27 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   private async _renderNewsAsync(apiUrl: string): Promise<void> {
     try {
-      const data: INewsItem[] = await this._getNewsData(apiUrl);
+      const [data, choices] = await Promise.all([
+        this._getNewsData(apiUrl),
+        this._getNewsCategories()
+      ]);
 
-      // Store the data (required later for tab filtering)
       this.newsCentreItems = data;
 
-      this.newsCentreRenderCategory('All');
-      this.newsCentreRenderCategory('Announcements');
-      this.newsCentreRenderCategory('Events');
-      this.newsCentreRenderCategory('News');
-      this.newsCentreRenderCategory('Circulars');
+      // Fallback: if the choices call failed, build categories from the items
+      let categories: string[] = choices;
+      if (!categories.length) {
+        categories = data
+          .map((item) => (item.Category || '').trim())
+          .filter((c, i, arr) => c !== '' && arr.indexOf(c) === i);
+      }
+      this.newsCentreCategories = categories;
+
+      this.newsCentreBuildTabsAndPanels();
+
+      ['All'].concat(this.newsCentreCategories).forEach((name) => {
+        this.newsCentreRenderCategory(name);
+      });
     } catch (error) {
       console.error('Error rendering News:', error);
     }
@@ -460,22 +473,12 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
   private newsCentreRenderCategory(category: string): void {
 
     // 1. Determine the panel
-    let panel: HTMLElement | null = null;
+    const tab = Array.prototype.slice
+      .call(this.domElement.querySelectorAll('#news-tabs .tab-title-pill'))
+      .filter((t: Element) => t.getAttribute('data-news-category') === category)[0] as Element | undefined;
 
-    if (category === 'All') {
-      panel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
-    } else if (category === 'Announcements') {
-      panel = this.domElement.querySelector('#news-panel-announcements') as HTMLElement | null;
-    } else if (category === 'Events') {
-      panel = this.domElement.querySelector('#news-panel-events') as HTMLElement | null;
-    } else if (category === 'News') {
-      panel = this.domElement.querySelector('#news-panel-news') as HTMLElement | null;
-    } else if (category === 'Circulars') {
-      panel = this.domElement.querySelector('#news-panel-circulars') as HTMLElement | null;
-    } else {
-      console.error(`Unknown News category: ${category}`);
-      return;
-    }
+    const panelId = tab ? tab.getAttribute('data-tab-news-id') : null;
+    const panel = panelId ? this.domElement.querySelector(`#${panelId}`) as HTMLElement | null : null;
 
     // 2. Check whether panel exists
     if (!panel) {
@@ -504,7 +507,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     items.forEach((item) => {
       const createddate = this.newsCentreFormatDate(item.PublishedDate);
-      const detailsUrl = `${this.context.pageContext.web.absoluteUrl}/Lists/News/DispForm.aspx?ID=${item.Id}`;
+      const detailsUrl = `${this.context.pageContext.web.absoluteUrl}/SitePages/NewsDetails.aspx?NewsDetailID=${item.Id}&env=WebViewList`;
 
       let singleElementHtml = NewsCentre.singleElementHtml;
       singleElementHtml = singleElementHtml.replace(/__KEY_URL_IMGICON__/g, newsIconImg);
@@ -525,6 +528,56 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     // 7. Insert HTML
     container.innerHTML = allElementsHtml;
+  }
+
+
+    private async _getNewsCategories(): Promise<string[]> {
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
+    const url = `${baseUrl}/_api/web/lists/getbytitle('News')/fields/getbyinternalnameortitle('Category')?$select=Choices`;
+
+    try {
+      const response: SPHttpClientResponse = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
+
+      if (!response.ok) {
+        throw new Error(`News categories failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.Choices || [];
+    } catch (error) {
+      console.error('Error loading News categories:', error);
+      return [];
+    }
+  }
+
+  private newsCentreBuildTabsAndPanels(): void {
+    const list = this.domElement.querySelector('#news-tabs .news-tabs-list');
+    if (!list) {
+      console.warn('News tabs list not found.');
+      return;
+    }
+
+    const names: string[] = ['All'].concat(this.newsCentreCategories);
+    let tabsHtml = '';
+    let panelsHtml = '';
+
+    names.forEach((name, index) => {
+      const panelId = `news-panel-${index}`;
+      const safeName = this.newsCentreEscapeHtml(name);
+
+      tabsHtml += NewsCentre.tabItemHtml
+        .replace(/__KEY_PANEL_ID__/g, panelId)
+        .replace(/__KEY_CATEGORY__/g, safeName)
+        .replace(/__KEY_LABEL__/g, safeName)
+        .replace(/__KEY_ACTIVE__/g, index === 0 ? 'tab-title-pill-active' : '');
+
+      panelsHtml += NewsCentre.panelHtml
+        .replace(/__KEY_PANEL_ID__/g, panelId)
+        .replace(/__KEY_PANEL_STYLE__/g, index === 0 ? 'style="display: block;"' : '');
+    });
+
+    list.innerHTML = tabsHtml;
+    list.insertAdjacentHTML('afterend', panelsHtml);
   }
 
   private async _getNewsData(apiUrl: string): Promise<INewsItem[]> {
@@ -548,7 +601,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     return `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
   }
 
-  private newsCentreAttachTabEvents(): void {
+    private newsCentreAttachTabEvents(): void {
     const tabs = this.domElement.querySelectorAll('#news-tabs .tab-title-pill');
     const panels = this.domElement.querySelectorAll('#news-tabs .news-panel-tab-view');
 
@@ -577,39 +630,20 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
           return;
         }
 
-        let category = '';
-        if (targetId === 'news-panel-all') {
-          category = 'All';
-        } else if (targetId === 'news-panel-announcements') {
-          category = 'Announcements';
-        } else if (targetId === 'news-panel-events') {
-          category = 'Events';
-        } else if (targetId === 'news-panel-news') {
-          category = 'News';
-        } else if (targetId === 'news-panel-circulars') {
-          category = 'Circulars';
-        }
-
+        const category = tab.getAttribute('data-news-category') || '';
         if (category) {
           this.newsCentreRenderCategory(category);
         }
       });
     });
 
-    // Default tab state: All tab active
+    // Default state: first tab (All) active, only its panel visible
     tabs.forEach((tab) => { tab.classList.remove('tab-title-pill-active'); });
+    tabs[0].classList.add('tab-title-pill-active');
 
-    const defaultTab = this.domElement.querySelector('[data-tab-news-id="news-panel-all"]') as HTMLElement | null;
-    if (defaultTab) {
-      defaultTab.classList.add('tab-title-pill-active');
-    }
-
-    // Default panel state: show All panel only
     panels.forEach((panel) => { (panel as HTMLElement).style.display = 'none'; });
-
-    const allPanel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
-    if (allPanel) {
-      allPanel.style.display = 'block';
+    if (panels[0]) {
+      (panels[0] as HTMLElement).style.display = 'block';
     }
   }
 
@@ -789,7 +823,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     const baseUrl = this.context.pageContext.web.absoluteUrl;
     const rightArrow = `${baseUrl}/SiteAssets/resources/images/icons/right-arrow.png`;
     const arrowRightShort = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
-    const UpcomingListingPage=`${this.context.pageContext.web.absoluteUrl}/SitePages/Upcoming-Events.aspx`;
+    const UpcomingListingPage=`${this.context.pageContext.web.absoluteUrl}/SitePages/Upcoming-Events.aspx?env=WebViewList`;
 
     const myEvents = this.getMyEvents();
     const organizationalEvents = this.getOrganizationalEvents();
@@ -834,9 +868,9 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       let arrowHtml = '';
       if (isMyEvent) {
         const teamsUrl = event.TeamsUrl || 'https://teams.microsoft.com/';
-        arrowHtml = `<a href="${escape(teamsUrl)}" target="_blank" data-interception="off" rel="noopener noreferrer"><img src="${rightArrow}" /></a>`;
+        arrowHtml = `<a href="${escape(teamsUrl)}" target="_self" data-interception="off" rel="noopener noreferrer"><img src="${rightArrow}" /></a>`;
       } else if (event.Link) {
-        arrowHtml = `<a href="${escape(event.Link)}" target="_blank" data-interception="off" rel="noopener noreferrer"><img src="${rightArrow}" /></a>`;
+        arrowHtml = `<a href="${escape(event.Link)}" target="_self" data-interception="off" rel="noopener noreferrer"><img src="${rightArrow}" /></a>`;
       }
 
       html = html.replace('__KEY_EVENT_ARROW__', arrowHtml);
@@ -1178,7 +1212,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     }
 
     // Set default URL
-    viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx`;
+    viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx?env=WebViewList`;
 
     // Change URL when tab changes
     const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
@@ -1187,9 +1221,9 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
         const selectedTab = tab.getAttribute('data-tab-ao');
 
         if (selectedTab === 'announcement') {
-          viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx`;
+          viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx?env=WebViewList`;
         } else if (selectedTab === 'offers') {
-          viewAllLink.href = `${baseUrl}/SitePages/Offer-List.aspx`;
+          viewAllLink.href = `${baseUrl}/SitePages/Offer-List.aspx?env=WebViewList`;
         }
       });
     });
@@ -1217,11 +1251,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
         // }
 
         const createddate = this.formatDates(item.Created);
-
+        const description=this._getPlainText(item.ShortDescription);
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         allElementsHtml += singleElementHtml;
@@ -1246,11 +1280,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
       data.forEach((item) => {
         const createddate = this.formatDates(item.Created);
-
+        const description=this._getPlainText(item.Description);
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         allElementsHtml += singleElementHtml;
@@ -1886,7 +1920,16 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
     this.setupSocialMediaTutorialLinkObserver();
   }
-
+    private _getPlainText(html: string): string {
+    if (!html) {
+      return "";
+    }
+    const doc: Document = new DOMParser().parseFromString(html, "text/html");
+    return (doc.body.textContent || "")
+      .replace(/\u200B/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
   // ==================== INITIALIZE WEB PART ====================
 
   protected async onInit(): Promise<void> {

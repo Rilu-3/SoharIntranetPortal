@@ -6,7 +6,7 @@ export default class QuickLinks {
 
   public static singleElementHtml: string = `
     <a href="__KEY_URL_LINK__"
-       target="_blank" data-interception="off"
+       target="_self" data-interception="off"
       class="quick-link-box"
       __KEY_DATA_FAVOURITE__>
 
@@ -50,7 +50,7 @@ export default class QuickLinks {
           <button
             type="button"
             class="btn-appearance-none btn-add-favourite"
-            title="Add to Favourites"
+            title="Submit"
             data-bs-toggle="modal"
             data-bs-target="#addFavouriteModal">
 

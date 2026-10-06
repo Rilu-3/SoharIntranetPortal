@@ -154,7 +154,7 @@ export default class WpNewsListingWebPart extends BaseClientSideWebPart<IWpNewsL
         title: escape(item.Title || ""),
         description: escape(this._getPlainText(item.ShortDescription || "")),
         imageUrl: this._getImageUrl(item, "News") || defaultImageUrl,
-        detailsUrl: `${webUrl}/SitePages/NewsDetails.aspx?NewsDetailID=${item.Id}`
+        detailsUrl: `${webUrl}/SitePages/NewsDetails.aspx?NewsDetailID=${item.Id}&env=WebViewList`
       };
       html += wpNewsListing.cardHtml(view);
     }

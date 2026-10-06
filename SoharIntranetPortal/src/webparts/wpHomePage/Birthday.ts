@@ -16,7 +16,7 @@ export default class Birthday {
           </h2>
 
         <a
-          href="#" target="_blank" data-interception="off"
+          href="#" target="_self" data-interception="off"
           class="link-arrow text-color-link birthday-view-all"
         >
           <span class="text-sm xxl-text-base font-bold">
