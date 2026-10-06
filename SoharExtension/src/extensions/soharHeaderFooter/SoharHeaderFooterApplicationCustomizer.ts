@@ -119,21 +119,16 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
   }
 
   private async _loadScripts(): Promise<void> {
-    // jQuery -> jQuery UI must be sequential; Bootstrap and Swiper are independent
-    const jQueryChain = async (): Promise<void> => {
-      await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-3.6.0.js`);
+    // Load scripts sequentially: jQuery -> jQuery UI -> Bootstrap -> Swiper
+    await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-3.6.0.js`);
 
-      // Save the original jQuery instance
-      (window as any).soharJQuery = (window as any).jQuery;
+    // Save the original jQuery instance
+    (window as any).soharJQuery = (window as any).jQuery;
 
-      await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-ui.js`);
-    };
-
-    await Promise.all([
-      jQueryChain(),
-      this._loadBootstrap(),
-      SPComponentLoader.loadScript(`${RESOURCES_URL}/js/swiper-bundle.min.js`)
-    ]);
+    await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-ui.js`);
+    await this._loadBootstrap();
+    await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/swiper-bundle.min.js`);
+    // await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery.marquee.min.js`);
   }
 
   private async _loadBootstrap(): Promise<void> {
