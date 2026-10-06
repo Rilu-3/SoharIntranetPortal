@@ -120,7 +120,6 @@ interface INewsItem {
 export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
   private newsCentreItems: INewsItem[] = [];
-  private newsCentreCategories: string[] = [];
 
   // Organizational Events (SharePoint) and My Events (Outlook)
   private events: IEventItem[] = [];
@@ -453,27 +452,16 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   private async _renderNewsAsync(apiUrl: string): Promise<void> {
     try {
-      const [data, choices] = await Promise.all([
-        this._getNewsData(apiUrl),
-        this._getNewsCategories()
-      ]);
+      const data: INewsItem[] = await this._getNewsData(apiUrl);
 
+      // Store the data (required later for tab filtering)
       this.newsCentreItems = data;
 
-      // Fallback: if the choices call failed, build categories from the items
-      let categories: string[] = choices;
-      if (!categories.length) {
-        categories = data
-          .map((item) => (item.Category || '').trim())
-          .filter((c, i, arr) => c !== '' && arr.indexOf(c) === i);
-      }
-      this.newsCentreCategories = categories;
-
-      this.newsCentreBuildTabsAndPanels();
-
-      ['All'].concat(this.newsCentreCategories).forEach((name) => {
-        this.newsCentreRenderCategory(name);
-      });
+      this.newsCentreRenderCategory('All');
+      this.newsCentreRenderCategory('Announcements');
+      this.newsCentreRenderCategory('Events');
+      this.newsCentreRenderCategory('News');
+      this.newsCentreRenderCategory('Circulars');
     } catch (error) {
       console.error('Error rendering News:', error);
     }
@@ -482,12 +470,22 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
   private newsCentreRenderCategory(category: string): void {
 
     // 1. Determine the panel
-    const tab = Array.prototype.slice
-      .call(this.domElement.querySelectorAll('#news-tabs .tab-title-pill'))
-      .filter((t: Element) => t.getAttribute('data-news-category') === category)[0] as Element | undefined;
+    let panel: HTMLElement | null = null;
 
-    const panelId = tab ? tab.getAttribute('data-tab-news-id') : null;
-    const panel = panelId ? this.domElement.querySelector(`#${panelId}`) as HTMLElement | null : null;
+    if (category === 'All') {
+      panel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
+    } else if (category === 'Announcements') {
+      panel = this.domElement.querySelector('#news-panel-announcements') as HTMLElement | null;
+    } else if (category === 'Events') {
+      panel = this.domElement.querySelector('#news-panel-events') as HTMLElement | null;
+    } else if (category === 'News') {
+      panel = this.domElement.querySelector('#news-panel-news') as HTMLElement | null;
+    } else if (category === 'Circulars') {
+      panel = this.domElement.querySelector('#news-panel-circulars') as HTMLElement | null;
+    } else {
+      console.error(`Unknown News category: ${category}`);
+      return;
+    }
 
     // 2. Check whether panel exists
     if (!panel) {
@@ -539,56 +537,6 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     container.innerHTML = allElementsHtml;
   }
 
-
-    private async _getNewsCategories(): Promise<string[]> {
-    const baseUrl = this.context.pageContext.web.absoluteUrl;
-    const url = `${baseUrl}/_api/web/lists/getbytitle('News')/fields/getbyinternalnameortitle('Category')?$select=Choices`;
-
-    try {
-      const response: SPHttpClientResponse = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
-
-      if (!response.ok) {
-        throw new Error(`News categories failed: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.Choices || [];
-    } catch (error) {
-      console.error('Error loading News categories:', error);
-      return [];
-    }
-  }
-
-  private newsCentreBuildTabsAndPanels(): void {
-    const list = this.domElement.querySelector('#news-tabs .news-tabs-list');
-    if (!list) {
-      console.warn('News tabs list not found.');
-      return;
-    }
-
-    const names: string[] = ['All'].concat(this.newsCentreCategories);
-    let tabsHtml = '';
-    let panelsHtml = '';
-
-    names.forEach((name, index) => {
-      const panelId = `news-panel-${index}`;
-      const safeName = this.newsCentreEscapeHtml(name);
-
-      tabsHtml += NewsCentre.tabItemHtml
-        .replace(/__KEY_PANEL_ID__/g, panelId)
-        .replace(/__KEY_CATEGORY__/g, safeName)
-        .replace(/__KEY_LABEL__/g, safeName)
-        .replace(/__KEY_ACTIVE__/g, index === 0 ? 'tab-title-pill-active' : '');
-
-      panelsHtml += NewsCentre.panelHtml
-        .replace(/__KEY_PANEL_ID__/g, panelId)
-        .replace(/__KEY_PANEL_STYLE__/g, index === 0 ? 'style="display: block;"' : '');
-    });
-
-    list.innerHTML = tabsHtml;
-    list.insertAdjacentHTML('afterend', panelsHtml);
-  }
-
   private async _getNewsData(apiUrl: string): Promise<INewsItem[]> {
     try {
       const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
@@ -610,7 +558,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     return `${webUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
   }
 
-    private newsCentreAttachTabEvents(): void {
+  private newsCentreAttachTabEvents(): void {
     const tabs = this.domElement.querySelectorAll('#news-tabs .tab-title-pill');
     const panels = this.domElement.querySelectorAll('#news-tabs .news-panel-tab-view');
 
@@ -639,20 +587,39 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
           return;
         }
 
-        const category = tab.getAttribute('data-news-category') || '';
+        let category = '';
+        if (targetId === 'news-panel-all') {
+          category = 'All';
+        } else if (targetId === 'news-panel-announcements') {
+          category = 'Announcements';
+        } else if (targetId === 'news-panel-events') {
+          category = 'Events';
+        } else if (targetId === 'news-panel-news') {
+          category = 'News';
+        } else if (targetId === 'news-panel-circulars') {
+          category = 'Circulars';
+        }
+
         if (category) {
           this.newsCentreRenderCategory(category);
         }
       });
     });
 
-    // Default state: first tab (All) active, only its panel visible
+    // Default tab state: All tab active
     tabs.forEach((tab) => { tab.classList.remove('tab-title-pill-active'); });
-    tabs[0].classList.add('tab-title-pill-active');
 
+    const defaultTab = this.domElement.querySelector('[data-tab-news-id="news-panel-all"]') as HTMLElement | null;
+    if (defaultTab) {
+      defaultTab.classList.add('tab-title-pill-active');
+    }
+
+    // Default panel state: show All panel only
     panels.forEach((panel) => { (panel as HTMLElement).style.display = 'none'; });
-    if (panels[0]) {
-      (panels[0] as HTMLElement).style.display = 'block';
+
+    const allPanel = this.domElement.querySelector('#news-panel-all') as HTMLElement | null;
+    if (allPanel) {
+      allPanel.style.display = 'block';
     }
   }
 
@@ -749,47 +716,112 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     }
   }
 
-private async loadMyEventDates(year: number, month: number): Promise<void> {
+ private async loadMyEventDates(
+  year: number,
+  month: number
+): Promise<void> {
   try {
-    const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
-    const startDate = new Date(year, month, 1, 0, 0, 0);
-    const endDate = new Date(year, month + 1, 1, 0, 0, 0);
-    const response = await client.api('/me/calendar/calendarView').header('Prefer', 'outlook.timezone="India Standard Time"').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('start,subject').orderby('start/dateTime').get();
+    const client: MSGraphClientV3 =
+      await this.context.msGraphClientFactory
+        .getClient('3');
+
+    const startDate =
+      new Date(
+        year,
+        month,
+        1,
+        0,
+        0,
+        0
+      );
+
+    const endDate =
+      new Date(
+        year,
+        month + 1,
+        1,
+        0,
+        0,
+        0
+      );
+
+    const response =
+      await client
+        .api('/me/calendar/calendarView')
+        .header(
+          'Prefer',
+          'outlook.timezone="India Standard Time"'
+        )
+        .query({
+          startDateTime:
+            startDate.toISOString(),
+          endDateTime:
+            endDate.toISOString()
+        })
+        .select('start,subject')
+        .orderby('start/dateTime')
+        .get();
 
     this.myEventDates = [];
     this.myEventTitles = {};
 
-    (response.value || []).forEach((event: IOutlookEvent) => {
-      if (!event.start?.dateTime) {
-        return;
-      }
+    (response.value || []).forEach(
+      (event: IOutlookEvent) => {
 
-      const dateKey = this.getDateKey(event.start.dateTime);
+        if (!event.start?.dateTime) {
+          return;
+        }
 
-      if (!dateKey) {
-        return;
-      }
+        const dateKey =
+          this.getDateKey(
+            event.start.dateTime
+          );
 
-      if (this.myEventDates.indexOf(dateKey) === -1) {
-        this.myEventDates.push(dateKey);
-      }
+        if (!dateKey) {
+          return;
+        }
 
-      const title = event.subject || '';
+        if (
+          this.myEventDates.indexOf(
+            dateKey
+          ) === -1
+        ) {
+          this.myEventDates.push(
+            dateKey
+          );
+        }
 
-      if (title) {
-        if (this.myEventTitles[dateKey]) {
-          this.myEventTitles[dateKey] += `, ${title}`;
-        } else {
-          this.myEventTitles[dateKey] = title;
+        const title =
+          event.subject || '';
+
+        if (title) {
+          if (
+            this.myEventTitles[
+              dateKey
+            ]
+          ) {
+            this.myEventTitles[
+              dateKey
+            ] += `, ${title}`;
+          } else {
+            this.myEventTitles[
+              dateKey
+            ] = title;
+          }
         }
       }
-    });
+    );
   } catch (error) {
-    console.error('Error loading Outlook event dates:', error);
+    console.error(
+      'Error loading Outlook event dates:',
+      error
+    );
+
     this.myEventDates = [];
     this.myEventTitles = {};
   }
 }
+
   private getDateKey(dateValue: string): string {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
@@ -800,18 +832,105 @@ private async loadMyEventDates(year: number, month: number): Promise<void> {
 
   // ==================== LOAD MY EVENTS ====================
 
-private async loadMyEvents(year: number, month: number, day: number): Promise<void> {
+private async loadMyEvents(
+  year: number,
+  month: number,
+  day: number
+): Promise<void> {
   try {
-    const client: MSGraphClientV3 = await this.context.msGraphClientFactory.getClient('3');
-    const startDate = new Date(year, month, day, 0, 0, 0);
-    const endDate = new Date(year, month, day + 1, 0, 0, 0);
-    const response = await client.api('/me/calendar/calendarView').header('Prefer', 'outlook.timezone="India Standard Time"').query({ startDateTime: startDate.toISOString(), endDateTime: endDate.toISOString() }).select('id,subject,start,end,location,onlineMeeting').orderby('start/dateTime').get();
+    const client: MSGraphClientV3 =
+      await this.context.msGraphClientFactory
+        .getClient('3');
 
-    this.myEvents = (response.value || []).map((event: IOutlookEvent, index: number): IEventItem => {
-      return { Id: index + 1, Title: event.subject || '', EventDate: event.start?.dateTime || '', StartTime: event.start?.dateTime || '', EndTime: event.end?.dateTime || '', Location: event.location?.displayName || '', Status: 'Active', TeamsUrl: event.onlineMeeting?.joinUrl || '' };
-    });
+    const startDate =
+      new Date(
+        year,
+        month,
+        day,
+        0,
+        0,
+        0
+      );
+
+    const endDate =
+      new Date(
+        year,
+        month,
+        day + 1,
+        0,
+        0,
+        0
+      );
+
+    const response =
+      await client
+        .api('/me/calendar/calendarView')
+        .header(
+          'Prefer',
+          'outlook.timezone="India Standard Time"'
+        )
+        .query({
+          startDateTime:
+            startDate.toISOString(),
+          endDateTime:
+            endDate.toISOString()
+        })
+        .select(
+          'id,subject,start,end,location,onlineMeeting'
+        )
+        .orderby(
+          'start/dateTime'
+        )
+        .get();
+
+    this.myEvents =
+      (response.value || []).map(
+        (
+          event: IOutlookEvent,
+          index: number
+        ): IEventItem => {
+
+           console.log('EVENT START:', event.start?.dateTime);
+    console.log('EVENT START TIMEZONE:', event.start?.timeZone);
+    console.log('EVENT END:', event.end?.dateTime);
+    console.log('EVENT END TIMEZONE:', event.end?.timeZone);
+
+
+
+          return {
+            Id:
+              index + 1,
+
+            Title:
+              event.subject || '',
+
+            EventDate:
+              event.start?.dateTime || '',
+
+            StartTime:
+              event.start?.dateTime || '',
+
+            EndTime:
+              event.end?.dateTime || '',
+
+            Location:
+              event.location?.displayName || '',
+
+            Status:
+              'Active',
+
+            TeamsUrl:
+              event.onlineMeeting?.joinUrl || ''
+          };
+        }
+      );
+
   } catch (error) {
-    console.error('Error loading Outlook Calendar events:', error);
+    console.error(
+      'Error loading Outlook Calendar events:',
+      error
+    );
+
     this.myEvents = [];
   }
 }
@@ -917,9 +1036,15 @@ private parseSharePointTime(timeValue: string): string {
         const hours = parseInt(match[1], 10);
         const minutes = parseInt(match[2], 10);
 
-        if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+        if (
+          hours >= 0 &&
+          hours <= 23 &&
+          minutes >= 0 &&
+          minutes <= 59
+        ) {
           const period = hours >= 12 ? 'PM' : 'AM';
-          const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+          const displayHour =
+            hours % 12 === 0 ? 12 : hours % 12;
 
           return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
         }
@@ -927,17 +1052,24 @@ private parseSharePointTime(timeValue: string): string {
     }
   }
 
-  // Handle SharePoint time values
-  // Example: 13:00:00
-  const match = timeValue.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  // Handle SharePoint time values such as 13:00
+  const match = timeValue.match(
+    /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+  );
 
   if (match) {
     const hours = parseInt(match[1], 10);
     const minutes = parseInt(match[2], 10);
 
-    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+    if (
+      hours >= 0 &&
+      hours <= 23 &&
+      minutes >= 0 &&
+      minutes <= 59
+    ) {
       const period = hours >= 12 ? 'PM' : 'AM';
-      const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+      const displayHour =
+        hours % 12 === 0 ? 12 : hours % 12;
 
       return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
     }
@@ -1267,11 +1399,11 @@ private parseSharePointTime(timeValue: string): string {
         // }
 
         const createddate = this.formatDates(item.Created);
-        const description=this._getPlainText(item.ShortDescription);
+
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.ShortDescription)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         allElementsHtml += singleElementHtml;
@@ -1296,11 +1428,11 @@ private parseSharePointTime(timeValue: string): string {
 
       data.forEach((item) => {
         const createddate = this.formatDates(item.Created);
-        const description=this._getPlainText(item.Description);
+
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
+          .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", item.Description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
 
         allElementsHtml += singleElementHtml;
@@ -1936,16 +2068,7 @@ private parseSharePointTime(timeValue: string): string {
 
     this.setupSocialMediaTutorialLinkObserver();
   }
-    private _getPlainText(html: string): string {
-    if (!html) {
-      return "";
-    }
-    const doc: Document = new DOMParser().parseFromString(html, "text/html");
-    return (doc.body.textContent || "")
-      .replace(/\u200B/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+
   // ==================== INITIALIZE WEB PART ====================
 
   protected async onInit(): Promise<void> {
