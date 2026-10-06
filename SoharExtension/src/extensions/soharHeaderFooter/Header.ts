@@ -1,3 +1,4 @@
+
 export default class Header {
 
   constructor(
@@ -144,12 +145,14 @@ export default class Header {
 
                 <!-- Departments -->
 
-                <li class="nav-item has-mega">
+                <li class="nav-item d-lg-flex dropdown">
 
                   <a
-                    class="nav-link d-flex align-items-center gap-2"
+                    class="nav-link dropdown-toggle d-flex align-items-center gap-2"
                     href="#"
-                    aria-haspopup="true"
+                    id="navbarScrollingDropdown"
+                    role="button"
+                    data-bs-toggle="dropdown"
                     aria-expanded="false">
 
                     <img
@@ -160,6 +163,12 @@ export default class Header {
 
                     <span>Departments</span>
 
+                    <img
+                      class="dropdown-arrow-nav"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
+                      alt=""
+                    />
+
                   </a>
 
                   <div
@@ -169,18 +178,17 @@ export default class Header {
                     <input
                       type="text"
                       class="form-control search-dept-dropdown"
-                      placeholder="Search departments...">
+                      placeholder="Search departments..."
+                    >
 
                     <ul class="custom-scroll-view dept-dropdown">
 
                       ${this.departmentItems.map((department: any) => {
 
-                        const link =
-                          department.Link?.Url || '#';
+                        const link = department.Link?.Url || '#';
 
                         return `
                           <li>
-
                             <a
                               class="dropdown-item text-sm"
                               href="${link}"
@@ -190,7 +198,6 @@ export default class Header {
                               <span>${department.Title}</span>
 
                             </a>
-
                           </li>
                         `;
 

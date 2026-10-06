@@ -453,7 +453,7 @@ private _setupDepartmentMegaMenu(): void {
 
   const departmentMenu =
     this._topPlaceholder.domElement.querySelector(
-      '.has-mega'
+      '.dropdown'
     ) as HTMLElement;
 
   if (!departmentMenu) {
@@ -477,51 +477,6 @@ private _setupDepartmentMegaMenu(): void {
     return;
   }
 
-  // Open and close the dropdown
-  departmentLink.addEventListener(
-    'click',
-    (event: Event) => {
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const isOpen =
-        dropdownMenu.classList.contains('show');
-
-      dropdownMenu.classList.toggle(
-        'show',
-        !isOpen
-      );
-
-      departmentLink.setAttribute(
-        'aria-expanded',
-        (!isOpen).toString()
-      );
-    }
-  );
-
-  // Close when clicking outside
-  document.addEventListener(
-    'click',
-    (event: Event) => {
-
-      if (
-        !departmentMenu.contains(
-          event.target as Node
-        )
-      ) {
-
-        dropdownMenu.classList.remove('show');
-
-        departmentLink.setAttribute(
-          'aria-expanded',
-          'false'
-        );
-      }
-    }
-  );
-
-  // Department search
   const searchInput =
     departmentMenu.querySelector(
       '.search-dept-dropdown'
@@ -635,54 +590,48 @@ window.open(
   // GET FOOTER ITEMS FROM SHAREPOINT
   // ============================================================
 
-  private async _getFooterItems(): Promise<any[]> {
+private async _getFooterItems(): Promise<any[]> {
 
-    const siteUrl :
-      string =
-  'https://soharaluminium5.sharepoint.com/sites/DevPortal';
+  const siteUrl: string =
+    'https://soharaluminium5.sharepoint.com/sites/DevPortal';
 
+  const url =
+    `${siteUrl}/_api/web/lists/getbytitle('Footer')/items` +
+    `?$select=Id,ContactDetails,Category,Status,Icon` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=Id asc`;
 
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Footer')/items` +
-      `?$select=Id,ContactDetails,Category,Status,Icon` +
-      `&$orderby=Id asc`;
+  try {
 
-
-    try {
-
-      const response =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              'Accept':
-                'application/json;odata=nometadata'
-            }
+    const response =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            'Accept':
+              'application/json;odata=nometadata'
           }
-        );
+        }
+      );
 
+    if (!response.ok) {
 
-      if (!response.ok) {
-
-        throw new Error(
-          `Failed to load Footer: ${response.status}`
-        );
-      }
-
-
-      const data =
-        await response.json();
-
-
-      return data.value || [];
-
-
-    } catch (error) {
-
-      return [];
+      throw new Error(
+        `Failed to load Footer: ${response.status}`
+      );
     }
+
+    const data =
+      await response.json();
+
+    return data.value || [];
+
+  } catch (error) {
+
+    return [];
   }
+}
 
 
   // ============================================================
