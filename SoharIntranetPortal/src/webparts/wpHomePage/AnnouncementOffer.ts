@@ -8,11 +8,15 @@ export default class AnnouncementOffer {
  
               <div class="d-flex align-items-center flex-wrap gap-2 gap-sm-3">
  
-                <h2 data-tab-ao="announcement" class="panel-title panel-title-tab panel-title-tab-active">Announcements
+               <div data-tab-ao="announcement" class="d-flex align-items-center gap-2 panel-title-tab panel-title-tab-active">
+                    <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/announcements.svg" />
+                    <h2 class="panel-title">Announcements</h2>
+                  </div>
  
-                </h2>
- 
-                <h2 data-tab-ao="offers" class="panel-title panel-title-tab">Offers</h2>
+                <div data-tab-ao="offers" class="d-flex align-items-center gap-2 panel-title-tab">
+                    <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/offers.png" />
+                    <h2 class="panel-title">Offers</h2>
+                  </div>
  
               </div>
  

@@ -64,7 +64,11 @@ export default class NewsCentre {
 
   <div class="panel-card px-2 py-4 d-flex flex-column">
     <div class="panel-header px-2 w-100 float-start mb-4">
-      <h2 class="panel-title">News Centre</h2>
+      <div class="d-flex align-items-center gap-2">
+                <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/newspaper.svg" />
+                <h2 class="panel-title">News Centre</h2>
+              </div>
+              
       <a href="__KEY_URL_VIEW_ALL__"  target="_self" data-interception="off" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
           News</span><img src="__KEY_URL_ARROW__" /></a>
     </div>

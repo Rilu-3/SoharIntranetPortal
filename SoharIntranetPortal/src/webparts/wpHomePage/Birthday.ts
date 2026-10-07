@@ -11,9 +11,10 @@ export default class Birthday {
 
         <div class="panel-header px-2 w-100 float-start mb-4">
 
-          <h2 class="panel-title">
-            Upcoming Birthdays
-          </h2>
+          <div class="d-flex align-items-center gap-2">
+                <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/upcoming-birthday.svg" />
+                <h2 class="panel-title">UPCOMING BIRTHDAY</h2>
+              </div>
 
         <a
           href="#" target="_self" data-interception="off"
