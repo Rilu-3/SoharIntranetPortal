@@ -23,7 +23,7 @@ export default class Header {
             <a
               class="navbar-brand"
               href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-              target="_blank"
+              target="_self"
               data-interception="off">
 
               <img
@@ -129,7 +129,7 @@ export default class Header {
                   <a
                     class="nav-link active-nav-link d-flex align-items-center gap-2"
                     aria-current="page"
-                    href="#">
+                    href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList" target="_self" data-interception="off">
 
                     <img
                       class="nav-menu-icon"
@@ -192,7 +192,7 @@ export default class Header {
                             <a
                               class="dropdown-item text-sm"
                               href="${link}"
-                              target="_blank"
+                              target="_self"
                               data-interception="off">
 
                               <span>${department.Title}</span>

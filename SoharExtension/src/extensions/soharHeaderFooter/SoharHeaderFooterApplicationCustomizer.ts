@@ -125,6 +125,9 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
     // Save the original jQuery instance
     (window as any).soharJQuery = (window as any).jQuery;
 
+      // Create separate jQuery reference for Media Gallery
+  (window as any).mediaJQuery = (window as any).jQuery;
+
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-ui.js`);
     await this._loadBootstrap();
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/swiper-bundle.min.js`);
@@ -299,6 +302,7 @@ private async _getDepartments(): Promise<any[]> {
 
     this._setupSearchFunctionality();
     this._setupDepartmentMegaMenu();
+    this._setActiveNavLink();
   }
 
   private _setupDepartmentMegaMenu(): void {
@@ -421,6 +425,30 @@ private async _getDepartments(): Promise<any[]> {
     return this._topPlaceholder ? this._topPlaceholder.domElement.querySelector('.dropdown') as HTMLElement : null;
   }
 
+    private _setActiveNavLink(): void {
+    if (!this._topPlaceholder) {
+      return;
+    }
+
+    // Only change the active link when the current site is NOT DevPortal
+    const currentWebUrl: string = this.context.pageContext.web.serverRelativeUrl.toLowerCase().replace(/\/$/, '');
+
+    if (currentWebUrl === '/sites/devportal') {
+      return;
+    }
+
+    const homeLink: HTMLElement | null = this._topPlaceholder.domElement.querySelector('.nav-link.active-nav-link');
+    const departmentLink: HTMLElement | null = this._topPlaceholder.domElement.querySelector('#navbarScrollingDropdown');
+
+    if (homeLink) {
+      homeLink.classList.remove('active-nav-link');
+    }
+
+    if (departmentLink) {
+      departmentLink.classList.add('active-nav-link');
+    }
+  }
+
   private _setupSearchFunctionality(): void {
     if (!this._topPlaceholder) {
       return;
@@ -437,7 +465,7 @@ private async _getDepartments(): Promise<any[]> {
       const searchKey: string = inputMainSearchBox.value.trim();
 
       if (searchKey) {
-        window.open(`${SITE_URL}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`, '_blank');
+        window.open(`${this.context.pageContext.web.absoluteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`, '_self');
       }
     };
 
