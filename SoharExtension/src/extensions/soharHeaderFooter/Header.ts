@@ -1,3 +1,4 @@
+
 export default class Header {
 
   constructor(
@@ -5,12 +6,10 @@ export default class Header {
     private userName: string,
     private designation: string,
     private profilePhoto: string,
-    private departmentItems: string[]
+    private departmentItems: any[]
   ) { }
 
   public render(): string {
-
-    const homeUrl: string = `${this.siteUrl}/SitePages/Home.aspx?env=WebViewList`;
 
     return `
       <!-- Widget start here -->
@@ -21,18 +20,20 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
-            <a class="navbar-brand" href="${homeUrl}">
+            <a
+              class="navbar-brand"
+              href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+              target="_self"
+              data-interception="off">
 
               <img
                 class="logo-desktop"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo.png"
-                alt="Sohar Aluminium"
               />
 
               <img
                 class="logo-mob"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo-mob.png"
-                alt="Sohar Aluminium"
               />
 
             </a>
@@ -44,7 +45,6 @@ export default class Header {
                 class="form-control"
                 id="inputGlobalSearchBox"
                 placeholder="Search..."
-                autocomplete="off"
               >
 
               <button
@@ -52,9 +52,7 @@ export default class Header {
                 type="button"
                 aria-label="Search">
 
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                </svg>
+                <i class="bi bi-search"></i>
 
               </button>
 
@@ -71,7 +69,6 @@ export default class Header {
                   <img
                     class="nav-avatar"
                     src="${this.profilePhoto}"
-                    alt=""
                   />
 
                   <div
@@ -125,12 +122,14 @@ export default class Header {
                 class="navbar-nav my-2 my-lg-0 navbar-nav-scroll gap-lg-3"
                 style="--bs-scroll-height: 400px;">
 
+                <!-- Home -->
+
                 <li class="nav-item d-lg-flex">
 
                   <a
                     class="nav-link active-nav-link d-flex align-items-center gap-2"
                     aria-current="page"
-                    href="${homeUrl}">
+                    href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList" target="_self" data-interception="off">
 
                     <img
                       class="nav-menu-icon"
@@ -144,12 +143,16 @@ export default class Header {
 
                 </li>
 
-                <li class="nav-item d-lg-flex has-mega">
+                <!-- Departments -->
+
+                <li class="nav-item d-lg-flex dropdown">
 
                   <a
-                    class="nav-link d-flex align-items-center gap-2"
+                    class="nav-link dropdown-toggle d-flex align-items-center gap-2"
                     href="#"
-                    aria-haspopup="true"
+                    id="navbarScrollingDropdown"
+                    role="button"
+                    data-bs-toggle="dropdown"
                     aria-expanded="false">
 
                     <img
@@ -160,28 +163,47 @@ export default class Header {
 
                     <span>Departments</span>
 
+                    <img
+                      class="dropdown-arrow-nav"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
+                      alt=""
+                    />
+
                   </a>
 
                   <div
-                    class="mega-panel"
-                    role="menu"
-                    aria-label="Department menu">
+                    class="dropdown-menu"
+                    aria-labelledby="navbarScrollingDropdown">
 
-                    <div class="mega-panel-inner">
+                    <input
+                      type="text"
+                      class="form-control search-dept-dropdown"
+                      placeholder="Search departments..."
+                    >
 
-                      <div class="mega-panel-content custom-scroll-view">
+                    <ul class="custom-scroll-view dept-dropdown">
 
-                        ${this.departmentItems.map((items: string) => `
-                          <div>
-                            <ul class="mega-links">
-                              ${items}
-                            </ul>
-                          </div>
-                        `).join('')}
+                      ${this.departmentItems.map((department: any) => {
 
-                      </div>
+                        const link = department.Link?.Url || '#';
 
-                    </div>
+                        return `
+                          <li>
+                            <a
+                              class="dropdown-item text-sm"
+                              href="${link}"
+                              target="_self"
+                              data-interception="off">
+
+                              <span>${department.Title}</span>
+
+                            </a>
+                          </li>
+                        `;
+
+                      }).join('')}
+
+                    </ul>
 
                   </div>
 

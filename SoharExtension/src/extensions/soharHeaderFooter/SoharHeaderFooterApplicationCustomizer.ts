@@ -235,44 +235,45 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
     }
   }
 
-  private async _getDepartments(): Promise<string[]> {
-    const url: string = `${SITE_URL}/_api/web/lists/getbytitle('Departments')/items?$select=Title,Link,Status,SortOrder&$filter=Status eq 'Active'&$orderby=SortOrder asc`;
+private async _getDepartments(): Promise<any[]> {
+  const url: string =
+    `${SITE_URL}/_api/web/lists/getbytitle('Departments')/items` +
+    `?$select=Title,Link,Status,SortOrder` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=SortOrder asc`;
 
-    try {
-      const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load Departments: ${response.status} ${response.statusText}`);
+  try {
+    const response = await this.context.spHttpClient.get(
+      url,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          'Accept': 'application/json;odata=nometadata'
+        }
       }
+    );
 
-      const data = await response.json();
-      const departments: any[] = data.value || [];
-      const departmentItems: string[] = [];
-
-      // Always split departments evenly into a fixed number of columns
-      const columnCount: number = 4;
-      const itemsPerColumn: number = Math.max(1, Math.ceil(departments.length / columnCount));
-
-      for (let i = 0; i < departments.length; i += itemsPerColumn) {
-        const chunk: any[] = departments.slice(i, i + itemsPerColumn);
-
-        departmentItems.push(chunk.map((department: any) => {
-          const title: string = escape(department.Title || '');
-          const link: string = department.Link?.Url ? escape(department.Link.Url) : '';
-
-          // No link -> plain item, no empty new tab
-          return link
-            ? `<li><a href="${link}" target="_blank" data-interception="off"><span>${title}</span></a></li>`
-            : `<li><a href="#" onclick="return false;"><span>${title}</span></a></li>`;
-        }).join(''));
-      }
-
-      return departmentItems;
-    } catch (error) {
-      Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(String(error)));
-      return [];
+    if (!response.ok) {
+      throw new Error(
+        `Failed to load Departments: ${response.status} ${response.statusText}`
+      );
     }
+
+    const data = await response.json();
+
+    return data.value || [];
+
+  } catch (error) {
+    Log.error(
+      LOG_SOURCE,
+      error instanceof Error
+        ? error
+        : new Error(String(error))
+    );
+
+    return [];
   }
+}
 
   // ============================================================
   // RENDER HEADER
@@ -298,30 +299,111 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
 
     this._setupSearchFunctionality();
     this._setupDepartmentMegaMenu();
+    this._setActiveNavLink();
   }
 
   private _setupDepartmentMegaMenu(): void {
-    const departmentMenu: HTMLElement | null = this._getDepartmentMenu();
-    const departmentLink: HTMLElement | null = departmentMenu ? departmentMenu.querySelector('.nav-link') as HTMLElement : null;
 
-    if (!departmentMenu || !departmentLink) {
-      return;
-    }
+  const departmentMenu: HTMLElement | null =
+    this._getDepartmentMenu();
 
-    departmentLink.addEventListener('click', (event: Event) => {
+  const departmentLink: HTMLElement | null =
+    departmentMenu
+      ? departmentMenu.querySelector(
+          '.nav-link'
+        ) as HTMLElement
+      : null;
+
+  const searchInput: HTMLInputElement | null =
+    departmentMenu
+      ? departmentMenu.querySelector(
+          '.search-dept-dropdown'
+        ) as HTMLInputElement
+      : null;
+
+  const departmentItems: NodeListOf<HTMLElement> =
+    departmentMenu
+      ? departmentMenu.querySelectorAll(
+          '.dept-dropdown li'
+        )
+      : ([] as unknown as NodeListOf<HTMLElement>);
+
+  if (
+    !departmentMenu ||
+    !departmentLink
+  ) {
+    return;
+  }
+
+  departmentLink.addEventListener(
+    'click',
+    (event: Event) => {
+
       event.preventDefault();
       event.stopPropagation();
 
-      const isOpen: boolean = departmentMenu.classList.contains('show');
+      const isOpen: boolean =
+        departmentMenu.classList.contains(
+          'show'
+        );
 
-      departmentMenu.classList.toggle('show', !isOpen);
-      departmentLink.setAttribute('aria-expanded', (!isOpen).toString());
-    });
+      departmentMenu.classList.toggle(
+        'show',
+        !isOpen
+      );
 
-    // Register the outside-click listener only once
-    document.removeEventListener('click', this._onDocumentClick);
-    document.addEventListener('click', this._onDocumentClick);
+      departmentLink.setAttribute(
+        'aria-expanded',
+        (!isOpen).toString()
+      );
+    }
+  );
+
+  // Department search/filter
+  if (searchInput) {
+
+    searchInput.addEventListener(
+      'input',
+      () => {
+
+        const searchValue: string =
+          searchInput.value
+            .trim()
+            .toLowerCase();
+
+        departmentItems.forEach(
+          (item: HTMLElement) => {
+
+            const departmentName: string =
+              item.textContent
+                ? item.textContent
+                    .trim()
+                    .toLowerCase()
+                : '';
+
+            item.style.display =
+              departmentName.indexOf(
+                searchValue
+              ) !== -1
+                ? ''
+                : 'none';
+          }
+        );
+      }
+    );
   }
+
+  // Register the outside-click listener only once
+  document.removeEventListener(
+    'click',
+    this._onDocumentClick
+  );
+
+  document.addEventListener(
+    'click',
+    this._onDocumentClick
+  );
+}
 
   private _onDocumentClick = (event: Event): void => {
     const departmentMenu: HTMLElement | null = this._getDepartmentMenu();
@@ -337,7 +419,31 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
   };
 
   private _getDepartmentMenu(): HTMLElement | null {
-    return this._topPlaceholder ? this._topPlaceholder.domElement.querySelector('.has-mega') as HTMLElement : null;
+    return this._topPlaceholder ? this._topPlaceholder.domElement.querySelector('.dropdown') as HTMLElement : null;
+  }
+
+    private _setActiveNavLink(): void {
+    if (!this._topPlaceholder) {
+      return;
+    }
+
+    // Only change the active link when the current site is NOT DevPortal
+    const currentWebUrl: string = this.context.pageContext.web.serverRelativeUrl.toLowerCase().replace(/\/$/, '');
+
+    if (currentWebUrl === '/sites/devportal') {
+      return;
+    }
+
+    const homeLink: HTMLElement | null = this._topPlaceholder.domElement.querySelector('.nav-link.active-nav-link');
+    const departmentLink: HTMLElement | null = this._topPlaceholder.domElement.querySelector('#navbarScrollingDropdown');
+
+    if (homeLink) {
+      homeLink.classList.remove('active-nav-link');
+    }
+
+    if (departmentLink) {
+      departmentLink.classList.add('active-nav-link');
+    }
   }
 
   private _setupSearchFunctionality(): void {
@@ -356,7 +462,7 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
       const searchKey: string = inputMainSearchBox.value.trim();
 
       if (searchKey) {
-        window.open(`${SITE_URL}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`, '_blank');
+        window.open(`${this.context.pageContext.web.absoluteUrl}/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(searchKey)}`, '_self');
       }
     };
 
