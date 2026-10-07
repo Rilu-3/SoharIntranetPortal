@@ -660,37 +660,24 @@ private async createFavourite(
   // Show / Hide Favourites Tab
   // =========================================================
 
-  private updateFavouriteTabVisibility(
-    domElement: HTMLElement,
-    favouriteIds: number[]
-  ): void {
-
-    const favouriteTab =
-      domElement.querySelector(
-        '[data-filter-ql="favourites"]'
-      ) as HTMLElement;
-
-
-    if (!favouriteTab) {
-
-      return;
-
-    }
-
-
-    if (favouriteIds.length === 0) {
-
-      favouriteTab.style.display =
-        'none';
-
-    } else {
-
-      favouriteTab.style.display =
-        '';
-
-    }
-
+private updateFavouriteTabVisibility(
+  domElement: HTMLElement,
+  favouriteIds: number[]
+): void {
+ 
+  const favouriteTab = domElement.querySelector(
+    '[data-filter-ql="favourites"]'
+  ) as HTMLElement;
+ 
+  if (!favouriteTab) {
+    return;
   }
+ 
+  const hasFavourites = favouriteIds.length > 0;
+ 
+  favouriteTab.classList.toggle('d-flex', hasFavourites);
+  favouriteTab.classList.toggle('d-none', !hasFavourites);
+}
 
 
   // =========================================================
