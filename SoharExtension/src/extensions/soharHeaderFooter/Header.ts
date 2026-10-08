@@ -157,11 +157,11 @@ export default class Header {
 
                     <img
                       class="nav-menu-icon"
-                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/folder.png"
                       alt=""
                     />
 
-                    <span>Departments</span>
+                    <span>Document Centre</span>
 
                     <img
                       class="dropdown-arrow-nav"
@@ -178,7 +178,7 @@ export default class Header {
                     <input
                       type="text"
                       class="form-control search-dept-dropdown"
-                      placeholder="Search departments..."
+                      placeholder="Search ..."
                     >
 
                     <ul class="custom-scroll-view dept-dropdown">

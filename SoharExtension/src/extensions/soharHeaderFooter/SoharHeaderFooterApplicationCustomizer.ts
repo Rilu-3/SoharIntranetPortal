@@ -148,6 +148,22 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
     }
   }
 
+  // private async _loadPageScripts(): Promise<void> {
+  //   // 1. home.js loads first
+  //   try {
+  //     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/home.js`);
+  //   } catch (error) {
+  //     Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(`Failed to load home.js: ${String(error)}`));
+  //   }
+
+  //   // 2. common.js loads after; a failure here does not affect home.js
+  //   try {
+  //     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/common.js`);
+  //   } catch (error) {
+  //     Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(`Failed to load common.js: ${String(error)}`));
+  //   }
+  // }
+
   private async _loadPageScripts(): Promise<void> {
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/common.js`);
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/home.js`);
