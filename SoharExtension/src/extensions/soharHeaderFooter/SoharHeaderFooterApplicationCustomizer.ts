@@ -25,7 +25,8 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
 
   // Cached data so header/footer can be restored after page navigation
   private _designation: string = '';
-  private _departmentItems: string[] = [];
+private _departmentItems: any[] = [];
+  private _controlledDocumentItems: any[] = [];
   private _footerHtml: string = '';
   private _isInitialised: boolean = false;
 
@@ -64,29 +65,39 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
   // INITIALISATION (parallel loading, correct render order)
   // ============================================================
 
-  private async _initialise(): Promise<void> {
-    // Start all independent work in parallel
-    const scriptsPromise: Promise<void> = this._loadScripts();
-    const headerDataPromise: Promise<[string, string[]]> = Promise.all([this._getUserDesignation(), this._getDepartments()]);
-    const footerItemsPromise: Promise<any[]> = this._getFooterItems();
 
-    // Header: render as soon as its data is ready
-    const [designation, departmentItems] = await headerDataPromise;
-    this._designation = designation;
-    this._departmentItems = departmentItems;
-    this._renderHeader();
+private async _initialise(): Promise<void> {
+  // Start all independent work in parallel
+  const scriptsPromise: Promise<void> = this._loadScripts();
 
-    // Footer: render once data and the footer target are ready
-    this._footerHtml = this._buildFooterHtml(await footerItemsPromise);
-    await this._waitForElement(this._getFooterTargetSelector());
-    this._renderFooter();
+  const headerDataPromise: Promise<[string, any[], any[]]> = Promise.all([
+    this._getUserDesignation(),
+    this._getDepartments(),
+    this._getControlledDocuments()
+  ]);
 
-    // Page scripts run after header/footer HTML exists
-    await scriptsPromise;
-    await this._loadPageScripts();
+  const footerItemsPromise: Promise<any[]> = this._getFooterItems();
 
-    this._isInitialised = true;
-  }
+  // Render the header as soon as its data is ready
+  const [designation, departmentItems, controlledDocumentItems] = await headerDataPromise;
+
+  this._designation = designation;
+  this._departmentItems = departmentItems;
+  this._controlledDocumentItems = controlledDocumentItems;
+
+  this._renderHeader();
+
+  // Render the footer once its data and target are ready
+  this._footerHtml = this._buildFooterHtml(await footerItemsPromise);
+  await this._waitForElement(this._getFooterTargetSelector());
+  this._renderFooter();
+
+  // Load page scripts after the header and footer HTML exist
+  await scriptsPromise;
+  await this._loadPageScripts();
+
+  this._isInitialised = true;
+}
 
   private _onNavigated(): void {
     if (!this._isInitialised) {
@@ -114,6 +125,7 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/swiper-bundle.min.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/font-size.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/custom.css`);
+        SPComponentLoader.loadCss(`${RESOURCES_URL}/css/customnew.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/sp-custom.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/home.css`);
   }
@@ -124,9 +136,6 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
 
     // Save the original jQuery instance
     (window as any).soharJQuery = (window as any).jQuery;
-
-      // Create separate jQuery reference for Media Gallery
-  (window as any).mediaJQuery = (window as any).jQuery;
 
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-ui.js`);
     await this._loadBootstrap();
@@ -150,6 +159,22 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
       }
     }
   }
+
+  // private async _loadPageScripts(): Promise<void> {
+  //   // 1. home.js loads first
+  //   try {
+  //     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/home.js`);
+  //   } catch (error) {
+  //     Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(`Failed to load home.js: ${String(error)}`));
+  //   }
+
+  //   // 2. common.js loads after; a failure here does not affect home.js
+  //   try {
+  //     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/common.js`);
+  //   } catch (error) {
+  //     Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(`Failed to load common.js: ${String(error)}`));
+  //   }
+  // }
 
   private async _loadPageScripts(): Promise<void> {
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/common.js`);
@@ -277,7 +302,48 @@ private async _getDepartments(): Promise<any[]> {
     return [];
   }
 }
+private async _getControlledDocuments(): Promise<any[]> {
 
+  const url: string =
+    `${SITE_URL}/_api/web/lists/getbytitle('Controlled Documents')/items` +
+    `?$select=Id,Title,Link,Status,SortOrder` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=SortOrder asc`;
+
+  try {
+
+    const response = await this.context.spHttpClient.get(
+      url,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          'Accept': 'application/json;odata=nometadata'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to load Controlled Documents: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+
+    return data.value || [];
+
+  } catch (error) {
+
+    Log.error(
+      LOG_SOURCE,
+      error instanceof Error
+        ? error
+        : new Error(String(error))
+    );
+
+    return [];
+  }
+}
   // ============================================================
   // RENDER HEADER
   // ============================================================
@@ -296,7 +362,7 @@ private async _getDepartments(): Promise<any[]> {
     const userEmail: string = this.context.pageContext.user.email || '';
     const profilePhoto: string = `${SITE_URL}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
-    const header: Header = new Header(SITE_URL, userName, escape(this._designation), profilePhoto, this._departmentItems);
+    const header: Header = new Header(SITE_URL, userName, escape(this._designation), profilePhoto, this._departmentItems,this._controlledDocumentItems);
 
     this._topPlaceholder.domElement.innerHTML = header.render();
 
@@ -305,107 +371,79 @@ private async _getDepartments(): Promise<any[]> {
     this._setActiveNavLink();
   }
 
-  private _setupDepartmentMegaMenu(): void {
-
-  const departmentMenu: HTMLElement | null =
-    this._getDepartmentMenu();
-
-  const departmentLink: HTMLElement | null =
-    departmentMenu
-      ? departmentMenu.querySelector(
-          '.nav-link'
-        ) as HTMLElement
-      : null;
-
-  const searchInput: HTMLInputElement | null =
-    departmentMenu
-      ? departmentMenu.querySelector(
-          '.search-dept-dropdown'
-        ) as HTMLInputElement
-      : null;
-
-  const departmentItems: NodeListOf<HTMLElement> =
-    departmentMenu
-      ? departmentMenu.querySelectorAll(
-          '.dept-dropdown li'
-        )
-      : ([] as unknown as NodeListOf<HTMLElement>);
-
-  if (
-    !departmentMenu ||
-    !departmentLink
-  ) {
+private _setupDepartmentMegaMenu(): void {
+  if (!this._topPlaceholder) {
     return;
   }
 
-  departmentLink.addEventListener(
-    'click',
-    (event: Event) => {
+  const headerElement: HTMLElement = this._topPlaceholder.domElement;
 
-      event.preventDefault();
-      event.stopPropagation();
+  // Handle department submenu click
+  headerElement.addEventListener('click', (event: MouseEvent): void => {
+    const target = event.target as HTMLElement;
+    const toggle = target.closest('.dept-submenu-toggle') as HTMLElement | null;
 
-      const isOpen: boolean =
-        departmentMenu.classList.contains(
-          'show'
-        );
-
-      departmentMenu.classList.toggle(
-        'show',
-        !isOpen
-      );
-
-      departmentLink.setAttribute(
-        'aria-expanded',
-        (!isOpen).toString()
-      );
+    if (!toggle) {
+      return;
     }
-  );
 
-  // Department search/filter
-  if (searchInput) {
+    event.preventDefault();
+    event.stopPropagation();
 
-    searchInput.addEventListener(
-      'input',
-      () => {
+    const menu = toggle.closest('.dept-dropdown') as HTMLElement | null;
+    const item = toggle.closest('.dept-submenu') as HTMLElement | null;
 
-        const searchValue: string =
-          searchInput.value
-            .trim()
-            .toLowerCase();
+    if (!menu || !item) {
+      return;
+    }
 
-        departmentItems.forEach(
-          (item: HTMLElement) => {
+    const isOpen: boolean = item.classList.contains('open');
+    const openItems = menu.querySelectorAll('.dept-submenu.open');
 
-            const departmentName: string =
-              item.textContent
-                ? item.textContent
-                    .trim()
-                    .toLowerCase()
-                : '';
+    for (let i = 0; i < openItems.length; i++) {
+      const openItem = openItems[i] as HTMLElement;
+      openItem.classList.remove('open');
 
-            item.style.display =
-              departmentName.indexOf(
-                searchValue
-              ) !== -1
-                ? ''
-                : 'none';
-          }
-        );
+      const openToggle = openItem.querySelector('.dept-submenu-toggle') as HTMLElement | null;
+
+      if (openToggle) {
+        openToggle.setAttribute('aria-expanded', 'false');
       }
-    );
-  }
+    }
 
-  // Register the outside-click listener only once
-  document.removeEventListener(
-    'click',
-    this._onDocumentClick
-  );
+    if (!isOpen) {
+      item.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+  });
 
-  document.addEventListener(
-    'click',
-    this._onDocumentClick
-  );
+  // Handle department and controlled document search
+  headerElement.addEventListener('input', (event: Event): void => {
+    const target = event.target as HTMLInputElement;
+
+    if (!target.classList.contains('search-dept-dropdown')) {
+      return;
+    }
+
+    const searchText: string = target.value.trim().toLowerCase();
+    const submenu = target.closest('.dept-submenu-list') as HTMLElement | null;
+
+    if (!submenu) {
+      return;
+    }
+
+    const listItems = submenu.querySelectorAll('ul > li');
+
+    for (let i = 0; i < listItems.length; i++) {
+      const listItem = listItems[i] as HTMLElement;
+      const link = listItem.querySelector('a');
+      const itemText: string = link && link.textContent
+        ? link.textContent.trim().toLowerCase()
+        : '';
+
+      listItem.style.display = itemText.indexOf(searchText) !== -1 ? '' : 'none';
+    }
+  });
 }
 
   private _onDocumentClick = (event: Event): void => {
@@ -422,7 +460,7 @@ private async _getDepartments(): Promise<any[]> {
   };
 
   private _getDepartmentMenu(): HTMLElement | null {
-    return this._topPlaceholder ? this._topPlaceholder.domElement.querySelector('.dropdown') as HTMLElement : null;
+    return this._topPlaceholder ? this._topPlaceholder.domElement.querySelector('#navbarScrollingDropdown') as HTMLElement : null;
   }
 
     private _setActiveNavLink(): void {

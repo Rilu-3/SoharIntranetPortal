@@ -6,7 +6,8 @@ export default class Header {
     private userName: string,
     private designation: string,
     private profilePhoto: string,
-    private departmentItems: any[]
+    private departmentItems: any[],
+    private controlledDocumentItems: any[]
   ) { }
 
   public render(): string {
@@ -20,6 +21,8 @@ export default class Header {
 
           <div class="container container-sa px-3 px-lg-4 d-flex align-items-center gap-3">
 
+            <!-- Logo -->
+
             <a
               class="navbar-brand"
               href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
@@ -29,14 +32,18 @@ export default class Header {
               <img
                 class="logo-desktop"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo.png"
+                alt="Logo"
               />
 
               <img
                 class="logo-mob"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo-mob.png"
+                alt="Logo"
               />
 
             </a>
+
+            <!-- Global Search -->
 
             <div class="header-search position-relative mx-lg-auto d-none d-lg-block">
 
@@ -45,7 +52,7 @@ export default class Header {
                 class="form-control"
                 id="inputGlobalSearchBox"
                 placeholder="Search..."
-              >
+              />
 
               <button
                 class="search-icon-btn"
@@ -58,6 +65,8 @@ export default class Header {
 
             </div>
 
+            <!-- User Information -->
+
             <div
               class="ms-lg-0 ms-auto nav-user-info d-flex align-items-center justify-content-between justify-content-lg-start gap-3 gap-lg-4">
 
@@ -69,6 +78,7 @@ export default class Header {
                   <img
                     class="nav-avatar"
                     src="${this.profilePhoto}"
+                    alt="Profile"
                   />
 
                   <div
@@ -92,6 +102,8 @@ export default class Header {
 
             </div>
 
+            <!-- Mobile Menu Toggle -->
+
             <button
               class="navbar-toggler"
               type="button"
@@ -108,6 +120,8 @@ export default class Header {
           </div>
 
         </div>
+
+        <!-- Navigation Menu -->
 
         <div class="w-100 float-start sa-header-bottom">
 
@@ -129,7 +143,9 @@ export default class Header {
                   <a
                     class="nav-link active-nav-link d-flex align-items-center gap-2"
                     aria-current="page"
-                    href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList" target="_self" data-interception="off">
+                    href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
+                    target="_self"
+                    data-interception="off">
 
                     <img
                       class="nav-menu-icon"
@@ -143,11 +159,12 @@ export default class Header {
 
                 </li>
 
-                <!-- Departments -->
+                <!-- Document Centre -->
 
                 <li class="nav-item d-lg-flex dropdown">
 
                   <a
+                    data-bs-auto-close="outside"
                     class="nav-link dropdown-toggle d-flex align-items-center gap-2"
                     href="#"
                     id="navbarScrollingDropdown"
@@ -157,11 +174,11 @@ export default class Header {
 
                     <img
                       class="nav-menu-icon"
-                      src="${this.siteUrl}/SiteAssets/resources/images/icons/department.png"
+                      src="${this.siteUrl}/SiteAssets/resources/images/icons/folder.png"
                       alt=""
                     />
 
-                    <span>Departments</span>
+                    <span>Document Center</span>
 
                     <img
                       class="dropdown-arrow-nav"
@@ -175,33 +192,139 @@ export default class Header {
                     class="dropdown-menu"
                     aria-labelledby="navbarScrollingDropdown">
 
-                    <input
-                      type="text"
-                      class="form-control search-dept-dropdown"
-                      placeholder="Search departments..."
-                    >
-
                     <ul class="custom-scroll-view dept-dropdown">
 
-                      ${this.departmentItems.map((department: any) => {
+                      <!-- Departments Submenu -->
 
-                        const link = department.Link?.Url || '#';
+                      <li class="dept-submenu">
 
-                        return `
-                          <li>
-                            <a
-                              class="dropdown-item text-sm"
-                              href="${link}"
-                              target="_self"
-                              data-interception="off">
+                        <a
+                          class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
+                          href="#"
+                          role="button"
+                          aria-expanded="false">
 
-                              <span>${department.Title}</span>
+                          <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
-                            </a>
-                          </li>
-                        `;
+                            <img
+                              class="sub-menu-icon sub-menu-icon-default"
+                              src="${this.siteUrl}/SiteAssets/resources/images/icons/department-link-icon.png"
+                              alt=""
+                            />
 
-                      }).join('')}
+                            <div class="doc-centre-title">Departments</div>
+
+                          </div>
+
+                          <img
+                            class="submenu-arrow"
+                            src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
+                            alt=""
+                          />
+
+                        </a>
+
+                        <div class="dept-submenu-list">
+
+                          <input
+                            type="text"
+                            class="form-control search-dept-dropdown"
+                            placeholder="Search departments..."
+                          />
+
+                          <ul>
+
+                            ${this.departmentItems.map((department: any) => {
+
+                              const link = department.Link?.Url || '#';
+
+                              return `
+                                <li>
+                                  <a
+                                    class="dropdown-item text-sm"
+                                    href="${link}"
+                                    target="_self"
+                                    data-interception="off">
+
+                                    <span>${department.Title}</span>
+
+                                  </a>
+                                </li>
+                              `;
+
+                            }).join('')}
+
+                          </ul>
+
+                        </div>
+
+                      </li>
+
+                      <!-- Controlled Documents Submenu -->
+
+                      <li class="dept-submenu">
+
+                        <a
+                          class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
+                          href="#"
+                          role="button"
+                          aria-expanded="false">
+
+                          <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
+
+                            <img
+                              class="sub-menu-icon sub-menu-icon-default"
+                              src="${this.siteUrl}/SiteAssets/resources/images/icons/controlled-doc.png"
+                              alt=""
+                            />
+
+                            <div class="doc-centre-title">Controlled Documents</div>
+
+                          </div>
+
+                          <img
+                            class="submenu-arrow"
+                            src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
+                            alt=""
+                          />
+
+                        </a>
+
+                        <div class="dept-submenu-list">
+
+                          <input
+                            type="text"
+                            class="form-control search-dept-dropdown"
+                            placeholder="Search documents..."
+                          />
+
+                          <ul>
+
+                            ${this.controlledDocumentItems.map((document: any) => {
+
+                              const link = document.Link?.Url || '#';
+
+                              return `
+                                <li>
+                                  <a
+                                    class="dropdown-item text-sm"
+                                    href="${link}"
+                                    target="_self"
+                                    data-interception="off">
+
+                                    <span>${document.Title}</span>
+
+                                  </a>
+                                </li>
+                              `;
+
+                            }).join('')}
+
+                          </ul>
+
+                        </div>
+
+                      </li>
 
                     </ul>
 
@@ -221,3 +344,4 @@ export default class Header {
     `;
   }
 }
+
