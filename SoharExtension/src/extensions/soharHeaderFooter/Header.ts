@@ -11,6 +11,7 @@ export default class Header {
     private documentCenterItems: any[]
   ) { }
 
+
   public render(): string {
 
     return `
@@ -30,17 +31,13 @@ export default class Header {
               target="_self"
               data-interception="off">
 
-              <img
-                class="logo-desktop"
+              <img class="logo-desktop"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo.png"
-                alt="Logo"
-              />
+                alt="Logo" />
 
-              <img
-                class="logo-mob"
+              <img class="logo-mob"
                 src="${this.siteUrl}/SiteAssets/resources/images/logo-mob.png"
-                alt="Logo"
-              />
+                alt="Logo" />
 
             </a>
 
@@ -48,50 +45,35 @@ export default class Header {
 
             <div class="header-search position-relative mx-lg-auto d-none d-lg-block">
 
-              <input
-                type="text"
-                class="form-control"
+              <input type="text" class="form-control"
                 id="inputGlobalSearchBox"
-                placeholder="Search..."
-              />
+                placeholder="Search..." />
 
-              <button
-                class="search-icon-btn"
-                type="button"
-                aria-label="Search">
-
+              <button class="search-icon-btn"
+                type="button" aria-label="Search">
                 <i class="bi bi-search"></i>
-
               </button>
 
             </div>
 
             <!-- User Information -->
 
-            <div
-              class="ms-lg-0 ms-auto nav-user-info d-flex align-items-center justify-content-between justify-content-lg-start gap-3 gap-lg-4">
+            <div class="ms-lg-0 ms-auto nav-user-info d-flex align-items-center justify-content-between justify-content-lg-start gap-3 gap-lg-4">
 
-              <div
-                class="btn btn-secondary d-flex align-items-center p-0 bg-transparent border-0 gap-2">
+              <div class="btn btn-secondary d-flex align-items-center p-0 bg-transparent border-0 gap-2">
 
                 <div class="nav-avatar-wrapper d-flex align-items-center gap-2">
 
-                  <img
-                    class="nav-avatar"
-                    src="${this.profilePhoto}"
-                    alt="Profile"
-                  />
+                  <img class="nav-avatar"
+                    src="${this.profilePhoto}" alt="Profile" />
 
-                  <div
-                    class="max-w-200 d-flex flex-column text-start d-none d-sm-flex">
+                  <div class="max-w-200 d-flex flex-column text-start d-none d-sm-flex">
 
-                    <p
-                      class="text-sm xxl-text-base font-bold text-color-title lh-base text-truncate">
+                    <p class="text-sm xxl-text-base font-bold text-color-title lh-base text-truncate">
                       ${this.userName}
                     </p>
 
-                    <p
-                      class="text-xs font-normal text-color-desc lh-sm text-truncate">
+                    <p class="text-xs font-normal text-color-desc lh-sm text-truncate">
                       ${this.designation}
                     </p>
 
@@ -105,8 +87,7 @@ export default class Header {
 
             <!-- Mobile Menu Toggle -->
 
-            <button
-              class="navbar-toggler"
+            <button class="navbar-toggler"
               type="button"
               data-bs-toggle="collapse"
               data-bs-target="#navbarSupportedContent"
@@ -126,33 +107,26 @@ export default class Header {
 
         <div class="w-100 float-start sa-header-bottom">
 
-          <div
-            class="collapse navbar-collapse gap-lg-2"
+          <div class="collapse navbar-collapse gap-lg-2"
             id="navbarSupportedContent">
 
-            <div
-              class="container container-sa px-3 px-lg-4 d-flex gap-3 py-lg-2">
+            <div class="container container-sa px-3 px-lg-4 d-flex gap-3 py-lg-2">
 
-              <ul
-                class="navbar-nav my-2 my-lg-0 navbar-nav-scroll gap-lg-3"
+              <ul class="navbar-nav my-2 my-lg-0 navbar-nav-scroll gap-lg-3"
                 style="--bs-scroll-height: 400px;">
 
                 <!-- Home -->
 
                 <li class="nav-item d-lg-flex">
 
-                  <a
-                    class="nav-link active-nav-link d-flex align-items-center gap-2"
+                  <a class="nav-link active-nav-link d-flex align-items-center gap-2"
                     aria-current="page"
                     href="/sites/DevPortal/SitePages/Home.aspx?env=WebViewList"
-                    target="_self"
-                    data-interception="off">
+                    target="_self" data-interception="off">
 
-                    <img
-                      class="nav-menu-icon"
+                    <img class="nav-menu-icon"
                       src="${this.siteUrl}/SiteAssets/resources/images/icons/home.png"
-                      alt=""
-                    />
+                      alt="" />
 
                     <span>Home</span>
 
@@ -164,8 +138,7 @@ export default class Header {
 
                 <li class="nav-item d-lg-flex dropdown">
 
-                  <a
-                    data-bs-auto-close="outside"
+                  <a data-bs-auto-close="outside"
                     class="nav-link dropdown-toggle d-flex align-items-center gap-2"
                     href="#"
                     id="navbarScrollingDropdown"
@@ -173,24 +146,19 @@ export default class Header {
                     data-bs-toggle="dropdown"
                     aria-expanded="false">
 
-                    <img
-                      class="nav-menu-icon"
+                    <img class="nav-menu-icon"
                       src="${this.siteUrl}/SiteAssets/resources/images/icons/folder.png"
-                      alt=""
-                    />
+                      alt="" />
 
                     <span>Document Center</span>
 
-                    <img
-                      class="dropdown-arrow-nav"
+                    <img class="dropdown-arrow-nav"
                       src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
-                      alt=""
-                    />
+                      alt="" />
 
                   </a>
 
-                  <div
-                    class="dropdown-menu"
+                  <div class="dropdown-menu"
                     aria-labelledby="navbarScrollingDropdown">
 
                     <ul class="custom-scroll-view dept-dropdown">
@@ -201,7 +169,7 @@ export default class Header {
 
                         const title = item.Title;
                         const normalizedTitle = title?.trim().toLowerCase();
-
+                        const iconUrl = item.IconUrl || '';
                         // Controlled Documents submenu
 
                         if (normalizedTitle === 'controlled documents') {
@@ -217,46 +185,33 @@ export default class Header {
 
                                 <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
-                                  <img
-                                    class="sub-menu-icon sub-menu-icon-default"
-                                    src="${this.siteUrl}/SiteAssets/resources/images/icons/controlled-doc.png"
-                                    alt=""
-                                  />
+                                  <img class="sub-menu-icon sub-menu-icon-default"
+                                    src="${iconUrl}" alt="" />
 
                                   <div class="doc-centre-title">${title}</div>
 
                                 </div>
 
-                                <img
-                                  class="submenu-arrow"
+                                <img class="submenu-arrow"
                                   src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
-                                  alt=""
-                                />
+                                  alt="" />
 
                               </a>
 
                               <div class="dept-submenu-list">
 
-                                <input
-                                  type="text"
+                                <input type="text"
                                   class="form-control search-dept-dropdown"
-                                  placeholder="Search documents..."
-                                />
+                                  placeholder="Search documents..." />
 
                                 <ul>
-
-                                  ${this.controlledDocumentItems.map((document: any) => {
-                                    const link = document.Link?.Url || '#';
-
-                                 return `<li><a class="dropdown-item text-sm" href="${link}" target="_self" data-interception="off"><span>${document.Title}</span></a></li>`;
-                                    }).join('')}
+                                 ${this.controlledDocumentItems.map((document: any) => `<li><a class="dropdown-item text-sm" href="${document.Link?.Url || '#'}" target="_self" data-interception="off"><span>${document.Title}</span></a></li>`).join('')}
                                 </ul>
 
                               </div>
 
                             </li>
                           `;
-
                         }
 
                         // Departments submenu
@@ -274,45 +229,33 @@ export default class Header {
 
                                 <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
-                                  <img
-                                    class="sub-menu-icon sub-menu-icon-default"
-                                    src="${this.siteUrl}/SiteAssets/resources/images/icons/department-link-icon.png"
-                                    alt=""
-                                  />
+                                  <img class="sub-menu-icon sub-menu-icon-default"
+                                   src="${iconUrl}" alt="" />
 
                                   <div class="doc-centre-title">${title}</div>
 
                                 </div>
 
-                                <img
-                                  class="submenu-arrow"
+                                <img class="submenu-arrow"
                                   src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
-                                  alt=""
-                                />
+                                  alt="" />
 
                               </a>
 
                               <div class="dept-submenu-list">
 
-                                <input
-                                  type="text"
+                                <input type="text"
                                   class="form-control search-dept-dropdown"
-                                  placeholder="Search departments..."
-                                />
+                                  placeholder="Search departments..." />
 
                                 <ul>
-                                    ${this.departmentItems.map((department: any) => {
-                                      const link = department.Link?.Url || '#';
-
-                                      return `<li><a class="dropdown-item text-sm" href="${link}" target="_self" data-interception="off"><span>${department.Title}</span></a></li>`;
-                                    }).join('')}
+                             ${this.departmentItems.map((department: any) => `<li><a class="dropdown-item text-sm" href="${department.Link?.Url || '#'}" target="_self" data-interception="off"><span>${department.Title}</span></a></li>`).join('')}
                                 </ul>
 
                               </div>
 
                             </li>
                           `;
-
                         }
 
                         // Shared Workspace direct navigation
@@ -330,11 +273,8 @@ export default class Header {
                                 target="_self"
                                 data-interception="off">
 
-                                <img
-                                  class="sub-menu-icon sub-menu-icon-default"
-                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/shared-workspace.png"
-                                  alt=""
-                                />
+                                <img class="sub-menu-icon sub-menu-icon-default"
+                                  src="${iconUrl}" alt="" />
 
                                 <span class="doc-centre-title">${title}</span>
 
@@ -342,8 +282,9 @@ export default class Header {
 
                             </li>
                           `;
-
                         }
+
+                        return '';
                       }).join('')}
 
                     </ul>

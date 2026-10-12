@@ -95,7 +95,10 @@ private async _initialise(): Promise<void> {
   this._designation = designation;
   this._departmentItems = departmentItems;
   this._controlledDocumentItems = controlledDocumentItems;
-  this._documentCenterItems = documentCenterItems;
+  this._documentCenterItems = documentCenterItems.map((item: any) => ({
+  ...item,
+  IconUrl: this._getIconUrl(item)
+}));
 
   // Render header after its data is ready
   this._renderHeader();
@@ -371,39 +374,65 @@ private async _getControlledDocuments(): Promise<any[]> {
   }
 }
 
+
+
 private async _getDocumentCenterItems(): Promise<any[]> {
-  const url: string =
+  const url =
     `${SITE_URL}/_api/web/lists/getbytitle('Document Center')/items` +
-    `?$select=Id,Title,Link,Status,SortOrder` +
+    `?$select=Id,Title,Link,Icon,Status,SortOrder` +
     `&$filter=Status eq 'Active'` +
     `&$orderby=SortOrder asc`;
 
-  try {
-    const response = await this.context.spHttpClient.get(
-      url,
-      SPHttpClient.configurations.v1,
-      {
-        headers: {
-          'Accept': 'application/json;odata=nometadata'
-        }
-      }
-    );
+  const response = await this.context.spHttpClient.get(
+    url,
+    SPHttpClient.configurations.v1
+  );
 
-    if (!response.ok) {
-      throw new Error(`Failed to load Document Center Links: ${response.status}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch Document Center items');
+  }
+
+  const data = await response.json();
+
+  console.log('Document Center items:', data.value);
+
+  return data.value || [];
+}
+
+
+
+
+
+private _getIconUrl(item: any): string {
+  if (!item || !item.Icon) {
+    return '';
+  }
+
+  try {
+    const icon = typeof item.Icon === 'string'
+      ? JSON.parse(item.Icon)
+      : item.Icon;
+
+    if (icon.serverRelativeUrl) {
+      const serverUrl = icon.serverUrl || window.location.origin;
+      const imagePath = icon.serverRelativeUrl.startsWith('/')
+        ? icon.serverRelativeUrl
+        : `/${icon.serverRelativeUrl}`;
+
+      return `${serverUrl.replace(/\/$/, '')}${imagePath}`;
     }
 
-    const data = await response.json();
-    return data.value || [];
-  } catch (error) {
-    Log.error(
-      LOG_SOURCE,
-      error instanceof Error ? error : new Error(String(error))
-    );
+    if (icon.Url) {
+      return icon.Url;
+    }
 
-    return [];
+    return '';
+  } catch {
+    return '';
   }
 }
+
+
 
 
   // ============================================================
