@@ -7,7 +7,8 @@ export default class Header {
     private designation: string,
     private profilePhoto: string,
     private departmentItems: any[],
-    private controlledDocumentItems: any[]
+    private controlledDocumentItems: any[],
+    private documentCenterItems: any[]
   ) { }
 
   public render(): string {
@@ -159,7 +160,7 @@ export default class Header {
 
                 </li>
 
-                <!-- Document Centre -->
+                <!-- Document Center -->
 
                 <li class="nav-item d-lg-flex dropdown">
 
@@ -194,137 +195,156 @@ export default class Header {
 
                     <ul class="custom-scroll-view dept-dropdown">
 
-                      <!-- Departments Submenu -->
+                      <!-- Dynamic Document Center Menu Items -->
 
-                      <li class="dept-submenu">
+                      ${this.documentCenterItems.map((item: any) => {
 
-                        <a
-                          class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
-                          href="#"
-                          role="button"
-                          aria-expanded="false">
+                        const title = item.Title;
+                        const normalizedTitle = title?.trim().toLowerCase();
 
-                          <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
+                        // Controlled Documents submenu
 
-                            <img
-                              class="sub-menu-icon sub-menu-icon-default"
-                              src="${this.siteUrl}/SiteAssets/resources/images/icons/department-link-icon.png"
-                              alt=""
-                            />
+                        if (normalizedTitle === 'controlled documents') {
 
-                            <div class="doc-centre-title">Departments</div>
+                          return `
+                            <li class="dept-submenu">
 
-                          </div>
+                              <a
+                                class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
+                                href="#"
+                                role="button"
+                                aria-expanded="false">
 
-                          <img
-                            class="submenu-arrow"
-                            src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
-                            alt=""
-                          />
+                                <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
-                        </a>
+                                  <img
+                                    class="sub-menu-icon sub-menu-icon-default"
+                                    src="${this.siteUrl}/SiteAssets/resources/images/icons/controlled-doc.png"
+                                    alt=""
+                                  />
 
-                        <div class="dept-submenu-list">
+                                  <div class="doc-centre-title">${title}</div>
 
-                          <input
-                            type="text"
-                            class="form-control search-dept-dropdown"
-                            placeholder="Search departments..."
-                          />
+                                </div>
 
-                          <ul>
+                                <img
+                                  class="submenu-arrow"
+                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
+                                  alt=""
+                                />
 
-                            ${this.departmentItems.map((department: any) => {
+                              </a>
 
-                              const link = department.Link?.Url || '#';
+                              <div class="dept-submenu-list">
 
-                              return `
-                                <li>
-                                  <a
-                                    class="dropdown-item text-sm"
-                                    href="${link}"
-                                    target="_self"
-                                    data-interception="off">
+                                <input
+                                  type="text"
+                                  class="form-control search-dept-dropdown"
+                                  placeholder="Search documents..."
+                                />
 
-                                    <span>${department.Title}</span>
+                                <ul>
 
-                                  </a>
-                                </li>
-                              `;
+                                  ${this.controlledDocumentItems.map((document: any) => {
+                                    const link = document.Link?.Url || '#';
 
-                            }).join('')}
+                                 return `<li><a class="dropdown-item text-sm" href="${link}" target="_self" data-interception="off"><span>${document.Title}</span></a></li>`;
+                                    }).join('')}
+                                </ul>
 
-                          </ul>
+                              </div>
 
-                        </div>
+                            </li>
+                          `;
 
-                      </li>
+                        }
 
-                      <!-- Controlled Documents Submenu -->
+                        // Departments submenu
 
-                      <li class="dept-submenu">
+                        if (normalizedTitle === 'departments') {
 
-                        <a
-                          class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
-                          href="#"
-                          role="button"
-                          aria-expanded="false">
+                          return `
+                            <li class="dept-submenu">
 
-                          <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
+                              <a
+                                class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
+                                href="#"
+                                role="button"
+                                aria-expanded="false">
 
-                            <img
-                              class="sub-menu-icon sub-menu-icon-default"
-                              src="${this.siteUrl}/SiteAssets/resources/images/icons/controlled-doc.png"
-                              alt=""
-                            />
+                                <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
-                            <div class="doc-centre-title">Controlled Documents</div>
+                                  <img
+                                    class="sub-menu-icon sub-menu-icon-default"
+                                    src="${this.siteUrl}/SiteAssets/resources/images/icons/department-link-icon.png"
+                                    alt=""
+                                  />
 
-                          </div>
+                                  <div class="doc-centre-title">${title}</div>
 
-                          <img
-                            class="submenu-arrow"
-                            src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
-                            alt=""
-                          />
+                                </div>
 
-                        </a>
+                                <img
+                                  class="submenu-arrow"
+                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
+                                  alt=""
+                                />
 
-                        <div class="dept-submenu-list">
+                              </a>
 
-                          <input
-                            type="text"
-                            class="form-control search-dept-dropdown"
-                            placeholder="Search documents..."
-                          />
+                              <div class="dept-submenu-list">
 
-                          <ul>
+                                <input
+                                  type="text"
+                                  class="form-control search-dept-dropdown"
+                                  placeholder="Search departments..."
+                                />
 
-                            ${this.controlledDocumentItems.map((document: any) => {
+                                <ul>
+                                    ${this.departmentItems.map((department: any) => {
+                                      const link = department.Link?.Url || '#';
 
-                              const link = document.Link?.Url || '#';
+                                      return `<li><a class="dropdown-item text-sm" href="${link}" target="_self" data-interception="off"><span>${department.Title}</span></a></li>`;
+                                    }).join('')}
+                                </ul>
 
-                              return `
-                                <li>
-                                  <a
-                                    class="dropdown-item text-sm"
-                                    href="${link}"
-                                    target="_self"
-                                    data-interception="off">
+                              </div>
 
-                                    <span>${document.Title}</span>
+                            </li>
+                          `;
 
-                                  </a>
-                                </li>
-                              `;
+                        }
 
-                            }).join('')}
+                        // Shared Workspace direct navigation
 
-                          </ul>
+                        if (normalizedTitle === 'shared workspace') {
 
-                        </div>
+                          const link = item.Link?.Url || '#';
 
-                      </li>
+                          return `
+                            <li class="dept-submenu">
+
+                              <a
+                                class="dropdown-item text-sm d-flex align-items-center gap-2"
+                                href="${link}"
+                                target="_self"
+                                data-interception="off">
+
+                                <img
+                                  class="sub-menu-icon sub-menu-icon-default"
+                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/shared-workspace.png"
+                                  alt=""
+                                />
+
+                                <span class="doc-centre-title">${title}</span>
+
+                              </a>
+
+                            </li>
+                          `;
+
+                        }
+                      }).join('')}
 
                     </ul>
 
@@ -344,4 +364,3 @@ export default class Header {
     `;
   }
 }
-

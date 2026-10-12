@@ -27,6 +27,7 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
   private _designation: string = '';
 private _departmentItems: any[] = [];
   private _controlledDocumentItems: any[] = [];
+  private _documentCenterItems: any[] = [];
   private _footerHtml: string = '';
   private _isInitialised: boolean = false;
 
@@ -66,38 +67,52 @@ private _departmentItems: any[] = [];
   // ============================================================
 
 
+
+
 private async _initialise(): Promise<void> {
-  // Start all independent work in parallel
+  // Load scripts and fetch all header data in parallel
   const scriptsPromise: Promise<void> = this._loadScripts();
 
-  const headerDataPromise: Promise<[string, any[], any[]]> = Promise.all([
-    this._getUserDesignation(),
-    this._getDepartments(),
-    this._getControlledDocuments()
-  ]);
+  const headerDataPromise: Promise<[string, any[], any[], any[]]> =
+    Promise.all([
+      this._getUserDesignation(),
+      this._getDepartments(),
+      this._getControlledDocuments(),
+      this._getDocumentCenterItems(),
+    ]);
 
   const footerItemsPromise: Promise<any[]> = this._getFooterItems();
 
-  // Render the header as soon as its data is ready
-  const [designation, departmentItems, controlledDocumentItems] = await headerDataPromise;
+  // Receive all five results in the same order as Promise.all
+  const [
+    designation,
+    departmentItems,
+    controlledDocumentItems,
+    documentCenterItems,
+  ] = await headerDataPromise;
 
+  // Cache the fetched data
   this._designation = designation;
   this._departmentItems = departmentItems;
   this._controlledDocumentItems = controlledDocumentItems;
+  this._documentCenterItems = documentCenterItems;
 
+  // Render header after its data is ready
   this._renderHeader();
 
-  // Render the footer once its data and target are ready
+  // Render footer after its data is ready
   this._footerHtml = this._buildFooterHtml(await footerItemsPromise);
   await this._waitForElement(this._getFooterTargetSelector());
   this._renderFooter();
 
-  // Load page scripts after the header and footer HTML exist
+  // Load page scripts after header and footer HTML exist
   await scriptsPromise;
   await this._loadPageScripts();
 
   this._isInitialised = true;
 }
+
+
 
   private _onNavigated(): void {
     if (!this._isInitialised) {
@@ -125,21 +140,32 @@ private async _initialise(): Promise<void> {
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/swiper-bundle.min.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/font-size.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/custom.css`);
-        SPComponentLoader.loadCss(`${RESOURCES_URL}/css/customnew.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/sp-custom.css`);
     SPComponentLoader.loadCss(`${RESOURCES_URL}/css/home.css`);
   }
 
   private async _loadScripts(): Promise<void> {
+    const w: any = window;
+
     // Load scripts sequentially: jQuery -> jQuery UI -> Bootstrap -> Swiper
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-3.6.0.js`);
 
     // Save the original jQuery instance
-    (window as any).soharJQuery = (window as any).jQuery;
+    w.soharJQuery = w.jQuery;
 
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery-ui.js`);
+
+    // Another script (e.g. SociableKit) may have replaced window.jQuery while jQuery UI was loading.
+    // Keep whichever jQuery instance jQuery UI actually attached the datepicker to.
+    if (!(w.soharJQuery && w.soharJQuery.fn && w.soharJQuery.fn.datepicker) && w.jQuery && w.jQuery.fn && w.jQuery.fn.datepicker) {
+      w.soharJQuery = w.jQuery;
+    }
+
     await this._loadBootstrap();
     await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/swiper-bundle.min.js`);
+
+    // Save the Swiper instance as well, so later scripts cannot replace it
+    w.soharSwiper = w.Swiper;
     // await SPComponentLoader.loadScript(`${RESOURCES_URL}/js/jquery.marquee.min.js`);
   }
 
@@ -344,6 +370,42 @@ private async _getControlledDocuments(): Promise<any[]> {
     return [];
   }
 }
+
+private async _getDocumentCenterItems(): Promise<any[]> {
+  const url: string =
+    `${SITE_URL}/_api/web/lists/getbytitle('Document Center')/items` +
+    `?$select=Id,Title,Link,Status,SortOrder` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=SortOrder asc`;
+
+  try {
+    const response = await this.context.spHttpClient.get(
+      url,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          'Accept': 'application/json;odata=nometadata'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to load Document Center Links: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.value || [];
+  } catch (error) {
+    Log.error(
+      LOG_SOURCE,
+      error instanceof Error ? error : new Error(String(error))
+    );
+
+    return [];
+  }
+}
+
+
   // ============================================================
   // RENDER HEADER
   // ============================================================
@@ -362,7 +424,7 @@ private async _getControlledDocuments(): Promise<any[]> {
     const userEmail: string = this.context.pageContext.user.email || '';
     const profilePhoto: string = `${SITE_URL}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
-    const header: Header = new Header(SITE_URL, userName, escape(this._designation), profilePhoto, this._departmentItems,this._controlledDocumentItems);
+    const header: Header = new Header(SITE_URL, userName, escape(this._designation), profilePhoto, this._departmentItems,this._controlledDocumentItems, this._documentCenterItems);
 
     this._topPlaceholder.domElement.innerHTML = header.render();
 
@@ -370,6 +432,7 @@ private async _getControlledDocuments(): Promise<any[]> {
     this._setupDepartmentMegaMenu();
     this._setActiveNavLink();
   }
+
 
 private _setupDepartmentMegaMenu(): void {
   if (!this._topPlaceholder) {
@@ -415,7 +478,7 @@ private _setupDepartmentMegaMenu(): void {
       item.classList.add('open');
       toggle.setAttribute('aria-expanded', 'true');
     }
-  });
+  }, true);
 
   // Handle department and controlled document search
   headerElement.addEventListener('input', (event: Event): void => {
@@ -437,6 +500,7 @@ private _setupDepartmentMegaMenu(): void {
     for (let i = 0; i < listItems.length; i++) {
       const listItem = listItems[i] as HTMLElement;
       const link = listItem.querySelector('a');
+
       const itemText: string = link && link.textContent
         ? link.textContent.trim().toLowerCase()
         : '';
