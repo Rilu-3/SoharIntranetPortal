@@ -170,6 +170,7 @@ export default class Header {
                         const title = item.Title;
                         const normalizedTitle = title?.trim().toLowerCase();
                         const iconUrl = item.IconUrl || '';
+
                         // Controlled Documents submenu
 
                         if (normalizedTitle === 'controlled documents') {
@@ -192,10 +193,6 @@ export default class Header {
 
                                 </div>
 
-                                <img class="submenu-arrow"
-                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
-                                  alt="" />
-
                               </a>
 
                               <div class="dept-submenu-list">
@@ -205,7 +202,7 @@ export default class Header {
                                   placeholder="Search documents..." />
 
                                 <ul>
-                                 ${this.controlledDocumentItems.map((document: any) => `<li><a class="dropdown-item text-sm" href="${document.Link?.Url || '#'}" target="_self" data-interception="off"><span>${document.Title}</span></a></li>`).join('')}
+                                  ${this.controlledDocumentItems.map((document: any) => `<li><a class="dropdown-item text-sm" href="${document.Link?.Url || '#'}" target="_self" data-interception="off"><span>${document.Title}</span></a></li>`).join('')}
                                 </ul>
 
                               </div>
@@ -230,15 +227,11 @@ export default class Header {
                                 <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
                                   <img class="sub-menu-icon sub-menu-icon-default"
-                                   src="${iconUrl}" alt="" />
+                                    src="${iconUrl}" alt="" />
 
                                   <div class="doc-centre-title">${title}</div>
 
                                 </div>
-
-                                <img class="submenu-arrow"
-                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
-                                  alt="" />
 
                               </a>
 
@@ -249,7 +242,7 @@ export default class Header {
                                   placeholder="Search departments..." />
 
                                 <ul>
-                             ${this.departmentItems.map((department: any) => `<li><a class="dropdown-item text-sm" href="${department.Link?.Url || '#'}" target="_self" data-interception="off"><span>${department.Title}</span></a></li>`).join('')}
+                                  ${this.departmentItems.map((department: any) => `<li><a class="dropdown-item text-sm" href="${department.Link?.Url || '#'}" target="_self" data-interception="off"><span>${department.Title}</span></a></li>`).join('')}
                                 </ul>
 
                               </div>
@@ -284,7 +277,27 @@ export default class Header {
                           `;
                         }
 
-                        return '';
+                        // Display any other Document Center item as a direct link
+
+                        const link = item.Link?.Url || '#';
+
+                        return `
+                          <li class="dept-submenu">
+
+                            <a
+                              class="dropdown-item text-sm d-flex align-items-center gap-2"
+                              href="${link}"
+                              target="_self"
+                              data-interception="off">
+
+                              ${iconUrl ? `<img class="sub-menu-icon sub-menu-icon-default" src="${iconUrl}" alt="" />` : ''}
+
+                              <span class="doc-centre-title">${title}</span>
+
+                            </a>
+
+                          </li>
+                        `;
                       }).join('')}
 
                     </ul>
