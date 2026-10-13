@@ -620,8 +620,7 @@ private _setupDepartmentMegaMenu(): void {
   // ============================================================
 
   private async _getFooterItems(): Promise<any[]> {
-    const url: string = `${SITE_URL}/_api/web/lists/getbytitle('Footer')/items?$select=Id,ContactDetails,Category,Status,Icon&$orderby=Id asc`;
-
+const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/items?$select=Id,ContactDetails,Category,Status,Icon,Created&$orderby=Created desc`;
     try {
       const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
