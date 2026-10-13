@@ -49,8 +49,7 @@ export default class WpMediaListingWebPart extends BaseClientSideWebPart<IWpMedi
     this.domElement.innerHTML = wpMediaListing.wrapperHtml(resourceUrl, homeUrl, wpMediaListing.loadingHtml);
     this._bindYearFilter();
 
-    const apiUrl: string = `${webUrl}/_api/web/lists/GetByTitle('${LIST_TITLE}')/items?$select=Id,Title,Caption,Status,SortOrder,Image,Year&$filter=Status eq '${PUBLISHED_STATUS}'&$orderby=SortOrder asc,Id desc&$top=500`;
-
+      const apiUrl: string = `${webUrl}/_api/web/lists/GetByTitle('${LIST_TITLE}')/items?$select=Id,Title,Caption,Status,SortOrder,Image,Year,Created&$filter=Status eq '${PUBLISHED_STATUS}'&$orderby=SortOrder asc,Created desc&$top=500`;
     try {
       const items: ISPList[] = await this._getListData(apiUrl);
 

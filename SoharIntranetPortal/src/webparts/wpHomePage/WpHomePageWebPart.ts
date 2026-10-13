@@ -59,20 +59,10 @@ export interface IEventItem {
 interface IOutlookEvent {
   id?: string;
   subject?: string;
-  start?: {
-    dateTime?: string;
-    timeZone?: string;
-  };
-  end?: {
-    dateTime?: string;
-    timeZone?: string;
-  };
-  location?: {
-    displayName?: string;
-  };
-  onlineMeeting?: {
-    joinUrl?: string;
-  };
+  start?: { dateTime?: string };
+  end?: { dateTime?: string };
+  location?: { displayName?: string };
+  onlineMeeting?: { joinUrl?: string };
 }
 
 interface IAnnouncement {
@@ -136,7 +126,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ==================== WAIT FOR LIBRARIES (loaded by extension) ====================
 
-private waitForLibraries(timeout: number = 10000): Promise<void> {
+  private waitForLibraries(timeout: number = 10000): Promise<void> {
     return new Promise<void>((resolve) => {
       const start = Date.now();
       const check = (): void => {
@@ -197,7 +187,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
     const $ = (window as any).jQuery;
     const Swiper = (window as any).Swiper;
     if (!$ || !Swiper) { console.warn('jQuery or Swiper is not available.'); return; }
- 
+
     const socialSwipers: { [key: string]: any } = {};
     document.querySelectorAll('.social-swiper').forEach(function (el) {
       const panel = el.closest('[id^="social-panel-"]');
@@ -214,14 +204,14 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
       });
       if (panel) socialSwipers[panel.id] = swiper;
     });
- 
+
     $('.sm-tab').on('click', function (this: HTMLElement) {
       const targetId = $(this).data('tab-social-id');
- 
+
       // Update active tab
       $('.sm-tab').removeClass('sm-tab-active');
       $(this).addClass('sm-tab-active');
- 
+
       // Hide all panels and fade in selected panel
       $('.social-media-view').stop(true, true).hide();
       $('#' + targetId).stop(true, true).fadeIn(200);
@@ -229,170 +219,75 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
   }
 
   // ---------- MEDIA GALLERY ----------
- private initMediaGallery(): void {
+  private initMediaGallery(): void {
+    const $ = (window as any).jQuery;
+    // const $ = (window as Window & { soharJQuery?: any }).soharJQuery;
+    const Swiper = (window as any).Swiper;
+    const bootstrap = (window as any).bootstrap;
+    if (!$ || !Swiper || !bootstrap) { console.warn('jQuery, Swiper or Bootstrap is not available.'); return; }
 
-  console.log('MEDIA GALLERY INIT START');
-
-  // const $ = (window as any).mediaJQuery;
-  const $ = (window as Window & { jQuery?: any }).jQuery;
-  const Swiper = (window as any).Swiper;
-  const bootstrap = (window as any).bootstrap;
-
-  // console.log('mediaJQuery:', !!$);
-  // console.log('Swiper:', !!Swiper);
-  // console.log('Bootstrap:', !!bootstrap);
-
-  if (!$ || !Swiper || !bootstrap) {
-    console.warn(
-      'jQuery, Swiper or Bootstrap is not available.'
-    );
-    return;
-  }
-
-  const galleryElement =
-    this.domElement.querySelector('.gallery-swiper') as HTMLElement;
-
-  if (!galleryElement) {
-    console.warn('Gallery Swiper element not found.');
-    return;
-  }
-
-  console.log(
-    'Gallery slides before Swiper:',
-    galleryElement.querySelectorAll('.swiper-slide').length
-  );
-
-  new Swiper(galleryElement, {
-
-    slidesPerView: 1,
-    spaceBetween: 12,
-    loop: false,
-    speed: 500,
-
-    pagination: {
-      el: '.gallery-swiper-pagination',
-      clickable: true
-    },
-
-    navigation: {
-      nextEl: '.gallery-slide-next',
-      prevEl: '.gallery-slide-prev'
-    },
-
-    breakpoints: {
-      400: {
-        slidesPerView: 2,
-        spaceBetween: 12
+    new Swiper('.gallery-swiper', {
+      slidesPerView: 1,
+      spaceBetween: 12,
+      loop: false,
+      speed: 500,
+      pagination: { el: ".gallery-swiper-pagination", clickable: true },
+      navigation: { nextEl: ".gallery-slide-next", prevEl: ".gallery-slide-prev" },
+      breakpoints: {
+        400: { slidesPerView: 2, spaceBetween: 12 },
+        576: { slidesPerView: 2, spaceBetween: 14 },
+        768: { slidesPerView: 3, spaceBetween: 16 },
+        992: { slidesPerView: 4, spaceBetween: 16 },
       },
-      576: {
-        slidesPerView: 2,
-        spaceBetween: 14
-      },
-      768: {
-        slidesPerView: 3,
-        spaceBetween: 16
-      },
-      992: {
-        slidesPerView: 4,
-        spaceBetween: 16
+    });
+
+    const modalElement = document.getElementById("galleryModal");
+    if (!modalElement) { return; }
+    const modal = new bootstrap.Modal.getOrCreateInstance(modalElement);
+
+    let swiperGalleryModal: any = null;
+    let gallery_slider_index = 0;
+
+    function initGalleryModalSwiper(): void {
+      // Destroy any previous instance before creating a new one
+      if (swiperGalleryModal) {
+        swiperGalleryModal.destroy(true, true);
+        swiperGalleryModal = null;
       }
-    }
 
-  });
-
-  console.log(
-    'Gallery Swiper initialized:',
-    galleryElement.classList.contains('swiper-initialized')
-  );
-
-  const modalElement =
-    this.domElement.querySelector(
-      '#galleryModal'
-    ) as HTMLElement;
-
-  if (!modalElement) {
-    return;
-  }
-
-  const modal =
-    bootstrap.Modal.getOrCreateInstance(
-      modalElement
-    );
-
-  let swiperGalleryModal: any = null;
-  let gallery_slider_index = 0;
-
-  function initGalleryModalSwiper(): void {
-
-    if (swiperGalleryModal) {
-      swiperGalleryModal.destroy(true, true);
-      swiperGalleryModal = null;
-    }
-
-    swiperGalleryModal = new Swiper(
-      '.gallery-modal-swiper',
-      {
+      swiperGalleryModal = new Swiper(".gallery-modal-swiper", {
         spaceBetween: 10,
         slidesPerView: 1,
         autoplay: false,
         speed: 1400,
         autoHeight: true,
         initialSlide: gallery_slider_index,
+        navigation: { nextEl: ".gallery-swiper-modal-next", prevEl: ".gallery-swiper-modal-prev" },
+      });
 
-        navigation: {
-          nextEl: '.gallery-swiper-modal-next',
-          prevEl: '.gallery-swiper-modal-prev'
-        }
-      }
-    );
+      $(".gallery-modal-content").css("opacity", 1);
+    }
 
-    $('.gallery-modal-content').css(
-      'opacity',
-      1
-    );
-  }
-
-  $(document).on(
-    'click',
-    '.gallery-item img, .gallery-item video',
-    function (this: HTMLElement): void {
-
-      $('.gallery-modal-content').css(
-        'opacity',
-        0
-      );
-
-      gallery_slider_index =
-        $(this)
-          .closest('.swiper-slide')
-          .index();
-
+    // Set the index BEFORE the modal opens
+    $(document).on("click", ".gallery-item img, .gallery-item video", function (this: HTMLElement) {
+      $(".gallery-modal-content").css("opacity", 0);
+      gallery_slider_index = $(this).closest(".swiper-slide").index();
       modal.show();
-    }
-  );
+    });
 
-  modalElement.addEventListener(
-    'shown.bs.modal',
-    () => {
+    // shown.bs.modal fires AFTER the transition — Swiper can measure dimensions safely here
+    modalElement.addEventListener("shown.bs.modal", () => {
       initGalleryModalSwiper();
-    }
-  );
+    });
 
-  modalElement.addEventListener(
-    'hidden.bs.modal',
-    () => {
-
+    // hidden.bs.modal fires AFTER modal is fully hidden
+    modalElement.addEventListener("hidden.bs.modal", () => {
       if (swiperGalleryModal) {
-        swiperGalleryModal.destroy(
-          true,
-          true
-        );
-
+        swiperGalleryModal.destroy(true, true);
         swiperGalleryModal = null;
       }
-    }
-  );
-}
+    });
+  }
 
   // ==================== SOCIAL MEDIA TUTORIAL LINKS ====================
 
@@ -775,29 +670,100 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
 
   // ==================== LOAD EVENTS ====================
 
-  private async loadEvents(year: number, month: number, day: number): Promise<void> {
-    const siteUrl = this.context.pageContext.web.absoluteUrl;
-    const startDate = new Date(year, month, day, 0, 0, 0);
-    const endDate = new Date(year, month, day + 1, 0, 0, 0);
 
-    const url = `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'&$orderby=EventDate asc`;
 
-    try {
-      const response: SPHttpClientResponse = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { Accept: 'application/json;odata=nometadata' } });
 
-      if (!response.ok) {
-        console.error('Upcoming Events list error:', response.status, response.statusText);
-        this.events = [];
-        return;
-      }
 
-      const data = await response.json();
-      this.events = data.value || [];
-    } catch (error) {
-      console.error('Error loading Upcoming Events:', error);
+private async loadEvents(
+  year: number,
+  month: number,
+  day: number
+): Promise<void> {
+ 
+  const siteUrl = this.context.pageContext.web.absoluteUrl;
+ 
+  const startDate = new Date(year, month, day, 0, 0, 0);
+  const endDate = new Date(year, month, day + 1, 0, 0, 0);
+ 
+  const url = `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'&$orderby=EventDate asc`;
+ 
+  try {
+ 
+    const response: SPHttpClientResponse =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            Accept: 'application/json;odata=nometadata'
+          }
+        }
+      );
+ 
+    if (!response.ok) {
+      console.error('Error loading events:', response.statusText);
       this.events = [];
+      return;
     }
+ 
+    const data = await response.json();
+    
+ 
+    this.events = (data.value || []).map((event: any) => ({
+      ...event,
+      StartTime: this.convertTimeToLocal(event.StartTime),
+      EndTime: this.convertTimeToLocal(event.EndTime)
+    }));
+ 
+
+ 
+  } catch (error) {
+    console.error('Error loading events:', error);
+    this.events = [];
   }
+}
+
+ private convertTimeToLocal(timeValue: string): string {
+ 
+  if (!timeValue) {
+    return '';
+  }
+ 
+  const match = timeValue.match(
+    /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+  );
+ 
+  if (!match) {
+    return timeValue;
+  }
+ 
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+ 
+  if (hours < 1 || hours > 12 || minutes > 59) {
+    return timeValue;
+  }
+ 
+  if (period === 'PM' && hours !== 12) {
+    hours += 12;
+  } else if (period === 'AM' && hours === 12) {
+    hours = 0;
+  }
+ 
+  const date = new Date();
+ 
+  date.setHours(hours, minutes, 0, 0);
+ 
+  return date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+ 
+
+ 
 
   private async loadOrganizationalEventDates(year: number, month: number): Promise<void> {
     const siteUrl = this.context.pageContext.web.absoluteUrl;
@@ -845,7 +811,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
     }
   }
 
-  private async loadMyEventDates(
+private async loadMyEventDates(
   year: number,
   month: number
 ): Promise<void> {
@@ -853,7 +819,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
     const client: MSGraphClientV3 =
       await this.context.msGraphClientFactory
         .getClient('3');
- 
+
     const startDate =
       new Date(
         year,
@@ -863,7 +829,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
         0,
         0
       );
- 
+
     const endDate =
       new Date(
         year,
@@ -873,7 +839,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
         0,
         0
       );
- 
+
     const response =
       await client
         .api('/me/calendar/calendarView')
@@ -890,26 +856,26 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
         .select('start,subject')
         .orderby('start/dateTime')
         .get();
- 
+
     this.myEventDates = [];
     this.myEventTitles = {};
- 
+
     (response.value || []).forEach(
       (event: IOutlookEvent) => {
- 
+
         if (!event.start?.dateTime) {
           return;
         }
- 
+
         const dateKey =
           this.getDateKey(
             event.start.dateTime
           );
- 
+
         if (!dateKey) {
           return;
         }
- 
+
         if (
           this.myEventDates.indexOf(
             dateKey
@@ -919,10 +885,10 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
             dateKey
           );
         }
- 
+
         const title =
           event.subject || '';
- 
+
         if (title) {
           if (
             this.myEventTitles[
@@ -945,13 +911,11 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
       'Error loading Outlook event dates:',
       error
     );
- 
+
     this.myEventDates = [];
     this.myEventTitles = {};
   }
 }
- 
-
   private getDateKey(dateValue: string): string {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
@@ -962,7 +926,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
 
   // ==================== LOAD MY EVENTS ====================
 
- private async loadMyEvents(
+  private async loadMyEvents(
   year: number,
   month: number,
   day: number
@@ -971,7 +935,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
     const client: MSGraphClientV3 =
       await this.context.msGraphClientFactory
         .getClient('3');
- 
+
     const startDate =
       new Date(
         year,
@@ -981,7 +945,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
         0,
         0
       );
- 
+
     const endDate =
       new Date(
         year,
@@ -991,7 +955,7 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
         0,
         0
       );
- 
+
     const response =
       await client
         .api('/me/calendar/calendarView')
@@ -1012,56 +976,51 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
           'start/dateTime'
         )
         .get();
- 
+
     this.myEvents =
       (response.value || []).map(
         (
           event: IOutlookEvent,
           index: number
         ): IEventItem => {
- 
-          
- 
- 
- 
+
           return {
             Id:
               index + 1,
- 
+
             Title:
               event.subject || '',
- 
+
             EventDate:
               event.start?.dateTime || '',
- 
+
             StartTime:
               event.start?.dateTime || '',
- 
+
             EndTime:
               event.end?.dateTime || '',
- 
+
             Location:
               event.location?.displayName || '',
- 
+
             Status:
               'Active',
- 
+
             TeamsUrl:
               event.onlineMeeting?.joinUrl || ''
           };
         }
       );
- 
+
   } catch (error) {
     console.error(
       'Error loading Outlook Calendar events:',
       error
     );
- 
+
     this.myEvents = [];
   }
 }
- 
 
   // ==================== RENDER UPCOMING EVENTS ====================
 
@@ -1149,63 +1108,102 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
     return `${start} – ${end}`;
   }
 
- private parseSharePointTime(timeValue: string): string {
+
+
+private parseSharePointTime(timeValue: string): string {
+ 
   if (!timeValue) {
+
     return '';
+
   }
  
-  if (timeValue.indexOf('T') !== -1) {
-    const timePart = timeValue.split('T')[1];
+  const value = String(timeValue).trim();
  
-    if (timePart) {
-      const match = timePart.match(/^(\d{1,2}):(\d{2})/);
- 
-      if (match) {
-        const hours = parseInt(match[1], 10);
-        const minutes = parseInt(match[2], 10);
- 
-        if (
-          hours >= 0 &&
-          hours <= 23 &&
-          minutes >= 0 &&
-          minutes <= 59
-        ) {
-          const period = hours >= 12 ? 'PM' : 'AM';
-          const displayHour =
-            hours % 12 === 0 ? 12 : hours % 12;
- 
-          return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
-        }
-      }
-    }
-  }
- 
-  // Handle SharePoint time values such as 13:00
-  const match = timeValue.match(
-    /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+  // Already formatted time (from loadEvents)
+
+  const formattedMatch = value.match(
+
+    /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+
   );
  
-  if (match) {
-    const hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
- 
-    if (
-      hours >= 0 &&
-      hours <= 23 &&
-      minutes >= 0 &&
-      minutes <= 59
-    ) {
-      const period = hours >= 12 ? 'PM' : 'AM';
-      const displayHour =
-        hours % 12 === 0 ? 12 : hours % 12;
- 
-      return `${('0' + displayHour).slice(-2)}:${('0' + minutes).slice(-2)} ${period}`;
-    }
+  if (formattedMatch) {
+
+    return value;
+
   }
  
-  return timeValue;
-}
+  // Handle ISO datetime from Outlook / Graph
+
+  let timePart = value;
  
+  if (value.indexOf('T') !== -1) {
+
+    timePart = value.split('T')[1];
+
+  }
+ 
+  const match = timePart.match(
+
+    /^(\d{1,2}):(\d{2})/
+
+  );
+ 
+  if (!match) {
+
+    return value;
+
+  }
+ 
+  const hours = parseInt(match[1], 10);
+
+  const minutes = parseInt(match[2], 10);
+ 
+  if (
+
+    hours < 0 ||
+
+    hours > 23 ||
+
+    minutes < 0 ||
+
+    minutes > 59
+
+  ) {
+
+    return value;
+
+  }
+ 
+  const period = hours >= 12 ? 'PM' : 'AM';
+ 
+  const displayHour = hours % 12 || 12;
+ 
+  const formattedHours =
+
+    displayHour < 10
+
+      ? '0' + displayHour
+
+      : String(displayHour);
+ 
+  const formattedMinutes =
+
+    minutes < 10
+
+      ? '0' + minutes
+
+      : String(minutes);
+ 
+  return formattedHours + ':' +
+
+    formattedMinutes + ' ' + period;
+
+}
+
+ 
+
   // ==================== INITIALIZE EVENT TABS ====================
 
   private initializeUpcomingEvents(): void {
@@ -1887,24 +1885,13 @@ private waitForLibraries(timeout: number = 10000): Promise<void> {
     });
   }
 
- private updateFavouriteTabVisibility(
-  domElement: HTMLElement,
-  favouriteIds: number[]
-): void {
- 
-  const favouriteTab = domElement.querySelector(
-    '[data-filter-ql="favourites"]'
-  ) as HTMLElement;
- 
-  if (!favouriteTab) {
-    return;
+  private updateFavouriteTabVisibility(domElement: HTMLElement, favouriteIds: number[]): void {
+    const favouriteTab = domElement.querySelector('[data-filter-ql="favourites"]') as HTMLElement;
+    if (!favouriteTab) {
+      return;
+    }
+    favouriteTab.style.display = favouriteIds.length === 0 ? 'none' : '';
   }
- 
-  const hasFavourites = favouriteIds.length > 0;
- 
-  favouriteTab.classList.toggle('d-flex', hasFavourites);
-  favouriteTab.classList.toggle('d-none', !hasFavourites);
-}
 
   private setupAddFavouriteButton(context: WebPartContext, domElement: HTMLElement): void {
     const button = domElement.querySelector('#btnAddFavourites');

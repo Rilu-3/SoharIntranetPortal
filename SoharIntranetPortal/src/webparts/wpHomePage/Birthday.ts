@@ -13,7 +13,7 @@ export default class Birthday {
 
           <div class="d-flex align-items-center gap-2">
                 <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/upcoming-birthday.svg" />
-                <h2 class="panel-title">UPCOMING BIRTHDAY</h2>
+                <h2 class="panel-title">UPCOMING BIRTHDAYS</h2>
               </div>
 
         <a
