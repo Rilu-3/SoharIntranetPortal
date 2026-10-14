@@ -670,9 +670,37 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ==================== LOAD EVENTS ====================
 
+private formatTime(startTime: string, endTime: string): string {
+  const formatSingleTime = (timeValue: string): string => {
+    if (!timeValue) return '';
 
+    const date = new Date(timeValue);
 
+    if (!isNaN(date.getTime()) && timeValue.includes('T')) {
+      let hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
 
+      hours = hours % 12 || 12;
+
+      const minutesStr = minutes < 10
+        ? '0' + minutes
+        : String(minutes);
+
+      return `${hours}:${minutesStr} ${ampm}`;
+    }
+
+    return this.parseSharePointTime(timeValue);
+  };
+
+  const start = formatSingleTime(startTime);
+  const end = formatSingleTime(endTime);
+
+  if (!start && !end) return '';
+  if (!end) return start;
+
+  return `${start} – ${end}`;
+}
 private async loadEvents(
   year: number,
   month: number,
@@ -739,7 +767,6 @@ private async loadEvents(
     this.events = [];
   }
 }
-
 
 private convertEventTimeToUserLocal(
   eventDate: string,
@@ -1187,18 +1214,18 @@ private async loadMyEventDates(
     };
   }
 
-  private formatTime(startTime: string, endTime: string): string {
-    const start = this.parseSharePointTime(startTime);
-    const end = this.parseSharePointTime(endTime);
+  // private formatTime(startTime: string, endTime: string): string {
+  //   const start = this.parseSharePointTime(startTime);
+  //   const end = this.parseSharePointTime(endTime);
 
-    if (!start && !end) {
-      return '';
-    }
-    if (!end) {
-      return start;
-    }
-    return `${start} – ${end}`;
-  }
+  //   if (!start && !end) {
+  //     return '';
+  //   }
+  //   if (!end) {
+  //     return start;
+  //   }
+  //   return `${start} – ${end}`;
+  // }
 
 
 
