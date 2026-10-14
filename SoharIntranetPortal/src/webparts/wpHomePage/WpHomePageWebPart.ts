@@ -676,8 +676,7 @@ private formatTime(startTime: string, endTime: string): string {
 
     const date = new Date(timeValue);
 
-    if (!isNaN(date.getTime()) && timeValue.includes('T')) {
-      let hours = date.getHours();
+if (!isNaN(date.getTime()) && timeValue.indexOf('T') !== -1) {      let hours = date.getHours();
       const minutes = date.getMinutes();
       const ampm = hours >= 12 ? 'PM' : 'AM';
 
