@@ -673,22 +673,20 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
 
 
-
 private async loadEvents(
   year: number,
   month: number,
   day: number
 ): Promise<void> {
- 
+
   const siteUrl = this.context.pageContext.web.absoluteUrl;
- 
+
   const startDate = new Date(year, month, day, 0, 0, 0);
   const endDate = new Date(year, month, day + 1, 0, 0, 0);
- 
+
   const url = `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'&$orderby=EventDate asc`;
- 
+
   try {
- 
     const response: SPHttpClientResponse =
       await this.context.spHttpClient.get(
         url,
@@ -699,69 +697,163 @@ private async loadEvents(
           }
         }
       );
- 
+
     if (!response.ok) {
-      console.error('Error loading events:', response.statusText);
+      console.error(
+        'Error loading organizational events:',
+        response.status,
+        response.statusText
+      );
+
       this.events = [];
       return;
     }
- 
+
     const data = await response.json();
-    
- 
-    this.events = (data.value || []).map((event: any) => ({
-      ...event,
-      StartTime: this.convertTimeToLocal(event.StartTime),
-      EndTime: this.convertTimeToLocal(event.EndTime)
-    }));
- 
+
+    // Detect browser timezone automatically
+    const userTimeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
 
  
+
+    this.events = (data.value || []).map((event: any) => ({
+      ...event,
+
+      StartTime: this.convertEventTimeToUserLocal(
+        event.EventDate,
+        event.StartTime,
+        userTimeZone
+      ),
+
+      EndTime: this.convertEventTimeToUserLocal(
+        event.EventDate,
+        event.EndTime,
+        userTimeZone
+      )
+    }));
+
+
   } catch (error) {
-    console.error('Error loading events:', error);
+    console.error('Error loading organizational events:', error);
     this.events = [];
   }
 }
 
- private convertTimeToLocal(timeValue: string): string {
- 
-  if (!timeValue) {
+
+private convertEventTimeToUserLocal(
+  eventDate: string,
+  timeValue: string,
+  userTimeZone: string
+): string {
+
+  if (!eventDate || !timeValue) {
     return '';
   }
- 
-  const match = timeValue.match(
+
+  // Read SharePoint time (example: 01:30 PM)
+  const match = String(timeValue).trim().match(
     /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
   );
- 
+
   if (!match) {
+    console.warn('Unexpected time format:', timeValue);
     return timeValue;
   }
- 
-  let hours = parseInt(match[1], 10);
-  const minutes = parseInt(match[2], 10);
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
   const period = match[3].toUpperCase();
- 
-  if (hours < 1 || hours > 12 || minutes > 59) {
+
+  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
     return timeValue;
   }
- 
+
   if (period === 'PM' && hours !== 12) {
     hours += 12;
-  } else if (period === 'AM' && hours === 12) {
+  }
+
+  if (period === 'AM' && hours === 12) {
     hours = 0;
   }
- 
-  const date = new Date();
- 
-  date.setHours(hours, minutes, 0, 0);
- 
-  return date.toLocaleTimeString(undefined, {
+
+  // Extract event date
+  const dateMatch = String(eventDate).match(
+    /^(\d{4})-(\d{2})-(\d{2})/
+  );
+
+  if (!dateMatch) {
+    console.error('Invalid event date:', eventDate);
+    return timeValue;
+  }
+
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]) - 1;
+  const day = Number(dateMatch[3]);
+
+  // UAE source timezone
+  const sourceTimeZone = 'Asia/Dubai';
+
+  // Create target wall-clock timestamp
+  const targetTime = Date.UTC(
+    year,
+    month,
+    day,
+    hours,
+    minutes
+  );
+
+  let utcTime = targetTime;
+
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: sourceTimeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  // Resolve UAE wall-clock time to UTC
+  for (let i = 0; i < 3; i++) {
+
+    const formattedDate = formatter.format(
+      new Date(utcTime)
+    );
+
+    const dateParts = formattedDate.match(
+      /^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})$/
+    );
+
+    if (!dateParts) {
+      console.error('Unable to parse UAE date/time:', formattedDate);
+      return timeValue;
+    }
+
+    const representedTime = Date.UTC(
+      Number(dateParts[3]),
+      Number(dateParts[2]) - 1,
+      Number(dateParts[1]),
+      Number(dateParts[4]),
+      Number(dateParts[5])
+    );
+
+    utcTime += targetTime - representedTime;
+  }
+
+  // Convert to user's local timezone
+  const convertedDate = new Date(utcTime);
+
+  const localTime = convertedDate.toLocaleTimeString(undefined, {
+    timeZone: userTimeZone,
     hour: '2-digit',
     minute: '2-digit',
     hour12: true
   });
+
+  return localTime;
 }
- 
 
  
 
