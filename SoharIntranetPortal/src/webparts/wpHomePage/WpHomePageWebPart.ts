@@ -59,10 +59,20 @@ export interface IEventItem {
 interface IOutlookEvent {
   id?: string;
   subject?: string;
-  start?: { dateTime?: string };
-  end?: { dateTime?: string };
-  location?: { displayName?: string };
-  onlineMeeting?: { joinUrl?: string };
+  start?: {
+    dateTime?: string;
+    timeZone?: string;
+  };
+  end?: {
+    dateTime?: string;
+    timeZone?: string;
+  };
+  location?: {
+    displayName?: string;
+  };
+  onlineMeeting?: {
+    joinUrl?: string;
+  };
 }
 
 interface IAnnouncement {
@@ -126,7 +136,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ==================== WAIT FOR LIBRARIES (loaded by extension) ====================
 
-  private waitForLibraries(timeout: number = 10000): Promise<void> {
+private waitForLibraries(timeout: number = 20000): Promise<void> {
     return new Promise<void>((resolve) => {
       const start = Date.now();
       const check = (): void => {
@@ -187,7 +197,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     const $ = (window as any).jQuery;
     const Swiper = (window as any).Swiper;
     if (!$ || !Swiper) { console.warn('jQuery or Swiper is not available.'); return; }
-
+ 
     const socialSwipers: { [key: string]: any } = {};
     document.querySelectorAll('.social-swiper').forEach(function (el) {
       const panel = el.closest('[id^="social-panel-"]');
@@ -204,14 +214,14 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       });
       if (panel) socialSwipers[panel.id] = swiper;
     });
-
+ 
     $('.sm-tab').on('click', function (this: HTMLElement) {
       const targetId = $(this).data('tab-social-id');
-
+ 
       // Update active tab
       $('.sm-tab').removeClass('sm-tab-active');
       $(this).addClass('sm-tab-active');
-
+ 
       // Hide all panels and fade in selected panel
       $('.social-media-view').stop(true, true).hide();
       $('#' + targetId).stop(true, true).fadeIn(200);
@@ -219,31 +229,61 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
   }
 
   // ---------- MEDIA GALLERY ----------
+   // ---------- MEDIA GALLERY ----------
   private initMediaGallery(): void {
-    const $ = (window as any).jQuery;
-    // const $ = (window as Window & { soharJQuery?: any }).soharJQuery;
-    const Swiper = (window as any).Swiper;
-    const bootstrap = (window as any).bootstrap;
-    if (!$ || !Swiper || !bootstrap) { console.warn('jQuery, Swiper or Bootstrap is not available.'); return; }
+    const $ = (window as any).soharJQuery || (window as any).jQuery;
+    const Swiper = (window as any).soharSwiper || (window as any).Swiper;
 
-    new Swiper('.gallery-swiper', {
+    if (!$ || !Swiper) {
+      console.warn('jQuery or Swiper is not available.');
+      return;
+    }
+
+    const galleryElement = this.domElement.querySelector('.gallery-swiper') as HTMLElement;
+
+    if (!galleryElement) {
+      console.warn('Gallery Swiper element not found.');
+      return;
+    }
+
+    const gallerySwiper = new Swiper(galleryElement, {
       slidesPerView: 1,
       spaceBetween: 12,
       loop: false,
       speed: 500,
-      pagination: { el: ".gallery-swiper-pagination", clickable: true },
-      navigation: { nextEl: ".gallery-slide-next", prevEl: ".gallery-slide-prev" },
+      observer: true,
+      observeParents: true,
+      pagination: { el: '.gallery-swiper-pagination', clickable: true },
+      navigation: { nextEl: '.gallery-slide-next', prevEl: '.gallery-slide-prev' },
       breakpoints: {
         400: { slidesPerView: 2, spaceBetween: 12 },
         576: { slidesPerView: 2, spaceBetween: 14 },
         768: { slidesPerView: 3, spaceBetween: 16 },
-        992: { slidesPerView: 4, spaceBetween: 16 },
-      },
+        992: { slidesPerView: 4, spaceBetween: 16 }
+      }
     });
 
-    const modalElement = document.getElementById("galleryModal");
-    if (!modalElement) { return; }
-    const modal = new bootstrap.Modal.getOrCreateInstance(modalElement);
+    // Recalculate once everything (images, social widgets, loader) has finished loading
+    if (document.readyState === 'complete') {
+      setTimeout(() => gallerySwiper.update(), 300);
+    } else {
+      window.addEventListener('load', () => gallerySwiper.update());
+    }
+
+    // Bootstrap is only needed for the popup, so it does not block the slider
+    const bootstrap = (window as any).bootstrap;
+    if (!bootstrap) {
+      console.warn('Bootstrap is not available.');
+      return;
+    }
+
+    const modalElement = this.domElement.querySelector('#galleryModal') as HTMLElement;
+
+    if (!modalElement) {
+      return;
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
 
     let swiperGalleryModal: any = null;
     let gallery_slider_index = 0;
@@ -255,33 +295,33 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
         swiperGalleryModal = null;
       }
 
-      swiperGalleryModal = new Swiper(".gallery-modal-swiper", {
+      swiperGalleryModal = new Swiper('.gallery-modal-swiper', {
         spaceBetween: 10,
         slidesPerView: 1,
         autoplay: false,
         speed: 1400,
         autoHeight: true,
         initialSlide: gallery_slider_index,
-        navigation: { nextEl: ".gallery-swiper-modal-next", prevEl: ".gallery-swiper-modal-prev" },
+        navigation: { nextEl: '.gallery-swiper-modal-next', prevEl: '.gallery-swiper-modal-prev' }
       });
 
-      $(".gallery-modal-content").css("opacity", 1);
+      $('.gallery-modal-content').css('opacity', 1);
     }
 
     // Set the index BEFORE the modal opens
-    $(document).on("click", ".gallery-item img, .gallery-item video", function (this: HTMLElement) {
-      $(".gallery-modal-content").css("opacity", 0);
-      gallery_slider_index = $(this).closest(".swiper-slide").index();
+    $(document).on('click', '.gallery-item img, .gallery-item video', function (this: HTMLElement): void {
+      $('.gallery-modal-content').css('opacity', 0);
+      gallery_slider_index = $(this).closest('.swiper-slide').index();
       modal.show();
     });
 
     // shown.bs.modal fires AFTER the transition — Swiper can measure dimensions safely here
-    modalElement.addEventListener("shown.bs.modal", () => {
+    modalElement.addEventListener('shown.bs.modal', () => {
       initGalleryModalSwiper();
     });
 
-    // hidden.bs.modal fires AFTER modal is fully hidden
-    modalElement.addEventListener("hidden.bs.modal", () => {
+    // hidden.bs.modal fires AFTER the modal is fully hidden
+    modalElement.addEventListener('hidden.bs.modal', () => {
       if (swiperGalleryModal) {
         swiperGalleryModal.destroy(true, true);
         swiperGalleryModal = null;
@@ -322,7 +362,8 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     const newsarrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
     const arrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc&$top=500`;    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc&$top=500`;
+    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
     const OfferApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     /*
@@ -385,10 +426,15 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       // Birthdays
       this.renderBirthdays(),
 
-      // Social Media
-      Promise.all([this.initializeSocialMedia(), libsReady]).then(() => {
-        this.initSocialMediaSwipers();
-      }),
+      // // Social Media
+      // Promise.all([this.initializeSocialMedia(), libsReady]).then(() => {
+      //   this.initSocialMediaSwipers();
+      // }),
+      // Social Media — load SociableKit widgets only AFTER our libraries are ready,
+      // so their own jQuery cannot interfere with jQuery UI, the calendar or the gallery
+      libsReady
+        .then(() => this.initializeSocialMedia())
+        .then(() => this.initSocialMediaSwipers()),
 
       // News Centre
       this._renderNewsAsync(newsApiUrl).then(() => {
@@ -669,7 +715,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ==================== LOAD EVENTS ====================
 
-private formatTime(startTime: string, endTime: string): string {
+ private formatTime(startTime: string, endTime: string): string {
   const start = this.parseSharePointTime(startTime);
   const end = this.parseSharePointTime(endTime);
 
@@ -801,8 +847,6 @@ private convertEventTimeToUserLocal(
   return `${formattedHours}:${formattedMinutes} ${finalPeriod}`;
 }
 
- 
-
   private async loadOrganizationalEventDates(year: number, month: number): Promise<void> {
     const siteUrl = this.context.pageContext.web.absoluteUrl;
     const startDate = new Date(year, month, 1, 0, 0, 0);
@@ -849,7 +893,7 @@ private convertEventTimeToUserLocal(
     }
   }
 
-private async loadMyEventDates(
+  private async loadMyEventDates(
   year: number,
   month: number
 ): Promise<void> {
@@ -857,7 +901,7 @@ private async loadMyEventDates(
     const client: MSGraphClientV3 =
       await this.context.msGraphClientFactory
         .getClient('3');
-
+ 
     const startDate =
       new Date(
         year,
@@ -867,7 +911,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const endDate =
       new Date(
         year,
@@ -877,7 +921,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const response =
       await client
         .api('/me/calendar/calendarView')
@@ -894,26 +938,26 @@ private async loadMyEventDates(
         .select('start,subject')
         .orderby('start/dateTime')
         .get();
-
+ 
     this.myEventDates = [];
     this.myEventTitles = {};
-
+ 
     (response.value || []).forEach(
       (event: IOutlookEvent) => {
-
+ 
         if (!event.start?.dateTime) {
           return;
         }
-
+ 
         const dateKey =
           this.getDateKey(
             event.start.dateTime
           );
-
+ 
         if (!dateKey) {
           return;
         }
-
+ 
         if (
           this.myEventDates.indexOf(
             dateKey
@@ -923,10 +967,10 @@ private async loadMyEventDates(
             dateKey
           );
         }
-
+ 
         const title =
           event.subject || '';
-
+ 
         if (title) {
           if (
             this.myEventTitles[
@@ -949,11 +993,13 @@ private async loadMyEventDates(
       'Error loading Outlook event dates:',
       error
     );
-
+ 
     this.myEventDates = [];
     this.myEventTitles = {};
   }
 }
+ 
+
   private getDateKey(dateValue: string): string {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
@@ -964,7 +1010,7 @@ private async loadMyEventDates(
 
   // ==================== LOAD MY EVENTS ====================
 
-  private async loadMyEvents(
+ private async loadMyEvents(
   year: number,
   month: number,
   day: number
@@ -973,7 +1019,7 @@ private async loadMyEventDates(
     const client: MSGraphClientV3 =
       await this.context.msGraphClientFactory
         .getClient('3');
-
+ 
     const startDate =
       new Date(
         year,
@@ -983,7 +1029,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const endDate =
       new Date(
         year,
@@ -993,7 +1039,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const response =
       await client
         .api('/me/calendar/calendarView')
@@ -1014,51 +1060,56 @@ private async loadMyEventDates(
           'start/dateTime'
         )
         .get();
-
+ 
     this.myEvents =
       (response.value || []).map(
         (
           event: IOutlookEvent,
           index: number
         ): IEventItem => {
-
+ 
+          
+ 
+ 
+ 
           return {
             Id:
               index + 1,
-
+ 
             Title:
               event.subject || '',
-
+ 
             EventDate:
               event.start?.dateTime || '',
-
+ 
             StartTime:
               event.start?.dateTime || '',
-
+ 
             EndTime:
               event.end?.dateTime || '',
-
+ 
             Location:
               event.location?.displayName || '',
-
+ 
             Status:
               'Active',
-
+ 
             TeamsUrl:
               event.onlineMeeting?.joinUrl || ''
           };
         }
       );
-
+ 
   } catch (error) {
     console.error(
       'Error loading Outlook Calendar events:',
       error
     );
-
+ 
     this.myEvents = [];
   }
 }
+ 
 
   // ==================== RENDER UPCOMING EVENTS ====================
 
@@ -1133,18 +1184,6 @@ private async loadMyEventDates(
     };
   }
 
-  // private formatTime(startTime: string, endTime: string): string {
-  //   const start = this.parseSharePointTime(startTime);
-  //   const end = this.parseSharePointTime(endTime);
-
-  //   if (!start && !end) {
-  //     return '';
-  //   }
-  //   if (!end) {
-  //     return start;
-  //   }
-  //   return `${start} – ${end}`;
-  // }
 
 
 
@@ -1244,9 +1283,6 @@ if (formattedMatch) {
     formattedMinutes + ' ' + period;
 
 }
-
- 
-
   // ==================== INITIALIZE EVENT TABS ====================
 
   private initializeUpcomingEvents(): void {
@@ -1686,10 +1722,10 @@ if (formattedMatch) {
 
 
     const apiUrl =
-  `${webUrl}` +
-  `/_api/web/lists/GetByTitle('Quick_Links')/items` +
-  `?$select=Id,Title,Icon,URL,Status,SortOrder,Created` +
-  `&$orderby=SortOrder asc,Created desc`;
+    `${webUrl}` +
+    `/_api/web/lists/GetByTitle('Quick_Links')/items` +
+    `?$select=Id,Title,Icon,URL,Status,SortOrder,Created` +
+    `&$orderby=SortOrder asc,Created desc`;
 
 
     const response =
@@ -1926,12 +1962,30 @@ if (formattedMatch) {
     });
   }
 
-  private updateFavouriteTabVisibility(domElement: HTMLElement, favouriteIds: number[]): void {
-    const favouriteTab = domElement.querySelector('[data-filter-ql="favourites"]') as HTMLElement;
+  private updateFavouriteTabVisibility(
+    domElement: HTMLElement,
+    favouriteIds: number[]
+  ): void {
+  
+    const favouriteTab = domElement.querySelector(
+      '[data-filter-ql="favourites"]'
+    ) as HTMLElement;
+  
     if (!favouriteTab) {
       return;
     }
-    favouriteTab.style.display = favouriteIds.length === 0 ? 'none' : '';
+  
+    const hasFavourites = favouriteIds.length > 0;
+  
+    if (hasFavourites) {
+      favouriteTab.classList.remove('d-none');
+      favouriteTab.style.removeProperty('display');
+      favouriteTab.classList.add('d-flex');
+    } else {
+      favouriteTab.classList.remove('d-flex');
+      favouriteTab.classList.add('d-none');
+      favouriteTab.style.setProperty('display', 'none', 'important');
+    }
   }
 
   private setupAddFavouriteButton(context: WebPartContext, domElement: HTMLElement): void {
