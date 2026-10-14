@@ -322,8 +322,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     const newsarrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
     const arrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc`;
-    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc&$top=500`;    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
     const OfferApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     /*
@@ -752,18 +751,16 @@ private async loadEvents(
 }
 
 private convertEventTimeToUserLocal(
-  eventDate: string,
+  eventDate: Date,
   timeValue: string,
   userTimeZone: string
 ): string {
-
-  if (!eventDate || !timeValue) {
+  if (!timeValue) {
     return '';
   }
 
-  // Read SharePoint time (example: 01:30 PM)
   const match = String(timeValue).trim().match(
-    /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+    /^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)$/i
   );
 
   if (!match) {
@@ -772,97 +769,36 @@ private convertEventTimeToUserLocal(
   }
 
   let hours = Number(match[1]);
-  const minutes = Number(match[2]);
+  const minutes = Number(match[2] || 0);
   const period = match[3].toUpperCase();
 
-  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
+  if (hours < 1 || hours > 12 || minutes > 59) {
     return timeValue;
   }
 
   if (period === 'PM' && hours !== 12) {
     hours += 12;
-  }
-
-  if (period === 'AM' && hours === 12) {
+  } else if (period === 'AM' && hours === 12) {
     hours = 0;
   }
 
-  // Extract event date
-  const dateMatch = String(eventDate).match(
-    /^(\d{4})-(\d{2})-(\d{2})/
-  );
+  const totalMinutes = hours * 60 + minutes + 90;
 
-  if (!dateMatch) {
-    console.error('Invalid event date:', eventDate);
-    return timeValue;
-  }
+  const convertedHours = Math.floor(totalMinutes / 60) % 24;
+  const convertedMinutes = totalMinutes % 60;
 
-  const year = Number(dateMatch[1]);
-  const month = Number(dateMatch[2]) - 1;
-  const day = Number(dateMatch[3]);
+  const finalPeriod = convertedHours >= 12 ? 'PM' : 'AM';
+  const displayHours = convertedHours % 12 || 12;
 
-  // UAE source timezone
-  const sourceTimeZone = 'Asia/Dubai';
+  const formattedHours = displayHours < 10
+    ? '0' + displayHours
+    : String(displayHours);
 
-  // Create target wall-clock timestamp
-  const targetTime = Date.UTC(
-    year,
-    month,
-    day,
-    hours,
-    minutes
-  );
+  const formattedMinutes = convertedMinutes < 10
+    ? '0' + convertedMinutes
+    : String(convertedMinutes);
 
-  let utcTime = targetTime;
-
-  const formatter = new Intl.DateTimeFormat('en-GB', {
-    timeZone: sourceTimeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-
-  // Resolve UAE wall-clock time to UTC
-  for (let i = 0; i < 3; i++) {
-
-    const formattedDate = formatter.format(
-      new Date(utcTime)
-    );
-
-    const dateParts = formattedDate.match(
-      /^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})$/
-    );
-
-    if (!dateParts) {
-      console.error('Unable to parse UAE date/time:', formattedDate);
-      return timeValue;
-    }
-
-    const representedTime = Date.UTC(
-      Number(dateParts[3]),
-      Number(dateParts[2]) - 1,
-      Number(dateParts[1]),
-      Number(dateParts[4]),
-      Number(dateParts[5])
-    );
-
-    utcTime += targetTime - representedTime;
-  }
-
-  // Convert to user's local timezone
-  const convertedDate = new Date(utcTime);
-
-  const localTime = convertedDate.toLocaleTimeString(undefined, {
-    timeZone: userTimeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-
-  return localTime;
+  return `${formattedHours}:${formattedMinutes} ${finalPeriod}`;
 }
 
  
@@ -1435,8 +1371,7 @@ if (formattedMatch) {
   private async _getBannerItems(): Promise<void> {
     try {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
-      const url = `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
+      const url = `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image,Created&$filter=Status eq 'Active'&$orderby=SortOrder asc,Created desc`;
       const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
@@ -1492,8 +1427,7 @@ if (formattedMatch) {
   private async _getMediaGalleryItems(): Promise<void> {
     try {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
-      const url = `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
+      const url = `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image,Created&$filter=Status eq 'Active'&$orderby=SortOrder asc,Created desc`;
       const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
@@ -1752,10 +1686,10 @@ if (formattedMatch) {
 
 
     const apiUrl =
-      `${webUrl}` +
-      `/_api/web/lists/GetByTitle('Quick_Links')/items` +
-      `?$select=Id,Title,Icon,URL,Status,SortOrder` +
-      `&$orderby=SortOrder asc`;
+  `${webUrl}` +
+  `/_api/web/lists/GetByTitle('Quick_Links')/items` +
+  `?$select=Id,Title,Icon,URL,Status,SortOrder,Created` +
+  `&$orderby=SortOrder asc,Created desc`;
 
 
     const response =
