@@ -255,52 +255,30 @@ export default class Header {
                         }
 
                         // Shared Workspace direct navigation
-
-                        if (normalizedTitle === 'shared workspace') {
-
-                          const link = item.Link?.Url || '#';
+     if (normalizedTitle === 'shared workspace') {
 
                           return `
                             <li class="dept-submenu">
 
                               <a
-                                class="dropdown-item text-sm d-flex align-items-center gap-2"
-                                href="${link}"
-                                target="_self"
-                                data-interception="off">
+                                class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
+                                href="${item.Link?.Url || '#'}"
+                                role="button">
 
-                                <img class="sub-menu-icon sub-menu-icon-default"
-                                  src="${iconUrl}" alt="" />
+                                <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
 
-                                <span class="doc-centre-title">${title}</span>
+                                  <img class="sub-menu-icon sub-menu-icon-default"
+                                    src="${iconUrl}" alt="" />
+
+                                  <div class="doc-centre-title">${title}</div>
+
+                                </div>
 
                               </a>
 
                             </li>
                           `;
                         }
-
-                        // Display any other Document Center item as a direct link
-
-                        const link = item.Link?.Url || '#';
-
-                        return `
-                          <li class="dept-submenu">
-
-                            <a
-                              class="dropdown-item text-sm d-flex align-items-center gap-2"
-                              href="${link}"
-                              target="_self"
-                              data-interception="off">
-
-                              ${iconUrl ? `<img class="sub-menu-icon sub-menu-icon-default" src="${iconUrl}" alt="" />` : ''}
-
-                              <span class="doc-centre-title">${title}</span>
-
-                            </a>
-
-                          </li>
-                        `;
                       }).join('')}
 
                     </ul>
