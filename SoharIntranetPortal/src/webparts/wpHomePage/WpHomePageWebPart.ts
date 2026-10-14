@@ -671,32 +671,16 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
   // ==================== LOAD EVENTS ====================
 
 private formatTime(startTime: string, endTime: string): string {
-  const formatSingleTime = (timeValue: string): string => {
-    if (!timeValue) return '';
+  const start = this.parseSharePointTime(startTime);
+  const end = this.parseSharePointTime(endTime);
 
-    const date = new Date(timeValue);
+  if (!start && !end) {
+    return '';
+  }
 
-if (!isNaN(date.getTime()) && timeValue.indexOf('T') !== -1) {      let hours = date.getHours();
-      const minutes = date.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-
-      hours = hours % 12 || 12;
-
-      const minutesStr = minutes < 10
-        ? '0' + minutes
-        : String(minutes);
-
-      return `${hours}:${minutesStr} ${ampm}`;
-    }
-
-    return this.parseSharePointTime(timeValue);
-  };
-
-  const start = formatSingleTime(startTime);
-  const end = formatSingleTime(endTime);
-
-  if (!start && !end) return '';
-  if (!end) return start;
+  if (!end) {
+    return start;
+  }
 
   return `${start} – ${end}`;
 }
@@ -1240,18 +1224,23 @@ private parseSharePointTime(timeValue: string): string {
  
   // Already formatted time (from loadEvents)
 
-  const formattedMatch = value.match(
+const formattedMatch = value.match(
+  /^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)$/i
+);
 
-    /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+if (formattedMatch) {
+  const hours = Number(formattedMatch[1]);
+  const minutes = Number(formattedMatch[2] || 0);
 
-  );
- 
-  if (formattedMatch) {
-
+  if (hours < 1 || hours > 12 || minutes > 59) {
     return value;
-
   }
- 
+
+  const formattedHours = hours < 10 ? '0' + hours : String(hours);
+  const formattedMinutes = minutes < 10 ? '0' + minutes : String(minutes);
+
+  return `${formattedHours}:${formattedMinutes} ${formattedMatch[3].toUpperCase()}`;
+}
   // Handle ISO datetime from Outlook / Graph
 
   let timePart = value;
