@@ -49,7 +49,7 @@ export default class WpNewsDetailsWebPart extends BaseClientSideWebPart<IWpNewsD
       return;
     }
 
-      const apiUrl: string = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('News')/items(${id})?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status,NewsImage&$top=500`;
+      const apiUrl: string = `${this.context.pageContext.web.absoluteUrl}/_api/web/lists/GetByTitle('News')/items(${id})?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status,NewsImage`;
     try {
       const item: ISPList = await this._getListData(apiUrl);
 
