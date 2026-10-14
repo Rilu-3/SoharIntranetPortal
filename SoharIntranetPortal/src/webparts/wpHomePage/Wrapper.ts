@@ -203,7 +203,7 @@ export default class Wrapper {
           </button>
 
           <button type="button" class="btn-appearance-none btn-brand btn-brand-primary px-3 py-1 text-sm" id="btnAddFavourites">
-            Add to Favourites
+            Submit
           </button>
         </div>
 

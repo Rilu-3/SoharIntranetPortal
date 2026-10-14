@@ -4,7 +4,10 @@ export default class SocialMedia {
       <div class="panel-card px-2 py-4">
 
         <div class="panel-header px-2 w-100 float-start">
-          <h2 class="panel-title">Social Media</h2>
+        <div class="d-flex align-items-center gap-2">
+                <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/social-media.png" />
+                <h2 class="panel-title">SOCIAL MEDIA</h2>
+              </div>
         </div>
 
         <div class="w-100 float-start px-2 pt-4 panel-card-calendar">

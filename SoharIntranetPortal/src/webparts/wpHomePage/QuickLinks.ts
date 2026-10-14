@@ -33,17 +33,15 @@ export default class QuickLinks {
 
           <div class="d-flex align-items-center flex-wrap gap-2 gap-sm-3">
 
-            <h2
-              data-filter-ql="quick-links"
-              class="panel-title panel-title-filter panel-title-filter-active">
-              Quick Links
-            </h2>
+            <div data-filter-ql="quick-links" class="d-flex align-items-center gap-2 panel-title-filter panel-title-filter-active">
+                  <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/link.png" />
+                  <h2 class="panel-title">Quick Links</h2>
+                </div>
 
-            <h2
-              data-filter-ql="favourites"
-              class="panel-title panel-title-filter">
-              Favourites
-            </h2>
+            <div data-filter-ql="favourites" class="d-flex align-items-center gap-2 panel-title-filter">
+                  <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/favourite.svg" />
+                  <h2 class="panel-title">Favourites</h2>
+                </div>
 
           </div>
 
