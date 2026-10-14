@@ -293,11 +293,13 @@ private async _initialise(): Promise<void> {
   }
 
 private async _getDepartments(): Promise<any[]> {
-  const url: string =
-    `${SITE_URL}/_api/web/lists/getbytitle('Departments')/items` +
-    `?$select=Title,Link,Status,SortOrder` +
-    `&$filter=Status eq 'Active'` +
-    `&$orderby=SortOrder asc`;
+ 
+const url: string =
+  `${SITE_URL}/_api/web/lists/getbytitle('Departments')/items` +
+  `?$select=Title,Link,Status,SortOrder` +
+  `&$filter=Status eq 'Active'` +
+  `&$orderby=Title asc`;
+
 
   try {
     const response = await this.context.spHttpClient.get(
@@ -333,11 +335,13 @@ private async _getDepartments(): Promise<any[]> {
 }
 private async _getControlledDocuments(): Promise<any[]> {
 
-  const url: string =
-    `${SITE_URL}/_api/web/lists/getbytitle('Controlled Documents')/items` +
-    `?$select=Id,Title,Link,Status,SortOrder` +
-    `&$filter=Status eq 'Active'` +
-    `&$orderby=SortOrder asc`;
+
+const url: string =
+  `${SITE_URL}/_api/web/lists/getbytitle('Controlled Documents')/items` +
+  `?$select=Id,Title,Link,Status,SortOrder` +
+  `&$filter=Status eq 'Active'` +
+  `&$orderby=Title asc`;
+
 
   try {
 
