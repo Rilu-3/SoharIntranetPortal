@@ -201,11 +201,11 @@ private async initializeQuickLinks(): Promise<void> {
       context.pageContext.web.absoluteUrl;
 
 
-    const apiUrl =
+      const apiUrl =
       `${webUrl}` +
-      `/_api/web/lists/GetByTitle('Quick_Links')/items` +
-      `?$select=Id,Title,Icon,URL,Status,SortOrder` +
-      `&$orderby=SortOrder asc`;
+        `/_api/web/lists/GetByTitle('Quick_Links')/items` +
+        `?$select=Id,Title,Icon,URL,Status,SortOrder,Created` +
+        `&$orderby=SortOrder asc,Created desc`;
 
 
     const response =
@@ -661,23 +661,30 @@ private async createFavourite(
   // =========================================================
 
 private updateFavouriteTabVisibility(
-  domElement: HTMLElement,
-  favouriteIds: number[]
-): void {
+    domElement: HTMLElement,
+    favouriteIds: number[]
+  ): void {
  
-  const favouriteTab = domElement.querySelector(
-    '[data-filter-ql="favourites"]'
-  ) as HTMLElement;
+    const favouriteTab = domElement.querySelector(
+      '[data-filter-ql="favourites"]'
+    ) as HTMLElement;
  
-  if (!favouriteTab) {
-    return;
+    if (!favouriteTab) {
+      return;
+    }
+ 
+    const hasFavourites = favouriteIds.length > 0;
+ 
+    if (hasFavourites) {
+      favouriteTab.classList.remove('d-none');
+      favouriteTab.style.removeProperty('display');
+      favouriteTab.classList.add('d-flex');
+    } else {
+      favouriteTab.classList.remove('d-flex');
+      favouriteTab.classList.add('d-none');
+      favouriteTab.style.setProperty('display', 'none', 'important');
+    }
   }
- 
-  const hasFavourites = favouriteIds.length > 0;
- 
-  favouriteTab.classList.toggle('d-flex', hasFavourites);
-  favouriteTab.classList.toggle('d-none', !hasFavourites);
-}
 
 
   // =========================================================
