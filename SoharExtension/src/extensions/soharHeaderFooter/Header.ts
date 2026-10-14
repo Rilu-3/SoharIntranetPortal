@@ -192,8 +192,9 @@ export default class Header {
                                   <div class="doc-centre-title">${title}</div>
 
                                 </div>
-
-                              </a>
+                                   <img class="submenu-arrow"
+                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
+                                  alt="" />                              </a>
 
                               <div class="dept-submenu-list">
 
@@ -210,7 +211,6 @@ export default class Header {
                             </li>
                           `;
                         }
-
                         // Departments submenu
 
                         if (normalizedTitle === 'departments') {
@@ -233,7 +233,10 @@ export default class Header {
 
                                 </div>
 
-                              </a>
+                                  <img class="submenu-arrow"
+                                  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow-neutral.png"
+                                  alt="" />                              
+                                  </a>
 
                               <div class="dept-submenu-list">
 
