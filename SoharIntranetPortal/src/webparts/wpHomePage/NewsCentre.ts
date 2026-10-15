@@ -14,14 +14,17 @@ export default class NewsCentre {
         </div>
         <div class="flex-grow-1">
           <p class="news-title">__KEY_DATA_TITLE__</p>
-          <p class="news-desc line-clamp-2">__KEY_DATA_DESCRIPTION__</p>
+          <p class="news-desc line-clamp-2 news-description">__KEY_DATA_DESCRIPTION__</p>
           <p class="news-meta mt-1"><span class="tag">__KEY_DATA_CATEGORY__</span> &nbsp;•&nbsp; __KEY_DATA_DATE__</p>
         </div>
       </div>
+      <!--
       <a href="__KEY_URL_LINK__ "  target="_self" data-interception="off"
         class="link-arrow text-color-link align-self-end align-self-sm-center flex-shrink-0"><span
-          class="text-sm xxl-text-base font-bold">Read More</span><img
+          class="text-sm xxl-text-base font-bold">Read Moreeee</span><img
           src="__KEY_URL_ARROW__" /></a>
+
+      -->
     </div>
   `;
 
@@ -78,6 +81,47 @@ export default class NewsCentre {
   </div>
 
   `;
+
+
+  
+public static documentPreviewModalHtml: string = `
+  <div
+    class="modal fade news-document-preview-modal"
+    id="newsDocumentPreviewModal"
+    tabindex="-1"
+    aria-labelledby="newsDocumentPreviewTitle"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="newsDocumentPreviewTitle">
+            Document Preview
+          </h5>
+
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close">
+          </button>
+        </div>
+
+        <div class="modal-body p-0">
+          <iframe
+            id="newsDocumentPreviewFrame"
+            title="News document preview"
+            style="width: 100%; height: 75vh; border: 0;"
+            allowfullscreen>
+          </iframe>
+        </div>
+
+      </div>
+    </div>
+  </div>
+`;
+
 
 
   /*
