@@ -27,6 +27,8 @@ export interface IWpHomePageWebPartProps {
   description: string;
 }
 
+
+
 export interface IEventItem {
   Id: number;
   Title: string;
@@ -166,191 +168,239 @@ export default class WpHomePageWebPart
       );
     }
   }
-
-  private async loadEvents(
-    year: number,
-    month: number,
-    day: number
-  ): Promise<void> {
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
-
-    const startDate =
-      new Date(
-        year,
-        month,
-        day,
-        0,
-        0,
-        0
-      );
-
-    const endDate =
-      new Date(
-        year,
-        month,
-        day + 1,
-        0,
-        0,
-        0
-      );
-
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
-      `?$select=Id,Title,EventDate,StartTime,EndTime,Location,Status,Link` +
-      `&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}'` +
-      `&$orderby=EventDate asc`;
-
-    try {
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              Accept:
-                'application/json;odata=nometadata'
-            }
-          }
-        );
-
-      if (!response.ok) {
-        console.error(
-          'Upcoming Events list error:',
-          response.status,
-          response.statusText
-        );
-
-        this.events = [];
-        return;
-      }
-
-      const data = await response.json();
-
-      this.events =
-        data.value || [];
-    } catch (error) {
-      console.error(
-        'Error loading Upcoming Events:',
-        error
-      );
-
-      this.events = [];
-    }
+private formatTime(
+  startTime: string,
+  endTime: string
+): string {
+  if (!startTime && !endTime) {
+    return '';
   }
 
-  private async loadOrganizationalEventDates(
-    year: number,
-    month: number
-  ): Promise<void> {
-    const siteUrl =
-      this.context.pageContext.web.absoluteUrl;
+  if (!endTime) {
+    return startTime;
+  }
 
-    const startDate =
-      new Date(
-        year,
-        month,
-        1,
-        0,
-        0,
-        0
-      );
+  if (!startTime) {
+    return endTime;
+  }
 
-    const endDate =
-      new Date(
-        year,
-        month + 1,
-        1,
-        0,
-        0,
-        0
-      );
+  return `${startTime} – ${endTime}`;
+}
+private async loadEvents(
+  year: number,
+  month: number,
+  day: number
+): Promise<void> {
 
-    const url =
-      `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
-      `?$select=EventDate,Status,Title` +
-      `&$filter=EventDate ge datetime'${startDate.toISOString()}' and EventDate lt datetime'${endDate.toISOString()}' and Status eq 'Active'`;
+  const siteUrl = this.context.pageContext.web.absoluteUrl;
 
-    try {
-      const response: SPHttpClientResponse =
-        await this.context.spHttpClient.get(
-          url,
-          SPHttpClient.configurations.v1,
-          {
-            headers: {
-              Accept:
-                'application/json;odata=nometadata'
-            }
-          }
-        );
+  const startDate = new Date(year, month, day, 0, 0, 0);
+  const endDate = new Date(year, month, day + 1, 0, 0, 0);
 
-      if (!response.ok) {
-        this.organizationalEventDates = [];
-        this.organizationalEventTitles = {};
-        return;
-      }
+  const filter =
+    "EventStartDate ge datetime'" +
+    startDate.toISOString() +
+    "' and EventStartDate lt datetime'" +
+    endDate.toISOString() + "'";
 
-      const data = await response.json();
+  const url =
+    `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
+    `?$select=Id,Title,EventStartDate,EventEndDate,Location,Status,Link` +
+    `&$filter=${encodeURIComponent(filter)}` +
+    `&$orderby=EventStartDate asc`;
 
-      this.organizationalEventDates = [];
-      this.organizationalEventTitles = {};
+  try {
 
-      (data.value || []).forEach(
-        (item: {
-          EventDate: string;
-          Status: string;
-          Title: string;
-        }) => {
-
-          const dateKey =
-            this.getDateKey(
-              item.EventDate
-            );
-
-          if (!dateKey) {
-            return;
-          }
-
-          if (
-            this.organizationalEventDates
-              .indexOf(dateKey) === -1
-          ) {
-            this.organizationalEventDates.push(
-              dateKey
-            );
-          }
-
-          const title =
-            item.Title || '';
-
-          if (title) {
-            if (
-              this.organizationalEventTitles[
-                dateKey
-              ]
-            ) {
-              this.organizationalEventTitles[
-                dateKey
-              ] += `, ${title}`;
-            } else {
-              this.organizationalEventTitles[
-                dateKey
-              ] = title;
-            }
+    const response: SPHttpClientResponse =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            Accept: 'application/json;odata=nometadata'
           }
         }
       );
-    } catch (error) {
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      console.error(
+        'Error loading organizational events:',
+        response.status,
+        errorText
+      );
+
+      this.events = [];
+      return;
+    }
+
+    const data = await response.json();
+
+    const userTimeZone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    this.events = (data.value || []).map(
+      (item: {
+        Id: number;
+        Title: string;
+        EventStartDate: string;
+        EventEndDate: string;
+        Location: string;
+        Status: string;
+        Link?: string;
+      }): IEventItem => ({
+
+        Id: item.Id,
+
+        Title: item.Title || '',
+
+        EventDate: item.EventStartDate || '',
+
+        StartTime: this.convertEventTimeToUserLocal(
+          item.EventStartDate,
+          userTimeZone
+        ),
+
+        EndTime: this.convertEventTimeToUserLocal(
+          item.EventEndDate,
+          userTimeZone
+        ),
+
+        Location: item.Location || '',
+
+        Status: item.Status || '',
+
+        Link: item.Link || ''
+
+      })
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      'Error loading organizational events:',
+      error
+    );
+
+    this.events = [];
+  }
+}
+private convertEventTimeToUserLocal(
+  timeValue: string,
+  userTimeZone: string
+): string {
+  if (!timeValue) {
+    return '';
+  }
+
+  const date = new Date(timeValue);
+
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleTimeString('en-US', {
+    timeZone: userTimeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+private async loadOrganizationalEventDates(
+  year: number,
+  month: number
+): Promise<void> {
+
+  const siteUrl = this.context.pageContext.web.absoluteUrl;
+
+  const startDate = new Date(year, month, 1, 0, 0, 0);
+  const endDate = new Date(year, month + 1, 1, 0, 0, 0);
+
+  const filter =
+    "EventStartDate ge datetime'" + startDate.toISOString() +
+    "' and EventStartDate lt datetime'" + endDate.toISOString() +
+    "' and Status eq 'Active'";
+
+  const url =
+    `${siteUrl}/_api/web/lists/getbytitle('Upcoming Events')/items` +
+    `?$select=Id,Title,EventStartDate,Status` +
+    `&$filter=${encodeURIComponent(filter)}`;
+
+  try {
+
+    const response: SPHttpClientResponse =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            Accept: 'application/json;odata=nometadata'
+          }
+        }
+      );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
       console.error(
         'Error loading organizational event dates:',
-        error
+        response.status,
+        errorText
       );
 
       this.organizationalEventDates = [];
       this.organizationalEventTitles = {};
+      return;
     }
-  }
 
+    const data = await response.json();
+
+    this.organizationalEventDates = [];
+    this.organizationalEventTitles = {};
+
+    (data.value || []).forEach((item: {
+      EventStartDate: string;
+      Status: string;
+      Title: string;
+    }) => {
+
+      const dateKey = this.getDateKey(item.EventStartDate);
+
+      if (!dateKey) {
+        return;
+      }
+
+      if (this.organizationalEventDates.indexOf(dateKey) === -1) {
+        this.organizationalEventDates.push(dateKey);
+      }
+
+      const title = item.Title || '';
+
+      if (title) {
+        if (this.organizationalEventTitles[dateKey]) {
+          this.organizationalEventTitles[dateKey] += `, ${title}`;
+        } else {
+          this.organizationalEventTitles[dateKey] = title;
+        }
+      }
+    });
+
+   
+
+  } catch (error) {
+
+    console.error(
+      'Error loading organizational event dates:',
+      error
+    );
+
+    this.organizationalEventDates = [];
+    this.organizationalEventTitles = {};
+  }
+}
 
 private async loadMyEventDates(
   year: number,
@@ -459,25 +509,23 @@ private async loadMyEventDates(
 }
 
 
-  private getDateKey(
-    dateValue: string
-  ): string {
-    const date =
-      new Date(dateValue);
+private getDateKey(dateValue: Date | string): string {
+  const date = dateValue instanceof Date
+    ? dateValue
+    : new Date(dateValue);
 
-    if (isNaN(date.getTime())) {
-      return '';
-    }
+  if (isNaN(date.getTime())) return '';
 
-    return (
-      date.getFullYear() +
-      '-' +
-      date.getMonth() +
-      '-' +
-      date.getDate()
-    );
-  }
+  const year = date.getFullYear();
 
+  const monthValue = date.getMonth() + 1;
+  const month = monthValue < 10 ? '0' + monthValue : String(monthValue);
+
+  const dayValue = date.getDate();
+  const day = dayValue < 10 ? '0' + dayValue : String(dayValue);
+
+  return year + '-' + month + '-' + day;
+}
 
 private async loadMyEvents(
   year: number,
@@ -753,135 +801,111 @@ private async loadMyEvents(
     };
   }
 
-  private formatTime(
-    startTime: string,
-    endTime: string
-  ): string {
-    const start =
-      this.parseSharePointTime(
-        startTime
-      );
+ 
+// private parseSharePointTime(
+//   timeValue: string
+// ): string {
+//   if (!timeValue) {
+//     return '';
+//   }
 
-    const end =
-      this.parseSharePointTime(
-        endTime
-      );
+//   // Handle Outlook / Microsoft Graph datetime
+//   // Example: 2026-10-05T13:00:00.0000000
+//   if (timeValue.indexOf('T') !== -1) {
+//     const timePart =
+//       timeValue.split('T')[1];
 
-    if (!start && !end) {
-      return '';
-    }
+//     if (timePart) {
+//       const match =
+//         timePart.match(
+//           /^(\d{1,2}):(\d{2})/
+//         );
 
-    if (!end) {
-      return start;
-    }
+//       if (match) {
+//         const hours =
+//           parseInt(
+//             match[1],
+//             10
+//           );
 
-    return `${start} – ${end}`;
-  }
+//         const minutes =
+//           parseInt(
+//             match[2],
+//             10
+//           );
 
-private parseSharePointTime(
-  timeValue: string
-): string {
-  if (!timeValue) {
-    return '';
-  }
+//         if (
+//           hours >= 0 &&
+//           hours <= 23 &&
+//           minutes >= 0 &&
+//           minutes <= 59
+//         ) {
+//           const period =
+//             hours >= 12
+//               ? 'PM'
+//               : 'AM';
 
-  // Handle Outlook / Microsoft Graph datetime
-  // Example: 2026-10-05T13:00:00.0000000
-  if (timeValue.indexOf('T') !== -1) {
-    const timePart =
-      timeValue.split('T')[1];
+//           const displayHour =
+//             hours % 12 === 0
+//               ? 12
+//               : hours % 12;
 
-    if (timePart) {
-      const match =
-        timePart.match(
-          /^(\d{1,2}):(\d{2})/
-        );
+//           return (
+//             `${('0' + displayHour).slice(-2)}:` +
+//             `${('0' + minutes).slice(-2)} ` +
+//             `${period}`
+//           );
+//         }
+//       }
+//     }
+//   }
 
-      if (match) {
-        const hours =
-          parseInt(
-            match[1],
-            10
-          );
+//   // Handle SharePoint time values
+//   // Example: 13:00:00
+//   const match =
+//     timeValue.match(
+//       /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+//     );
 
-        const minutes =
-          parseInt(
-            match[2],
-            10
-          );
+//   if (match) {
+//     const hours =
+//       parseInt(
+//         match[1],
+//         10
+//       );
 
-        if (
-          hours >= 0 &&
-          hours <= 23 &&
-          minutes >= 0 &&
-          minutes <= 59
-        ) {
-          const period =
-            hours >= 12
-              ? 'PM'
-              : 'AM';
+//     const minutes =
+//       parseInt(
+//         match[2],
+//         10
+//       );
 
-          const displayHour =
-            hours % 12 === 0
-              ? 12
-              : hours % 12;
+//     if (
+//       hours >= 0 &&
+//       hours <= 23 &&
+//       minutes >= 0 &&
+//       minutes <= 59
+//     ) {
+//       const period =
+//         hours >= 12
+//           ? 'PM'
+//           : 'AM';
 
-          return (
-            `${('0' + displayHour).slice(-2)}:` +
-            `${('0' + minutes).slice(-2)} ` +
-            `${period}`
-          );
-        }
-      }
-    }
-  }
+//       const displayHour =
+//         hours % 12 === 0
+//           ? 12
+//           : hours % 12;
 
-  // Handle SharePoint time values
-  // Example: 13:00:00
-  const match =
-    timeValue.match(
-      /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
-    );
+//       return (
+//         `${('0' + displayHour).slice(-2)}:` +
+//         `${('0' + minutes).slice(-2)} ` +
+//         `${period}`
+//       );
+//     }
+//   }
 
-  if (match) {
-    const hours =
-      parseInt(
-        match[1],
-        10
-      );
-
-    const minutes =
-      parseInt(
-        match[2],
-        10
-      );
-
-    if (
-      hours >= 0 &&
-      hours <= 23 &&
-      minutes >= 0 &&
-      minutes <= 59
-    ) {
-      const period =
-        hours >= 12
-          ? 'PM'
-          : 'AM';
-
-      const displayHour =
-        hours % 12 === 0
-          ? 12
-          : hours % 12;
-
-      return (
-        `${('0' + displayHour).slice(-2)}:` +
-        `${('0' + minutes).slice(-2)} ` +
-        `${period}`
-      );
-    }
-  }
-
-  return timeValue;
-}
+//   return timeValue;
+// }
 
   private initializeUpcomingEvents(): void {
     const tabs =
@@ -970,10 +994,7 @@ private parseSharePointTime(
           string,
           string
         ] => {
-          const dateKey =
-            this.getDateKey(
-              date.toISOString()
-            );
+          const dateKey = this.getDateKey(date);
 
           const hasEvent =
             this.myEventDates.indexOf(
@@ -1053,39 +1074,33 @@ private parseSharePointTime(
   .find('.ui-state-active')
   .removeClass('ui-state-active');
 
-    // ORGANIZATIONAL EVENTS CALENDAR
-    $('#events-calendar-org').datepicker({
-      dateFormat: 'dd M yy',
+// ORGANIZATIONAL EVENTS CALENDAR
+$('#events-calendar-org').datepicker({
+  dateFormat: 'dd M yy',
 
-      beforeShowDay:
-        (date: Date): [
-          boolean,
-          string,
-          string
-        ] => {
-          const dateKey =
-            this.getDateKey(
-              date.toISOString()
-            );
+  beforeShowDay:
+    (date: Date): [
+      boolean,
+      string,
+      string
+    ] => {
+      const dateKey = this.getDateKey(date);
 
-          const hasEvent =
-            this.organizationalEventDates
-              .indexOf(dateKey) !== -1;
+      const hasEvent =
+        this.organizationalEventDates.indexOf(dateKey) !== -1;
 
-          return hasEvent
-            ? [
-                true,
-                'has-event',
-                this.organizationalEventTitles[
-                  dateKey
-                ] || 'Special Event'
-              ]
-            : [
-                true,
-                '',
-                ''
-              ];
-        },
+      return hasEvent
+        ? [
+            true,
+            'has-event',
+            this.organizationalEventTitles[dateKey] || 'Special Event'
+          ]
+        : [
+            true,
+            '',
+            ''
+          ];
+    },
 
       onSelect:
         async (
