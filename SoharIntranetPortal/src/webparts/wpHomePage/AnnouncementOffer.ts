@@ -57,12 +57,15 @@ export default class AnnouncementOffer {
                     <img src="__KEY__ANNOUNCEMENTOFFER__ICON__" />
                   </div>
                   <div class="flex-grow-1">
-                    <p class="announcement-title mb-1">__KEY__ANNOUNCEMENTOFFER__TITLE__</p>
-                    <p class="announcement-desc line-clamp-2">__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__</p>
+                    <p class="announcement-title mb-1">        <a href="__KEY__ANNOUNCEMENTOFFER__LINK__" target="_self" data-interception="off"
+           class="text-decoration-none announcement-link" style="color:inherit;">__KEY__ANNOUNCEMENTOFFER__TITLE__</a></p>
+                    <p class="announcement-desc line-clamp-2">        <a href="__KEY__ANNOUNCEMENTOFFER__LINK__" target="_self" data-interception="off"
+           class="text-decoration-none announcement-link" style="color:inherit;">__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__</a>
+</p>
                   </div>
                   <span class="announcement-date">__KEY__ANNOUNCEMENTOFFER__DATE__</span>
                 </div>`;
-
+ 
     public static noElementHtml: string = `
     <div class="news-item">
       <div class="flex-grow-1">
@@ -71,3 +74,5 @@ export default class AnnouncementOffer {
     </div>`
  
 }
+ 
+ 
