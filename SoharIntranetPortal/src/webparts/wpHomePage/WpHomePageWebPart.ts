@@ -71,6 +71,8 @@ interface IAnnouncement {
   ShortDescription: string;
   Icon: string;
   Created: string;
+  StartDate: string;
+  EndDate: string;
 }
 
 interface IOffer {
@@ -310,6 +312,17 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     this.socialMediaObserver.observe(document.body, { childList: true, subtree: true });
   }
 
+  private _getActiveDateFilter(): string {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' }); // "2026-10-16"
+  const dubaiMidnight = new Date(`${today}T00:00:00+04:00`).toISOString();
+  console.log(today);           // "2026-10-16"
+  console.log(dubaiMidnight);      // "2026-10-15T20:00:00.000Z"
+ 
+  return `StartDate le datetime'${dubaiMidnight}' and EndDate ge datetime'${dubaiMidnight}'`;
+}
+ 
+ 
+
   // ==================== RENDER ====================
 
   public async render(): Promise<void> {
@@ -318,12 +331,18 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       workbenchContent.style.maxWidth = 'none';
     }
 
+    const filter = `Status eq 'Active' and ${this._getActiveDateFilter()}`;
+
     const baseUrl = this.context.pageContext.web.absoluteUrl;
     const newsarrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
     const arrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
-    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc`;
-    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items?$select=Id,Title,ShortDescription,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc&$top=500`;
+       const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items`
+  + `?$select=Id,Title,ShortDescription,Created,Status,StartDate,EndDate`
+  +`&$filter=(${filter}) and Status eq 'Active'`
+  + `&$orderby=StartDate desc,Created desc`
+  + `&$top=3`;
     const OfferApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     /*
@@ -509,7 +528,6 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     items.forEach((item) => {
       const createddate = this.newsCentreFormatDate(item.PublishedDate);
       const detailsUrl = `${this.context.pageContext.web.absoluteUrl}/SitePages/NewsDetails.aspx?NewsDetailID=${item.Id}&env=WebViewList`;
-      console.log("Maincontent",item.MainContent)
       const descriptionHtml = this.newsCentreSanitizeRichText(item.MainContent || '');
       let singleElementHtml = NewsCentre.singleElementHtml;
       singleElementHtml = singleElementHtml.replace(/__KEY_URL_IMGICON__/g, newsIconImg);
@@ -1751,73 +1769,80 @@ if (formattedMatch) {
     });
   }
 
-  private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
+   private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
     try {
       const baseUrl = this.context.pageContext.web.absoluteUrl;
       const imageUrl: string = `${baseUrl}/SiteAssets/resources/images/DefaultImages/announcement-icon.png`;
       const data: IAnnouncement[] = await this._getAnnouncementsData(apiUrl);
+ 
       let allElementsHtml: string = "";
-
+ 
       if (!data || data.length === 0) {
         this.domElement.querySelector('#announcement-container')!.innerHTML = AnnouncementOffer.noElementHtml;
         return;
       }
-
+ 
       data.forEach((item) => {
         // const imageData = typeof item.Icon === 'string' ? JSON.parse(item.Icon) : item.Icon;
-
+ 
         // // SharePoint stores the real location of the image here
         // if (imageData?.serverRelativeUrl) {
         //   const serverUrl = imageData.serverUrl || new URL(this.context.pageContext.web.absoluteUrl).origin;
         //   imageUrl = `${serverUrl}${imageData.serverRelativeUrl}`;
         // }
-
-        const createddate = this.formatDates(item.Created);
+ 
+        const startdate = this.formatDates(item.StartDate);
         const description=this._getPlainText(item.ShortDescription);
+        const detailsurl=`${baseUrl}/SitePages/AnnouncementDetails.aspx?AnnoDetailID=${item.Id}`
         const singleElementHtml = AnnouncementOffer.singleElementHtml
+          .replace(/__KEY__ANNOUNCEMENTOFFER__LINK__/g,  detailsurl)
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
           .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
-          .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
-
+          .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", startdate);
+ 
         allElementsHtml += singleElementHtml;
       });
-
+ 
       this.domElement.querySelector("#announcement-container")!.innerHTML = allElementsHtml;
     } catch (error) {
       console.error('Error rendering QuickList:', error);
     }
   }
 
-  private async _renderOffersAsync(apiUrl: string): Promise<void> {
+   private async _renderOffersAsync(apiUrl: string): Promise<void> {
     try {
       const imageUrl = `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/DefaultImages/offer-icon.png`;
       const data: IOffer[] = await this._getOffersData(apiUrl);
       let allElementsHtml: string = "";
-
+ 
       if (!data || data.length === 0) {
         this.domElement.querySelector('#offer-container')!.innerHTML = AnnouncementOffer.noElementHtml;
         return;
       }
-
+ 
       data.forEach((item) => {
+        const baseUrl = this.context.pageContext.web.absoluteUrl;
         const createddate = this.formatDates(item.Created);
         const description=this._getPlainText(item.Description);
+        const detailsurl=`${baseUrl}/SitePages/OfferDetails.aspx?OfferDetailID=${item.Id}`
         const singleElementHtml = AnnouncementOffer.singleElementHtml
+          .replace(/__KEY__ANNOUNCEMENTOFFER__LINK__/g,  detailsurl)
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
           .replace("__KEY__ANNOUNCEMENTOFFER__TITLE__", item.Title)
           .replace("__KEY__ANNOUNCEMENTOFFER__DESCRIPTION__", description)
           .replace("__KEY__ANNOUNCEMENTOFFER__DATE__", createddate);
-
+ 
         allElementsHtml += singleElementHtml;
       });
-
+ 
       this.domElement.querySelector("#offer-container")!.innerHTML = allElementsHtml;
     } catch (error) {
       console.error('Error rendering QuickList:', error);
     }
   }
-
+ 
+ 
   private async _getAnnouncementsData(apiUrl: string): Promise<IAnnouncement[]> {
     const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1);
 
