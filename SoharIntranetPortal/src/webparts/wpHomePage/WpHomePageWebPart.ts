@@ -393,6 +393,7 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
 
     this.newsCentreSetupViewAll(newsarrowIconUrl);
     this.setupViewAllLink(arrowIconUrl);
+    this.newsCentreSetupDocumentPreview();
 
     /*
      * 3. Load every section in parallel.
@@ -553,11 +554,11 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
     items.forEach((item) => {
       const createddate = this.newsCentreFormatDate(item.PublishedDate);
       const detailsUrl = `${this.context.pageContext.web.absoluteUrl}/SitePages/NewsDetails.aspx?NewsDetailID=${item.Id}&env=WebViewList`;
-
+      const descriptionHtml = this.newsCentreSanitizeRichText(item.MainContent || '');
       let singleElementHtml = NewsCentre.singleElementHtml;
       singleElementHtml = singleElementHtml.replace(/__KEY_URL_IMGICON__/g, newsIconImg);
       singleElementHtml = singleElementHtml.replace(/__KEY_DATA_TITLE__/g, this.newsCentreEscapeHtml(item.Title || ''));
-      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DESCRIPTION__/g, this.newsCentreEscapeHtml(item.ShortDescription || ''));
+      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DESCRIPTION__/g, ()=> descriptionHtml);
       singleElementHtml = singleElementHtml.replace(/__KEY_DATA_CATEGORY__/g, this.newsCentreEscapeHtml(item.Category || ''));
       singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DATE__/g, createddate);
       singleElementHtml = singleElementHtml.replace(/__KEY_URL_LINK__/g, detailsUrl);
@@ -712,6 +713,144 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
   private newsCentreEscapeHtml(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
+
+    // Injects the modal and handles clicks on links inside the description
+private newsCentreSetupDocumentPreview(): void {
+  const newsContainer = this.domElement.querySelector('#news-container') as HTMLElement | null;
+  if (!newsContainer) { return; }
+ 
+  // 1. Inject the modal from your template
+  this.domElement.insertAdjacentHTML('beforeend', NewsCentre.documentPreviewModalHtml);
+ 
+  const modalEl = this.domElement.querySelector('#newsDocumentPreviewModal') as HTMLElement;
+  const frame = this.domElement.querySelector('#newsDocumentPreviewFrame') as HTMLIFrameElement;
+  const titleEl = this.domElement.querySelector('#newsDocumentPreviewTitle') as HTMLElement;
+ 
+  // 2. Clear the iframe when the modal closes
+  modalEl.addEventListener('hidden.bs.modal', () => { frame.src = 'about:blank'; });
+ 
+  // 3. One delegated click handler (cards are re-rendered on every tab click)
+  newsContainer.addEventListener('click', (e: Event) => {
+    const anchor = (e.target as HTMLElement).closest('.news-description a') as HTMLAnchorElement | null;
+    if (!anchor || !anchor.getAttribute('href')) { return; }
+ 
+    e.preventDefault();
+    e.stopPropagation();
+ 
+    const fileUrl = this.newsCentreGetFileUrl(anchor.getAttribute('href') || '');
+    const bootstrap = (window as any).bootstrap;
+ 
+    if (!bootstrap || !bootstrap.Modal) {
+      window.open(fileUrl, '_blank');   // fallback if Bootstrap isn't loaded
+      return;
+    }
+ 
+    titleEl.textContent = anchor.textContent || 'Document Preview';
+    frame.src = this.newsCentreGetPreviewUrl(fileUrl);
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  });
+}
+ 
+// Library view links (AllItems.aspx?...&id=/path/file.pdf) keep the real path in "id"
+private newsCentreGetFileUrl(href: string): string {
+  const url = new URL(href, window.location.origin);
+  const filePath = url.searchParams.get('id');
+  return filePath ? window.location.origin + encodeURI(filePath) : url.href;
+}
+ 
+// Office files need the embed view to render inside an iframe
+private newsCentreGetPreviewUrl(fileUrl: string): string {
+  const ext = (fileUrl.split('?')[0].split('.').pop() || '').toLowerCase();
+  if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].indexOf(ext) > -1) {
+    return fileUrl + (fileUrl.indexOf('?') > -1 ? '&' : '?') + 'action=embedview';
+  }
+  return ext === 'pdf' ? fileUrl + '?web=1' : fileUrl;
+}
+ 
+ 
+ 
+private newsCentreSanitizeRichText(html: string): string {
+  if (!html) {
+    return '';
+  }
+ 
+  const doc: Document = new DOMParser().parseFromString(html, 'text/html');
+ 
+  // Remove elements that should never be rendered.
+  doc.querySelectorAll(
+    'script, style, iframe, object, embed, form, input, button'
+  ).forEach((element: Element) => {
+    element.remove();
+  });
+ 
+  // Allowed HTML elements for the rich-text description.
+const allowedTags: string[] = [
+  'BR', 'SPAN', 'B', 'STRONG', 'I', 'EM', 'U', 'A'
+];
+ 
+  // Attributes allowed on the remaining elements.
+  const allowedAttributes: string[] = ['href', 'target', 'title', 'class'];
+ 
+  const elements = Array.prototype.slice.call(
+    doc.body.querySelectorAll('*')
+  ) as Element[];
+ 
+  elements.forEach((element: Element) => {
+    // Replace unsupported elements with their child content.
+    if (allowedTags.indexOf(element.tagName) === -1) {
+      const parent = element.parentNode;
+ 
+      if (parent) {
+        while (element.firstChild) {
+          parent.insertBefore(element.firstChild, element);
+        }
+        parent.removeChild(element);
+      }
+      return;
+    }
+ 
+    // Remove event handlers, inline styles and all unapproved attributes.
+    const attributes = Array.prototype.slice.call(element.attributes) as Attr[];
+ 
+    attributes.forEach((attribute: Attr) => {
+      const name = attribute.name.toLowerCase();
+ 
+      if (name.indexOf('on') === 0 || allowedAttributes.indexOf(name) === -1) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+ 
+    // Validate hyperlinks.
+    if (element.tagName === 'A') {
+      const anchor = element as HTMLAnchorElement;
+      const href = anchor.getAttribute('href');
+ 
+      // Links open in the preview modal, not a new tab.
+      anchor.removeAttribute('target');
+ 
+      // Stop SharePoint's page navigation from intercepting the link.
+      anchor.setAttribute('data-interception', 'off');
+ 
+      if (href) {
+        try {
+          const url = new URL(href, this.context.pageContext.web.absoluteUrl);
+ 
+          // Only allow HTTP and HTTPS links.
+          if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+            anchor.removeAttribute('href');
+          } else {
+            anchor.setAttribute('href', url.href);
+          }
+        } catch {
+          anchor.removeAttribute('href');
+        }
+      }
+    }
+  });
+ 
+  return doc.body.innerHTML;
+}
+ 
 
   // ==================== LOAD EVENTS ====================
 
