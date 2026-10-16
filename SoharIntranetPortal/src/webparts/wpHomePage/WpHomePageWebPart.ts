@@ -369,7 +369,7 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
       workbenchContent.style.maxWidth = 'none';
     }
 
-    const filter = `Status eq 'Active' and ${this._getActiveDateFilter()}`;
+      const filter = `Status eq 'Active' and ${ this._getActiveDateFilter()}`;
 
     const baseUrl = this.context.pageContext.web.absoluteUrl;
     const newsarrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
