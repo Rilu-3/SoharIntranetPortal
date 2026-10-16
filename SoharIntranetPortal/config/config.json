@@ -9,10 +9,19 @@
           "manifest": "./src/webparts/wpHomePage/WpHomePageWebPart.manifest.json"
         }
       ]
+    },
+    "admin-page-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/adminPage/AdminPageWebPart.js",
+          "manifest": "./src/webparts/adminPage/AdminPageWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
-    "WpHomePageWebPartStrings": "lib/webparts/wpHomePage/loc/{locale}.js"
+    "WpHomePageWebPartStrings": "lib/webparts/wpHomePage/loc/{locale}.js",
+    "AdminPageWebPartStrings": "lib/webparts/adminPage/loc/{locale}.js"
   }
 }
