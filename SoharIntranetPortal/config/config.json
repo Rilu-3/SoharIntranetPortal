@@ -89,6 +89,14 @@
           "manifest": "./src/webparts/wpDocLibraryListing/WpDocLibraryListingWebPart.manifest.json"
         }
       ]
+    },
+    "admin-page-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/adminPage/AdminPageWebPart.js",
+          "manifest": "./src/webparts/adminPage/AdminPageWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
@@ -103,6 +111,7 @@
     "WpOffersDetailsWebPartStrings": "lib/webparts/wpOffersDetails/loc/{locale}.js",
     "WpOrganizationListingWebPartStrings": "lib/webparts/wpOrganizationListing/loc/{locale}.js",
     "WpBirthdayListingWebPartStrings": "lib/webparts/wpBirthdayListing/loc/{locale}.js",
-    "WpDocLibraryListingWebPartStrings": "lib/webparts/wpDocLibraryListing/loc/{locale}.js"
+    "WpDocLibraryListingWebPartStrings": "lib/webparts/wpDocLibraryListing/loc/{locale}.js",
+    "AdminPageWebPartStrings": "lib/webparts/adminPage/loc/{locale}.js"
   }
 }
