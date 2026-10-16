@@ -97,6 +97,14 @@
           "manifest": "./src/webparts/adminPage/AdminPageWebPart.manifest.json"
         }
       ]
+    },
+    "wp-announcement-offer-listing-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/wpAnnouncementOfferListing/WpAnnouncementOfferListingWebPart.js",
+          "manifest": "./src/webparts/wpAnnouncementOfferListing/WpAnnouncementOfferListingWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
@@ -112,6 +120,7 @@
     "WpOrganizationListingWebPartStrings": "lib/webparts/wpOrganizationListing/loc/{locale}.js",
     "WpBirthdayListingWebPartStrings": "lib/webparts/wpBirthdayListing/loc/{locale}.js",
     "WpDocLibraryListingWebPartStrings": "lib/webparts/wpDocLibraryListing/loc/{locale}.js",
-    "AdminPageWebPartStrings": "lib/webparts/adminPage/loc/{locale}.js"
+    "AdminPageWebPartStrings": "lib/webparts/adminPage/loc/{locale}.js",
+    "WpAnnouncementOfferListingWebPartStrings": "lib/webparts/wpAnnouncementOfferListing/loc/{locale}.js"
   }
 }

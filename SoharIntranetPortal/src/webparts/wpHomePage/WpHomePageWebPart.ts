@@ -1713,49 +1713,38 @@ if (formattedMatch) {
 
   private setupViewAllLink(arrowIconUrl: string): void {
     const baseUrl = this.context.pageContext.web.absoluteUrl;
-
+ 
     const arrowImage = this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
     if (!arrowImage) {
       console.error('arrow image element not found');
       return;
     }
-
+ 
     // Set arrow image
     arrowImage.src = arrowIconUrl;
-
+ 
     const viewAllLink = this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
     if (!viewAllLink) {
       console.error('View All elements not found');
       return;
     }
-
+ 
     // Set default URL
-    viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx?env=WebViewList`;
-
+    viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Announcements&env=WebViewList`;
+ 
     // Change URL when tab changes
     const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
-tabs.forEach((tab) => {
-
-  tab.addEventListener('click', () => {
-
-    const selectedTab = tab.getAttribute('data-tab-ao');
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const selectedTab = tab.getAttribute('data-tab-ao');
  
-    viewAllLink.style.display = selectedTab === 'new-joiners' ? 'none' : '';
- 
-    if (selectedTab === 'announcement') {
-
-      viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx?env=WebViewList`;
-
-    } else if (selectedTab === 'offers') {
-
-      viewAllLink.href = `${baseUrl}/SitePages/Offer-List.aspx?env=WebViewList`;
-
-    }
-
-  });
-
-});
- 
+        if (selectedTab === 'announcement') {
+          viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Announcements&env=WebViewList`;
+        } else if (selectedTab === 'offers') {
+          viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Offers&env=WebViewList`;
+        }
+      });
+    });
   }
 
 private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
@@ -1782,7 +1771,7 @@ private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
  
         const startdate = this.formatDates(item.StartDate);
         const description=this._getPlainText(item.ShortDescription);
-        const detailsurl=`${baseUrl}/SitePages/AnnouncementDetails.aspx?AnnoDetailID=${item.Id}`
+        const detailsurl=`${baseUrl}/SitePages/AnnouncementDetails.aspx?AnnoDetailID=${item.Id}&env=WebViewList`
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace(/__KEY__ANNOUNCEMENTOFFER__LINK__/g,  detailsurl)
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
@@ -1814,7 +1803,7 @@ private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
         const baseUrl = this.context.pageContext.web.absoluteUrl;
         const createddate = this.formatDates(item.Created);
         const description=this._getPlainText(item.Description);
-        const detailsurl=`${baseUrl}/SitePages/OfferDetails.aspx?OfferDetailID=${item.Id}`
+        const detailsurl=`${baseUrl}/SitePages/OfferDetails.aspx?OfferDetailID=${item.Id}&env=WebViewList`
         const singleElementHtml = AnnouncementOffer.singleElementHtml
           .replace(/__KEY__ANNOUNCEMENTOFFER__LINK__/g,  detailsurl)
           .replace("__KEY__ANNOUNCEMENTOFFER__ICON__", imageUrl)
