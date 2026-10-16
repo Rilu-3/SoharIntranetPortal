@@ -25,9 +25,11 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
 
   // Cached data so header/footer can be restored after page navigation
   private _designation: string = '';
+  // private _isAdmin: boolean = false;
 private _departmentItems: any[] = [];
   private _controlledDocumentItems: any[] = [];
   private _documentCenterItems: any[] = [];
+  private _listingPageItems: any[] = [];
   private _footerHtml: string = '';
   private _isInitialised: boolean = false;
 
@@ -73,34 +75,52 @@ private async _initialise(): Promise<void> {
   // Load scripts and fetch all header data in parallel
   const scriptsPromise: Promise<void> = this._loadScripts();
 
-  const headerDataPromise: Promise<[string, any[], any[], any[]]> =
-    Promise.all([
-      this._getUserDesignation(),
-      this._getDepartments(),
-      this._getControlledDocuments(),
-      this._getDocumentCenterItems(),
-    ]);
+const headerDataPromise: Promise<[string, any[], any[], any[], any[]]> =
+  Promise.all([
+    this._getUserDesignation(),
+    this._getDepartments(),
+    this._getControlledDocuments(),
+    this._getDocumentCenterItems(),
+    this._getListingPageItems(),
+    // this._isAdminUser()
+  ]);
 
   const footerItemsPromise: Promise<any[]> = this._getFooterItems();
 
   // Receive all five results in the same order as Promise.all
-  const [
-    designation,
-    departmentItems,
-    controlledDocumentItems,
-    documentCenterItems,
-  ] = await headerDataPromise;
+const [
+  designation,
+  departmentItems,
+  controlledDocumentItems,
+  documentCenterItems,
+  listingPageItems,
+  // isAdmin
+] = await headerDataPromise;
 
   // Cache the fetched data
   this._designation = designation;
   this._departmentItems = departmentItems;
   this._controlledDocumentItems = controlledDocumentItems;
+  
   this._documentCenterItems = documentCenterItems.map((item: any) => ({
   ...item,
   IconUrl: this._getIconUrl(item)
 }));
+this._listingPageItems = listingPageItems.map((item: any) => ({
+  ...item,
+  IconUrl: this._getIconUrl(item)
+}));
+// this._isAdmin = isAdmin;
 
-  // Render header after its data is ready
+//for Testing the Admin label 
+// const userEmail: string =
+//   this.context.pageContext.user.email?.toLowerCase() || '';
+
+// this._isAdmin = isAdmin ||
+//   userEmail === 'developer2@sohar-aluminium.com';
+
+
+ // Render header after its data is ready
   this._renderHeader();
 
   // Render footer after its data is ready
@@ -379,7 +399,6 @@ const url: string =
 }
 
 
-
 private async _getDocumentCenterItems(): Promise<any[]> {
   const url =
     `${SITE_URL}/_api/web/lists/getbytitle('Document Center')/items` +
@@ -403,9 +422,42 @@ private async _getDocumentCenterItems(): Promise<any[]> {
   return data.value || [];
 }
 
+private async _getListingPageItems(): Promise<any[]> {
+  const url =
+    `${SITE_URL}/_api/web/lists/getbytitle('ListingPage')/items` +
+    `?$select=Title,Link,Icon,Status,SortOrder` +
+    `&$filter=Status eq 'Active'` +
+    `&$orderby=SortOrder asc`;
 
+  try {
+    const response = await this.context.spHttpClient.get(
+      url,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          'Accept': 'application/json;odata=nometadata'
+        }
+      }
+    );
 
+    if (!response.ok) {
+      throw new Error(
+        `Failed to load Listing Page: ${response.status} ${response.statusText}`
+      );
+    }
 
+    const data = await response.json();
+    return data.value || [];
+
+  } catch (error) {
+    Log.error(
+      LOG_SOURCE,
+      error instanceof Error ? error : new Error(String(error))
+    );
+
+    return [];
+  }
+}
 
 private _getIconUrl(item: any): string {
   if (!item || !item.Icon) {
@@ -435,7 +487,34 @@ private _getIconUrl(item: any): string {
     return '';
   }
 }
+// private async _isAdminUser(): Promise<boolean> {
+//   try {
+//     const response = await this.context.spHttpClient.get(
+//       `${this.context.pageContext.web.absoluteUrl}/_api/web/currentuser/groups?$select=Title`,
+//       SPHttpClient.configurations.v1
+//     );
 
+//     if (!response.ok) {
+//       return false;
+//     }
+
+//     const result = await response.json();
+
+//     const adminGroups = [
+//       'Communication Admin',
+//       'Portal Admin'
+//     ];
+
+//     return result.value.some((group: { Title: string }) =>
+//       adminGroups.some(
+//         (adminGroup: string) =>
+//           group.Title.trim().toLowerCase() === adminGroup.toLowerCase()
+//       )
+//     );
+//   } catch {
+//     return false;
+//   }
+// }
 
 
 
@@ -457,7 +536,18 @@ private _getIconUrl(item: any): string {
     const userEmail: string = this.context.pageContext.user.email || '';
     const profilePhoto: string = `${SITE_URL}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
 
-    const header: Header = new Header(SITE_URL, userName, escape(this._designation), profilePhoto, this._departmentItems,this._controlledDocumentItems, this._documentCenterItems);
+    const header: Header = new Header(
+  SITE_URL,
+  userName,
+  escape(this._designation),
+  profilePhoto,
+  this._departmentItems,
+  this._controlledDocumentItems,
+  this._documentCenterItems,
+  this._listingPageItems,
+  // this._isAdmin
+  
+);
 
     this._topPlaceholder.domElement.innerHTML = header.render();
 
