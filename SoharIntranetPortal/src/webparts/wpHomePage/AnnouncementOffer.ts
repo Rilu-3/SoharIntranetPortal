@@ -17,6 +17,11 @@ export default class AnnouncementOffer {
                     <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/offers.png" />
                     <h2 class="panel-title">Offers</h2>
                   </div>
+
+                <div data-tab-ao="new-joiners" class="d-flex align-items-center gap-2 panel-title-tab">
+                  <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/new-employee.png" />
+                  <h2 class="panel-title">New Joiners</h2>
+                </div>
  
               </div>
  
@@ -46,6 +51,12 @@ export default class AnnouncementOffer {
              
  
             </div>
+
+            <div id="new-joiners" class="w-100 float-start ao-tab-view">
+            <div id="new-joiners-container"
+                class="w-100 d-flex flex-column float-start px-2 overflow-auto panel-card-announcement custom-scroll-view">
+            </div>
+            </div>
  
           </div>
  
@@ -72,6 +83,25 @@ export default class AnnouncementOffer {
         <p class="news-desc">No records found.</p>
       </div>
     </div>`
+ public static singleNewJoinerHtml: string = `
+<div class="new-joiners-item">
+<img src="__KEY__NEWJOINER__IMAGE__" class="new-joiners-avatar" alt="__KEY__NEWJOINER__NAME__">
+<div class="d-flex flex-column flex-grow-1 overflow-hidden">
+<p class="new-joiners-name">__KEY__NEWJOINER__NAME__</p>
+<p class="new-joiners-desc">__KEY__NEWJOINER__DESCRIPTION__</p>
+</div>
+<div class="new-joiners-date d-flex">
+<span>__KEY__NEWJOINER__MONTH__</span>
+<span>__KEY__NEWJOINER__DAY__</span>
+</div>
+</div>`;
+ 
+public static noNewJoinerHtml: string = `
+<div class="news-item">
+<div class="flex-grow-1">
+<p class="news-desc">No new joiners found.</p>
+</div>
+</div>`;
  
 }
  

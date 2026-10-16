@@ -119,6 +119,15 @@ interface INewsItem {
   Status?: string;
 }
 
+interface INewJoiner {
+  Id: number;
+  Title: string;
+  EmployeePhoto?: string | ISharePointImage | undefined;
+  Department?: string;
+  JoiningDate: string;
+  Status: string;
+}
+
 export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePageWebPartProps> {
 
   private newsCentreItems: INewsItem[] = [];
@@ -382,6 +391,7 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
     + `&$orderby=StartDate desc,Created desc`
     + `&$top=3`;
     const OfferApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
+    const NewJoinersApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('New_Joiners')/items?$select=Id,Title,EmployeePhoto,Department,JoiningDate,Status&$filter=Status eq 'Active'&$orderby=JoiningDate desc&$top=50`;
 
     /*
      * 1. Render the page layout immediately (before any API call),
@@ -432,6 +442,7 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
       // Announcements and Offers
       this._renderAnnouncementsAsync(AnnouncementApiUrl),
       this._renderOffersAsync(OfferApiUrl),
+      this._renderNewJoinersAsync(NewJoinersApiUrl),
 
       // Media Gallery
       Promise.all([this._getMediaGalleryItems(), libsReady]).then(() => {
@@ -1723,17 +1734,28 @@ if (formattedMatch) {
 
     // Change URL when tab changes
     const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const selectedTab = tab.getAttribute('data-tab-ao');
+tabs.forEach((tab) => {
 
-        if (selectedTab === 'announcement') {
-          viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx?env=WebViewList`;
-        } else if (selectedTab === 'offers') {
-          viewAllLink.href = `${baseUrl}/SitePages/Offer-List.aspx?env=WebViewList`;
-        }
-      });
-    });
+  tab.addEventListener('click', () => {
+
+    const selectedTab = tab.getAttribute('data-tab-ao');
+ 
+    viewAllLink.style.display = selectedTab === 'new-joiners' ? 'none' : '';
+ 
+    if (selectedTab === 'announcement') {
+
+      viewAllLink.href = `${baseUrl}/SitePages/Announcement.aspx?env=WebViewList`;
+
+    } else if (selectedTab === 'offers') {
+
+      viewAllLink.href = `${baseUrl}/SitePages/Offer-List.aspx?env=WebViewList`;
+
+    }
+
+  });
+
+});
+ 
   }
 
 private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
@@ -1834,6 +1856,136 @@ private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
     console.error(`Request failed with status ${response.status}: ${response.statusText}`);
     throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
   }
+  // How many days a new joiner stays visible, counting from the joining date
+
+private readonly NEW_JOINER_VISIBLE_DAYS: number = 14;
+ 
+private async _getNewJoinersData(apiUrl: string): Promise<INewJoiner[]> {
+
+  const response: SPHttpClientResponse = await this.context.spHttpClient.get(
+
+    apiUrl,
+
+    SPHttpClient.configurations.v1,
+
+    { headers: { Accept: 'application/json;odata=nometadata' } }
+
+  );
+ 
+  if (!response.ok) {
+
+    throw new Error(`New Joiners request failed: ${response.status} ${response.statusText}`);
+
+  }
+ 
+  const data = await response.json();
+
+  return data.value || [];
+
+}
+ 
+// Keeps only people whose joining date is today or within the last 14 days
+
+private getVisibleNewJoiners(items: INewJoiner[]): INewJoiner[] {
+
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+ 
+  return items.filter((item) => {
+
+    if (!item.JoiningDate) {
+
+      return false;
+
+    }
+
+    const joiningDate = new Date(item.JoiningDate);
+
+    if (isNaN(joiningDate.getTime())) {
+
+      return false;
+
+    }
+
+    joiningDate.setHours(0, 0, 0, 0);
+ 
+    const daysSinceJoining = Math.round((today.getTime() - joiningDate.getTime()) / msPerDay);
+
+    return daysSinceJoining >= 0 && daysSinceJoining < this.NEW_JOINER_VISIBLE_DAYS;
+
+  });
+
+}
+ 
+private async _renderNewJoinersAsync(apiUrl: string): Promise<void> {
+
+  const container = this.domElement.querySelector('#new-joiners-container');
+
+  if (!container) {
+
+    return;
+
+  }
+ 
+  try {
+
+    const baseUrl = this.context.pageContext.web.absoluteUrl;
+
+    const defaultPhoto = `${baseUrl}/SiteAssets/resources/images/DefaultImages/user-default.png`;
+ 
+    const data = await this._getNewJoinersData(apiUrl);
+
+    const visibleJoiners = this.getVisibleNewJoiners(data);
+ 
+    if (!visibleJoiners.length) {
+
+      container.innerHTML = AnnouncementOffer.noNewJoinerHtml;
+
+      return;
+
+    }
+ 
+    let html = '';
+
+    visibleJoiners.forEach((item) => {
+
+      const joiningDate = new Date(item.JoiningDate);
+
+      const month = joiningDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+
+      const day = joiningDate.getDate().toString();
+
+      const photo = this.getBirthdayImageUrl(item.EmployeePhoto) || defaultPhoto;
+ 
+      html += AnnouncementOffer.singleNewJoinerHtml
+
+        .replace(/__KEY__NEWJOINER__IMAGE__/g, photo)
+
+        .replace(/__KEY__NEWJOINER__NAME__/g, this.newsCentreEscapeHtml(item.Title || ''))
+
+        .replace(/__KEY__NEWJOINER__DESCRIPTION__/g, this.newsCentreEscapeHtml(item.Department || ''))
+
+        .replace(/__KEY__NEWJOINER__MONTH__/g, month)
+
+        .replace(/__KEY__NEWJOINER__DAY__/g, day);
+
+    });
+ 
+    container.innerHTML = html;
+
+  } catch (error) {
+
+    console.error('Error rendering New Joiners:', error);
+
+    container.innerHTML = AnnouncementOffer.noNewJoinerHtml;
+
+  }
+
+}
+ 
 
   // Converts the SharePoint Created date into: Sep 21, 2026
   private formatDates(dateValue: string): string {

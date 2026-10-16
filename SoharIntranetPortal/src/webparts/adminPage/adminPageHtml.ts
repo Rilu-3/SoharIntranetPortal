@@ -37,8 +37,9 @@ public static singleListHtml(data: IAdminListView): string {
     <div class="event-list-item align-items-center w-100">
       <span aria-hidden="true">📁</span>
       <a href="${this.escape(data.url)}"
-         class="event-title text-decoration-none mb-0 position-relative z-3 pe-auto"
-         target="_self">
+        class="event-title text-decoration-none mb-0 position-relative z-3 pe-auto"
+        target="_self"
+        data-interception="off">
         ${this.escape(data.title)}
       </a>
     </div>`;
