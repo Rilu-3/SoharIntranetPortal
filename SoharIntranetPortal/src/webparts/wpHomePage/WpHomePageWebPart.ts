@@ -59,10 +59,20 @@ export interface IEventItem {
 interface IOutlookEvent {
   id?: string;
   subject?: string;
-  start?: { dateTime?: string };
-  end?: { dateTime?: string };
-  location?: { displayName?: string };
-  onlineMeeting?: { joinUrl?: string };
+  start?: {
+    dateTime?: string;
+    timeZone?: string;
+  };
+  end?: {
+    dateTime?: string;
+    timeZone?: string;
+  };
+  location?: {
+    displayName?: string;
+  };
+  onlineMeeting?: {
+    joinUrl?: string;
+  };
 }
 
 interface IAnnouncement {
@@ -128,7 +138,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
 
   // ==================== WAIT FOR LIBRARIES (loaded by extension) ====================
 
-  private waitForLibraries(timeout: number = 10000): Promise<void> {
+private waitForLibraries(timeout: number = 20000): Promise<void> {
     return new Promise<void>((resolve) => {
       const start = Date.now();
       const check = (): void => {
@@ -189,7 +199,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     const $ = (window as any).jQuery;
     const Swiper = (window as any).Swiper;
     if (!$ || !Swiper) { console.warn('jQuery or Swiper is not available.'); return; }
-
+ 
     const socialSwipers: { [key: string]: any } = {};
     document.querySelectorAll('.social-swiper').forEach(function (el) {
       const panel = el.closest('[id^="social-panel-"]');
@@ -206,14 +216,14 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       });
       if (panel) socialSwipers[panel.id] = swiper;
     });
-
+ 
     $('.sm-tab').on('click', function (this: HTMLElement) {
       const targetId = $(this).data('tab-social-id');
-
+ 
       // Update active tab
       $('.sm-tab').removeClass('sm-tab-active');
       $(this).addClass('sm-tab-active');
-
+ 
       // Hide all panels and fade in selected panel
       $('.social-media-view').stop(true, true).hide();
       $('#' + targetId).stop(true, true).fadeIn(200);
@@ -221,31 +231,61 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
   }
 
   // ---------- MEDIA GALLERY ----------
+   // ---------- MEDIA GALLERY ----------
   private initMediaGallery(): void {
-    const $ = (window as any).jQuery;
-    // const $ = (window as Window & { soharJQuery?: any }).soharJQuery;
-    const Swiper = (window as any).Swiper;
-    const bootstrap = (window as any).bootstrap;
-    if (!$ || !Swiper || !bootstrap) { console.warn('jQuery, Swiper or Bootstrap is not available.'); return; }
+    const $ = (window as any).soharJQuery || (window as any).jQuery;
+    const Swiper = (window as any).soharSwiper || (window as any).Swiper;
 
-    new Swiper('.gallery-swiper', {
+    if (!$ || !Swiper) {
+      console.warn('jQuery or Swiper is not available.');
+      return;
+    }
+
+    const galleryElement = this.domElement.querySelector('.gallery-swiper') as HTMLElement;
+
+    if (!galleryElement) {
+      console.warn('Gallery Swiper element not found.');
+      return;
+    }
+
+    const gallerySwiper = new Swiper(galleryElement, {
       slidesPerView: 1,
       spaceBetween: 12,
       loop: false,
       speed: 500,
-      pagination: { el: ".gallery-swiper-pagination", clickable: true },
-      navigation: { nextEl: ".gallery-slide-next", prevEl: ".gallery-slide-prev" },
+      observer: true,
+      observeParents: true,
+      pagination: { el: '.gallery-swiper-pagination', clickable: true },
+      navigation: { nextEl: '.gallery-slide-next', prevEl: '.gallery-slide-prev' },
       breakpoints: {
         400: { slidesPerView: 2, spaceBetween: 12 },
         576: { slidesPerView: 2, spaceBetween: 14 },
         768: { slidesPerView: 3, spaceBetween: 16 },
-        992: { slidesPerView: 4, spaceBetween: 16 },
-      },
+        992: { slidesPerView: 4, spaceBetween: 16 }
+      }
     });
 
-    const modalElement = document.getElementById("galleryModal");
-    if (!modalElement) { return; }
-    const modal = new bootstrap.Modal.getOrCreateInstance(modalElement);
+    // Recalculate once everything (images, social widgets, loader) has finished loading
+    if (document.readyState === 'complete') {
+      setTimeout(() => gallerySwiper.update(), 300);
+    } else {
+      window.addEventListener('load', () => gallerySwiper.update());
+    }
+
+    // Bootstrap is only needed for the popup, so it does not block the slider
+    const bootstrap = (window as any).bootstrap;
+    if (!bootstrap) {
+      console.warn('Bootstrap is not available.');
+      return;
+    }
+
+    const modalElement = this.domElement.querySelector('#galleryModal') as HTMLElement;
+
+    if (!modalElement) {
+      return;
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
 
     let swiperGalleryModal: any = null;
     let gallery_slider_index = 0;
@@ -257,33 +297,33 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
         swiperGalleryModal = null;
       }
 
-      swiperGalleryModal = new Swiper(".gallery-modal-swiper", {
+      swiperGalleryModal = new Swiper('.gallery-modal-swiper', {
         spaceBetween: 10,
         slidesPerView: 1,
         autoplay: false,
         speed: 1400,
         autoHeight: true,
         initialSlide: gallery_slider_index,
-        navigation: { nextEl: ".gallery-swiper-modal-next", prevEl: ".gallery-swiper-modal-prev" },
+        navigation: { nextEl: '.gallery-swiper-modal-next', prevEl: '.gallery-swiper-modal-prev' }
       });
 
-      $(".gallery-modal-content").css("opacity", 1);
+      $('.gallery-modal-content').css('opacity', 1);
     }
 
     // Set the index BEFORE the modal opens
-    $(document).on("click", ".gallery-item img, .gallery-item video", function (this: HTMLElement) {
-      $(".gallery-modal-content").css("opacity", 0);
-      gallery_slider_index = $(this).closest(".swiper-slide").index();
+    $(document).on('click', '.gallery-item img, .gallery-item video', function (this: HTMLElement): void {
+      $('.gallery-modal-content').css('opacity', 0);
+      gallery_slider_index = $(this).closest('.swiper-slide').index();
       modal.show();
     });
 
     // shown.bs.modal fires AFTER the transition — Swiper can measure dimensions safely here
-    modalElement.addEventListener("shown.bs.modal", () => {
+    modalElement.addEventListener('shown.bs.modal', () => {
       initGalleryModalSwiper();
     });
 
-    // hidden.bs.modal fires AFTER modal is fully hidden
-    modalElement.addEventListener("hidden.bs.modal", () => {
+    // hidden.bs.modal fires AFTER the modal is fully hidden
+    modalElement.addEventListener('hidden.bs.modal', () => {
       if (swiperGalleryModal) {
         swiperGalleryModal.destroy(true, true);
         swiperGalleryModal = null;
@@ -312,7 +352,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     this.socialMediaObserver.observe(document.body, { childList: true, subtree: true });
   }
 
-  private _getActiveDateFilter(): string {
+    private _getActiveDateFilter(): string {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' }); // "2026-10-16"
   const dubaiMidnight = new Date(`${today}T00:00:00+04:00`).toISOString();
   console.log(today);           // "2026-10-16"
@@ -320,8 +360,6 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
  
   return `StartDate le datetime'${dubaiMidnight}' and EndDate ge datetime'${dubaiMidnight}'`;
 }
- 
- 
 
   // ==================== RENDER ====================
 
@@ -338,11 +376,11 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     const arrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
 
     const newsApiUrl = `${baseUrl}/_api/web/lists/getbytitle('News')/items?$select=Id,Title,ShortDescription,Category,MainContent,PublishedDate,Status&$filter=Status eq 'Active'&$orderby=PublishedDate desc&$top=500`;
-       const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items`
-  + `?$select=Id,Title,ShortDescription,Created,Status,StartDate,EndDate`
-  +`&$filter=(${filter}) and Status eq 'Active'`
-  + `&$orderby=StartDate desc,Created desc`
-  + `&$top=3`;
+    const AnnouncementApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Announcements')/items`
+    + `?$select=Id,Title,ShortDescription,Created,Status,StartDate,EndDate`
+    +`&$filter=(${filter}) and Status eq 'Active'`
+    + `&$orderby=StartDate desc,Created desc`
+    + `&$top=3`;
     const OfferApiUrl = `${baseUrl}/_api/web/lists/GetByTitle('Offers')/items?$select=Id,Title,Description,Created,Status&$filter=Status eq 'Active'&$orderby=Created desc&$top=3`;
 
     /*
@@ -406,10 +444,15 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       // Birthdays
       this.renderBirthdays(),
 
-      // Social Media
-      Promise.all([this.initializeSocialMedia(), libsReady]).then(() => {
-        this.initSocialMediaSwipers();
-      }),
+      // // Social Media
+      // Promise.all([this.initializeSocialMedia(), libsReady]).then(() => {
+      //   this.initSocialMediaSwipers();
+      // }),
+      // Social Media — load SociableKit widgets only AFTER our libraries are ready,
+      // so their own jQuery cannot interfere with jQuery UI, the calendar or the gallery
+      libsReady
+        .then(() => this.initializeSocialMedia())
+        .then(() => this.initSocialMediaSwipers()),
 
       // News Centre
       this._renderNewsAsync(newsApiUrl).then(() => {
@@ -532,7 +575,7 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
       let singleElementHtml = NewsCentre.singleElementHtml;
       singleElementHtml = singleElementHtml.replace(/__KEY_URL_IMGICON__/g, newsIconImg);
       singleElementHtml = singleElementHtml.replace(/__KEY_DATA_TITLE__/g, this.newsCentreEscapeHtml(item.Title || ''));
-      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DESCRIPTION__/g, () => descriptionHtml);
+      singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DESCRIPTION__/g, ()=> descriptionHtml);
       singleElementHtml = singleElementHtml.replace(/__KEY_DATA_CATEGORY__/g, this.newsCentreEscapeHtml(item.Category || ''));
       singleElementHtml = singleElementHtml.replace(/__KEY_DATA_DATE__/g, createddate);
       singleElementHtml = singleElementHtml.replace(/__KEY_URL_LINK__/g, detailsUrl);
@@ -688,50 +731,50 @@ export default class WpHomePageWebPart extends BaseClientSideWebPart<IWpHomePage
     return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
-  // Injects the modal and handles clicks on links inside the description
+    // Injects the modal and handles clicks on links inside the description
 private newsCentreSetupDocumentPreview(): void {
   const newsContainer = this.domElement.querySelector('#news-container') as HTMLElement | null;
   if (!newsContainer) { return; }
-
+ 
   // 1. Inject the modal from your template
   this.domElement.insertAdjacentHTML('beforeend', NewsCentre.documentPreviewModalHtml);
-
+ 
   const modalEl = this.domElement.querySelector('#newsDocumentPreviewModal') as HTMLElement;
   const frame = this.domElement.querySelector('#newsDocumentPreviewFrame') as HTMLIFrameElement;
   const titleEl = this.domElement.querySelector('#newsDocumentPreviewTitle') as HTMLElement;
-
+ 
   // 2. Clear the iframe when the modal closes
   modalEl.addEventListener('hidden.bs.modal', () => { frame.src = 'about:blank'; });
-
+ 
   // 3. One delegated click handler (cards are re-rendered on every tab click)
   newsContainer.addEventListener('click', (e: Event) => {
     const anchor = (e.target as HTMLElement).closest('.news-description a') as HTMLAnchorElement | null;
     if (!anchor || !anchor.getAttribute('href')) { return; }
-
+ 
     e.preventDefault();
     e.stopPropagation();
-
+ 
     const fileUrl = this.newsCentreGetFileUrl(anchor.getAttribute('href') || '');
     const bootstrap = (window as any).bootstrap;
-
+ 
     if (!bootstrap || !bootstrap.Modal) {
       window.open(fileUrl, '_blank');   // fallback if Bootstrap isn't loaded
       return;
     }
-
+ 
     titleEl.textContent = anchor.textContent || 'Document Preview';
     frame.src = this.newsCentreGetPreviewUrl(fileUrl);
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
   });
 }
-
+ 
 // Library view links (AllItems.aspx?...&id=/path/file.pdf) keep the real path in "id"
 private newsCentreGetFileUrl(href: string): string {
   const url = new URL(href, window.location.origin);
   const filePath = url.searchParams.get('id');
   return filePath ? window.location.origin + encodeURI(filePath) : url.href;
 }
-
+ 
 // Office files need the embed view to render inside an iframe
 private newsCentreGetPreviewUrl(fileUrl: string): string {
   const ext = (fileUrl.split('?')[0].split('.').pop() || '').toLowerCase();
@@ -740,40 +783,40 @@ private newsCentreGetPreviewUrl(fileUrl: string): string {
   }
   return ext === 'pdf' ? fileUrl + '?web=1' : fileUrl;
 }
-
-  
-
+ 
+ 
+ 
 private newsCentreSanitizeRichText(html: string): string {
   if (!html) {
     return '';
   }
-
+ 
   const doc: Document = new DOMParser().parseFromString(html, 'text/html');
-
+ 
   // Remove elements that should never be rendered.
   doc.querySelectorAll(
     'script, style, iframe, object, embed, form, input, button'
   ).forEach((element: Element) => {
     element.remove();
   });
-
+ 
   // Allowed HTML elements for the rich-text description.
 const allowedTags: string[] = [
   'BR', 'SPAN', 'B', 'STRONG', 'I', 'EM', 'U', 'A'
 ];
-
+ 
   // Attributes allowed on the remaining elements.
   const allowedAttributes: string[] = ['href', 'target', 'title', 'class'];
-
+ 
   const elements = Array.prototype.slice.call(
     doc.body.querySelectorAll('*')
   ) as Element[];
-
+ 
   elements.forEach((element: Element) => {
     // Replace unsupported elements with their child content.
     if (allowedTags.indexOf(element.tagName) === -1) {
       const parent = element.parentNode;
-
+ 
       if (parent) {
         while (element.firstChild) {
           parent.insertBefore(element.firstChild, element);
@@ -782,33 +825,33 @@ const allowedTags: string[] = [
       }
       return;
     }
-
+ 
     // Remove event handlers, inline styles and all unapproved attributes.
     const attributes = Array.prototype.slice.call(element.attributes) as Attr[];
-
+ 
     attributes.forEach((attribute: Attr) => {
       const name = attribute.name.toLowerCase();
-
+ 
       if (name.indexOf('on') === 0 || allowedAttributes.indexOf(name) === -1) {
         element.removeAttribute(attribute.name);
       }
     });
-
+ 
     // Validate hyperlinks.
     if (element.tagName === 'A') {
       const anchor = element as HTMLAnchorElement;
       const href = anchor.getAttribute('href');
-
+ 
       // Links open in the preview modal, not a new tab.
       anchor.removeAttribute('target');
-
+ 
       // Stop SharePoint's page navigation from intercepting the link.
       anchor.setAttribute('data-interception', 'off');
-
+ 
       if (href) {
         try {
           const url = new URL(href, this.context.pageContext.web.absoluteUrl);
-
+ 
           // Only allow HTTP and HTTPS links.
           if (url.protocol !== 'https:' && url.protocol !== 'http:') {
             anchor.removeAttribute('href');
@@ -821,15 +864,14 @@ const allowedTags: string[] = [
       }
     }
   });
-
+ 
   return doc.body.innerHTML;
 }
-
-
+ 
 
   // ==================== LOAD EVENTS ====================
 
-private formatTime(startTime: string, endTime: string): string {
+ private formatTime(startTime: string, endTime: string): string {
   const start = this.parseSharePointTime(startTime);
   const end = this.parseSharePointTime(endTime);
 
@@ -911,18 +953,16 @@ private async loadEvents(
 }
 
 private convertEventTimeToUserLocal(
-  eventDate: string,
+  eventDate: Date,
   timeValue: string,
   userTimeZone: string
 ): string {
-
-  if (!eventDate || !timeValue) {
+  if (!timeValue) {
     return '';
   }
 
-  // Read SharePoint time (example: 01:30 PM)
   const match = String(timeValue).trim().match(
-    /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+    /^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)$/i
   );
 
   if (!match) {
@@ -931,100 +971,37 @@ private convertEventTimeToUserLocal(
   }
 
   let hours = Number(match[1]);
-  const minutes = Number(match[2]);
+  const minutes = Number(match[2] || 0);
   const period = match[3].toUpperCase();
 
-  if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) {
+  if (hours < 1 || hours > 12 || minutes > 59) {
     return timeValue;
   }
 
   if (period === 'PM' && hours !== 12) {
     hours += 12;
-  }
-
-  if (period === 'AM' && hours === 12) {
+  } else if (period === 'AM' && hours === 12) {
     hours = 0;
   }
 
-  // Extract event date
-  const dateMatch = String(eventDate).match(
-    /^(\d{4})-(\d{2})-(\d{2})/
-  );
+  const totalMinutes = hours * 60 + minutes + 90;
 
-  if (!dateMatch) {
-    console.error('Invalid event date:', eventDate);
-    return timeValue;
-  }
+  const convertedHours = Math.floor(totalMinutes / 60) % 24;
+  const convertedMinutes = totalMinutes % 60;
 
-  const year = Number(dateMatch[1]);
-  const month = Number(dateMatch[2]) - 1;
-  const day = Number(dateMatch[3]);
+  const finalPeriod = convertedHours >= 12 ? 'PM' : 'AM';
+  const displayHours = convertedHours % 12 || 12;
 
-  // UAE source timezone
-  const sourceTimeZone = 'Asia/Dubai';
+  const formattedHours = displayHours < 10
+    ? '0' + displayHours
+    : String(displayHours);
 
-  // Create target wall-clock timestamp
-  const targetTime = Date.UTC(
-    year,
-    month,
-    day,
-    hours,
-    minutes
-  );
+  const formattedMinutes = convertedMinutes < 10
+    ? '0' + convertedMinutes
+    : String(convertedMinutes);
 
-  let utcTime = targetTime;
-
-  const formatter = new Intl.DateTimeFormat('en-GB', {
-    timeZone: sourceTimeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-
-  // Resolve UAE wall-clock time to UTC
-  for (let i = 0; i < 3; i++) {
-
-    const formattedDate = formatter.format(
-      new Date(utcTime)
-    );
-
-    const dateParts = formattedDate.match(
-      /^(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})$/
-    );
-
-    if (!dateParts) {
-      console.error('Unable to parse UAE date/time:', formattedDate);
-      return timeValue;
-    }
-
-    const representedTime = Date.UTC(
-      Number(dateParts[3]),
-      Number(dateParts[2]) - 1,
-      Number(dateParts[1]),
-      Number(dateParts[4]),
-      Number(dateParts[5])
-    );
-
-    utcTime += targetTime - representedTime;
-  }
-
-  // Convert to user's local timezone
-  const convertedDate = new Date(utcTime);
-
-  const localTime = convertedDate.toLocaleTimeString(undefined, {
-    timeZone: userTimeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-
-  return localTime;
+  return `${formattedHours}:${formattedMinutes} ${finalPeriod}`;
 }
-
- 
 
   private async loadOrganizationalEventDates(year: number, month: number): Promise<void> {
     const siteUrl = this.context.pageContext.web.absoluteUrl;
@@ -1072,7 +1049,7 @@ private convertEventTimeToUserLocal(
     }
   }
 
-private async loadMyEventDates(
+  private async loadMyEventDates(
   year: number,
   month: number
 ): Promise<void> {
@@ -1080,7 +1057,7 @@ private async loadMyEventDates(
     const client: MSGraphClientV3 =
       await this.context.msGraphClientFactory
         .getClient('3');
-
+ 
     const startDate =
       new Date(
         year,
@@ -1090,7 +1067,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const endDate =
       new Date(
         year,
@@ -1100,7 +1077,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const response =
       await client
         .api('/me/calendar/calendarView')
@@ -1117,26 +1094,26 @@ private async loadMyEventDates(
         .select('start,subject')
         .orderby('start/dateTime')
         .get();
-
+ 
     this.myEventDates = [];
     this.myEventTitles = {};
-
+ 
     (response.value || []).forEach(
       (event: IOutlookEvent) => {
-
+ 
         if (!event.start?.dateTime) {
           return;
         }
-
+ 
         const dateKey =
           this.getDateKey(
             event.start.dateTime
           );
-
+ 
         if (!dateKey) {
           return;
         }
-
+ 
         if (
           this.myEventDates.indexOf(
             dateKey
@@ -1146,10 +1123,10 @@ private async loadMyEventDates(
             dateKey
           );
         }
-
+ 
         const title =
           event.subject || '';
-
+ 
         if (title) {
           if (
             this.myEventTitles[
@@ -1172,11 +1149,13 @@ private async loadMyEventDates(
       'Error loading Outlook event dates:',
       error
     );
-
+ 
     this.myEventDates = [];
     this.myEventTitles = {};
   }
 }
+ 
+
   private getDateKey(dateValue: string): string {
     const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
@@ -1187,7 +1166,7 @@ private async loadMyEventDates(
 
   // ==================== LOAD MY EVENTS ====================
 
-  private async loadMyEvents(
+ private async loadMyEvents(
   year: number,
   month: number,
   day: number
@@ -1196,7 +1175,7 @@ private async loadMyEventDates(
     const client: MSGraphClientV3 =
       await this.context.msGraphClientFactory
         .getClient('3');
-
+ 
     const startDate =
       new Date(
         year,
@@ -1206,7 +1185,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const endDate =
       new Date(
         year,
@@ -1216,7 +1195,7 @@ private async loadMyEventDates(
         0,
         0
       );
-
+ 
     const response =
       await client
         .api('/me/calendar/calendarView')
@@ -1237,51 +1216,56 @@ private async loadMyEventDates(
           'start/dateTime'
         )
         .get();
-
+ 
     this.myEvents =
       (response.value || []).map(
         (
           event: IOutlookEvent,
           index: number
         ): IEventItem => {
-
+ 
+          
+ 
+ 
+ 
           return {
             Id:
               index + 1,
-
+ 
             Title:
               event.subject || '',
-
+ 
             EventDate:
               event.start?.dateTime || '',
-
+ 
             StartTime:
               event.start?.dateTime || '',
-
+ 
             EndTime:
               event.end?.dateTime || '',
-
+ 
             Location:
               event.location?.displayName || '',
-
+ 
             Status:
               'Active',
-
+ 
             TeamsUrl:
               event.onlineMeeting?.joinUrl || ''
           };
         }
       );
-
+ 
   } catch (error) {
     console.error(
       'Error loading Outlook Calendar events:',
       error
     );
-
+ 
     this.myEvents = [];
   }
 }
+ 
 
   // ==================== RENDER UPCOMING EVENTS ====================
 
@@ -1356,18 +1340,6 @@ private async loadMyEventDates(
     };
   }
 
-  // private formatTime(startTime: string, endTime: string): string {
-  //   const start = this.parseSharePointTime(startTime);
-  //   const end = this.parseSharePointTime(endTime);
-
-  //   if (!start && !end) {
-  //     return '';
-  //   }
-  //   if (!end) {
-  //     return start;
-  //   }
-  //   return `${start} – ${end}`;
-  // }
 
 
 
@@ -1467,9 +1439,6 @@ if (formattedMatch) {
     formattedMinutes + ' ' + period;
 
 }
-
- 
-
   // ==================== INITIALIZE EVENT TABS ====================
 
   private initializeUpcomingEvents(): void {
@@ -1594,8 +1563,7 @@ if (formattedMatch) {
   private async _getBannerItems(): Promise<void> {
     try {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
-      const url = `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
+      const url = `${siteUrl}/_api/web/lists/getbytitle('Banner')/items?$select=Id,Title,Description,Status,SortOrder,Image,Created&$filter=Status eq 'Active'&$orderby=SortOrder asc,Created desc`;
       const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
@@ -1651,8 +1619,7 @@ if (formattedMatch) {
   private async _getMediaGalleryItems(): Promise<void> {
     try {
       const siteUrl = this.context.pageContext.web.absoluteUrl;
-      const url = `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
+      const url = `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image,Created&$filter=Status eq 'Active'&$orderby=SortOrder asc,Created desc`;
       const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
       if (!response.ok) {
@@ -1769,7 +1736,7 @@ if (formattedMatch) {
     });
   }
 
-   private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
+private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
     try {
       const baseUrl = this.context.pageContext.web.absoluteUrl;
       const imageUrl: string = `${baseUrl}/SiteAssets/resources/images/DefaultImages/announcement-icon.png`;
@@ -1809,7 +1776,7 @@ if (formattedMatch) {
       console.error('Error rendering QuickList:', error);
     }
   }
-
+ 
    private async _renderOffersAsync(apiUrl: string): Promise<void> {
     try {
       const imageUrl = `${this.context.pageContext.web.absoluteUrl}/SiteAssets/resources/images/DefaultImages/offer-icon.png`;
@@ -1843,6 +1810,7 @@ if (formattedMatch) {
   }
  
  
+
   private async _getAnnouncementsData(apiUrl: string): Promise<IAnnouncement[]> {
     const response: SPHttpClientResponse = await this.context.spHttpClient.get(apiUrl, SPHttpClient.configurations.v1);
 
@@ -1918,10 +1886,10 @@ if (formattedMatch) {
 
 
     const apiUrl =
-      `${webUrl}` +
-      `/_api/web/lists/GetByTitle('Quick_Links')/items` +
-      `?$select=Id,Title,Icon,URL,Status,SortOrder` +
-      `&$orderby=SortOrder asc`;
+    `${webUrl}` +
+    `/_api/web/lists/GetByTitle('Quick_Links')/items` +
+    `?$select=Id,Title,Icon,URL,Status,SortOrder,Created` +
+    `&$orderby=SortOrder asc,Created desc`;
 
 
     const response =
@@ -2158,12 +2126,30 @@ if (formattedMatch) {
     });
   }
 
-  private updateFavouriteTabVisibility(domElement: HTMLElement, favouriteIds: number[]): void {
-    const favouriteTab = domElement.querySelector('[data-filter-ql="favourites"]') as HTMLElement;
+  private updateFavouriteTabVisibility(
+    domElement: HTMLElement,
+    favouriteIds: number[]
+  ): void {
+  
+    const favouriteTab = domElement.querySelector(
+      '[data-filter-ql="favourites"]'
+    ) as HTMLElement;
+  
     if (!favouriteTab) {
       return;
     }
-    favouriteTab.style.display = favouriteIds.length === 0 ? 'none' : '';
+  
+    const hasFavourites = favouriteIds.length > 0;
+  
+    if (hasFavourites) {
+      favouriteTab.classList.remove('d-none');
+      favouriteTab.style.removeProperty('display');
+      favouriteTab.classList.add('d-flex');
+    } else {
+      favouriteTab.classList.remove('d-flex');
+      favouriteTab.classList.add('d-none');
+      favouriteTab.style.setProperty('display', 'none', 'important');
+    }
   }
 
   private setupAddFavouriteButton(context: WebPartContext, domElement: HTMLElement): void {

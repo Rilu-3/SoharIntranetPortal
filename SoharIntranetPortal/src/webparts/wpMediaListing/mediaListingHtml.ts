@@ -1,3 +1,4 @@
+
 export interface IMediaCardView {
   title: string;
   caption: string;
@@ -6,7 +7,7 @@ export interface IMediaCardView {
 
 export default class wpMediaListing {
 
-  // Page wrapper (header + year filter + listing container)
+  // Page wrapper (header + year and month filters + listing container)
   public static wrapperHtml(resourceUrl: string, homeUrl: string, content: string): string {
     return `
       <div class="main-wrapper w-100 float-start min-h-screen-wrapper">
@@ -33,7 +34,10 @@ export default class wpMediaListing {
                   </div>
                   <p class="font-bold font-bold text-lg md-text-xl text-color-primary">MEDIA GALLERY</p>
                 </div>
+
                 <div class="d-flex align-items-center gap-2 flex-shrink-0 filter-area-wrapper">
+
+                  <!-- Year Filter -->
                   <div class="dropdown sa-filter-dropdown">
                     <button
                       class="sa-btn sa-filter-dropdown-btn dropdown-toggle d-flex align-items-center gap-1 text-color-neutral text-sm font-normal"
@@ -50,8 +54,28 @@ export default class wpMediaListing {
                       ${wpMediaListing.yearItemHtml("All")}
                     </ul>
                   </div>
+
+                  <!-- Month Filter -->
+                  <div class="dropdown sa-filter-dropdown">
+                    <button
+                      class="sa-btn sa-filter-dropdown-btn dropdown-toggle d-flex align-items-center gap-1 text-color-neutral text-sm font-normal"
+                      type="button" id="dropdownMenuMonth" data-bs-toggle="dropdown" aria-expanded="false">
+                      <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <img src="${resourceUrl}/images/icons/filter.png" alt="Filter" />
+                        <span>Month:</span>
+                      </div>
+                      <div class="flex-grow-1 overflow-hidden">
+                        <p class="text-truncate text-start">All</p>
+                      </div>
+                    </button>
+                    <ul class="dropdown-menu text-sm font-normal" aria-labelledby="dropdownMenuMonth">
+                      ${wpMediaListing.monthItemHtml("All")}
+                    </ul>
+                  </div>
+
                 </div>
               </div>
+
               <div class="row gy-4" id="IdMediaList">
                 ${content}
               </div>
@@ -59,13 +83,57 @@ export default class wpMediaListing {
 
           </div>
         </div>
-      </div>`;
+      </div>
+
+      ${wpMediaListing.galleryModalHtml}
+    `;
   }
 
   // Single year dropdown item
   public static yearItemHtml(year: string): string {
     return `<li><span class="dropdown-item" data-year="${year}">${year}</span></li>`;
   }
+
+  // Single month dropdown item
+  public static monthItemHtml(month: string): string {
+    return `<li><span class="dropdown-item" data-month="${month}">${month}</span></li>`;
+  }
+
+  // Gallery Image Modal
+  public static galleryModalHtml: string = `
+    <div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModal" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable gallery-modal">
+        <div class="modal-content py-2 px-2">
+
+          <div class="gallery-modal-header d-flex justify-content-end me-2 mt-0">
+            <svg class="cursor-pointer flex-shrink-0"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+              role="button"
+              width="15"
+              height="15"
+              viewBox="0 0 15 15"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg">
+              <path d="M0.666992 0.666016L14.0003 13.9993M0.666992 13.9993L14.0003 0.666016"
+                stroke="#005187"
+                stroke-width="1.33333"
+                stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </div>
+
+          <div class="modal-body gallery-modal-content">
+            <img id="galleryModalImage"
+              src=""
+              alt="Gallery Image"
+              class="img-fluid">
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `;
 
   // Loading state (Bootstrap spinner)
   public static loadingHtml: string = `
@@ -81,11 +149,12 @@ export default class wpMediaListing {
       <p class="text-color-desc text-sm">No records found</p>
     </div>`;
 
-  // Single media card
+  // Single media cardSSSS
   public static cardHtml(data: IMediaCardView): string {
     return `
       <div class="col-12 col-sm-6 col-md-4 col-xl-3">
-        <a href="${data.imageUrl}" target="_self" rel="noopener noreferrer" class="w-100 float-start d-flex flex-column sa-list-col" data-interception="off">
+        <a href="#" target="_self" class="w-100 float-start d-flex flex-column sa-list-col gallery-image-trigger"
+          data-gallery-image="${data.imageUrl}">
           <div class="sa-list-media w-100 float-start">
             <img src="${data.imageUrl}" alt="${data.title}" />
           </div>

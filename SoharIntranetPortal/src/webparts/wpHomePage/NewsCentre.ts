@@ -1,10 +1,10 @@
 export default class NewsCentre {
-
+ 
   /*
    * ============================================================
    * SINGLE NEWS ITEM
    * ============================================================
-
+ 
    */
   public static singleElementHtml: string = `
     <div class="news-item flex-column flex-sm-row">
@@ -23,30 +23,30 @@ export default class NewsCentre {
         class="link-arrow text-color-link align-self-end align-self-sm-center flex-shrink-0"><span
           class="text-sm xxl-text-base font-bold">Read Moreeee</span><img
           src="__KEY_URL_ARROW__" /></a>
-
+ 
       -->
     </div>
   `;
-
-
+ 
+ 
   /*
    * ============================================================
    * DYNAMIC TAB (one per category)
    * ============================================================
-
+ 
    */
   public static tabItemHtml: string = `
     <li>
       <div data-tab-news-id="__KEY_PANEL_ID__" data-news-category="__KEY_CATEGORY__" class="tab-title-pill __KEY_ACTIVE__">__KEY_LABEL__</div>
     </li>
   `;
-
-
+ 
+ 
   /*
    * ============================================================
    * DYNAMIC PANEL (one per category)
    * ============================================================
-
+ 
    */
   public static panelHtml: string = `
     <div id="__KEY_PANEL_ID__" class="w-100 float-start news-panel-tab-view flex-grow-1"
@@ -55,23 +55,23 @@ export default class NewsCentre {
       </div>
     </div>
   `;
-
-
+ 
+ 
   /*
    * ============================================================
    * COMPLETE NEWS CENTRE HTML
    * ============================================================
-
+ 
    */
   public static allElementsHtml: string = `
-
+ 
   <div class="panel-card px-2 py-4 d-flex flex-column">
     <div class="panel-header px-2 w-100 float-start mb-4">
       <div class="d-flex align-items-center gap-2">
                 <img class="panel-title-icon" src="/sites/DevPortal/SiteAssets/resources/images/icons/section-titles/newspaper.svg" />
                 <h2 class="panel-title">News Centre</h2>
               </div>
-              
+             
       <a href="__KEY_URL_VIEW_ALL__"  target="_self" data-interception="off" class="link-arrow text-color-link"><span class="text-sm xxl-text-base font-bold">View All
           News</span><img src="__KEY_URL_ARROW__" /></a>
     </div>
@@ -79,11 +79,11 @@ export default class NewsCentre {
       <ul class="news-tabs-list px-2"></ul>
     </div>
   </div>
-
+ 
   `;
-
-
-  
+ 
+ 
+ 
 public static documentPreviewModalHtml: string = `
   <div
     class="modal fade news-document-preview-modal"
@@ -91,15 +91,15 @@ public static documentPreviewModalHtml: string = `
     tabindex="-1"
     aria-labelledby="newsDocumentPreviewTitle"
     aria-hidden="true">
-
+ 
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
-
+ 
         <div class="modal-header">
           <h5 class="modal-title" id="newsDocumentPreviewTitle">
             Document Preview
           </h5>
-
+ 
           <button
             type="button"
             class="btn-close"
@@ -107,7 +107,7 @@ public static documentPreviewModalHtml: string = `
             aria-label="Close">
           </button>
         </div>
-
+ 
         <div class="modal-body p-0">
           <iframe
             id="newsDocumentPreviewFrame"
@@ -116,19 +116,19 @@ public static documentPreviewModalHtml: string = `
             allowfullscreen>
           </iframe>
         </div>
-
+ 
       </div>
     </div>
   </div>
 `;
-
-
-
+ 
+ 
+ 
   /*
    * ============================================================
    * NO ELEMENT HTML
    * ============================================================
-
+ 
    */
   public static noElementHtml: string = `
     <div class="news-item">
@@ -137,6 +137,7 @@ public static documentPreviewModalHtml: string = `
       </div>
     </div>
   `;
-
-
+ 
+ 
 }
+ 
