@@ -25,7 +25,7 @@ export default class SoharHeaderFooterApplicationCustomizer extends BaseApplicat
 
   // Cached data so header/footer can be restored after page navigation
   private _designation: string = '';
-  // private _isAdmin: boolean = false;
+  private _isAdmin: boolean = false;
 private _departmentItems: any[] = [];
   private _controlledDocumentItems: any[] = [];
   private _documentCenterItems: any[] = [];
@@ -75,14 +75,14 @@ private async _initialise(): Promise<void> {
   // Load scripts and fetch all header data in parallel
   const scriptsPromise: Promise<void> = this._loadScripts();
 
-const headerDataPromise: Promise<[string, any[], any[], any[], any[]]> =
+const headerDataPromise: Promise<[string, any[], any[], any[], any[], boolean]> =
   Promise.all([
     this._getUserDesignation(),
     this._getDepartments(),
     this._getControlledDocuments(),
     this._getDocumentCenterItems(),
     this._getListingPageItems(),
-    // this._isAdminUser()
+    this._isAdminUser()
   ]);
 
   const footerItemsPromise: Promise<any[]> = this._getFooterItems();
@@ -94,7 +94,7 @@ const [
   controlledDocumentItems,
   documentCenterItems,
   listingPageItems,
-  // isAdmin
+  isAdmin
 ] = await headerDataPromise;
 
   // Cache the fetched data
@@ -110,14 +110,9 @@ this._listingPageItems = listingPageItems.map((item: any) => ({
   ...item,
   IconUrl: this._getIconUrl(item)
 }));
-// this._isAdmin = isAdmin;
 
-//for Testing the Admin label 
-// const userEmail: string =
-//   this.context.pageContext.user.email?.toLowerCase() || '';
+this._isAdmin = isAdmin;
 
-// this._isAdmin = isAdmin ||
-//   userEmail === 'developer2@sohar-aluminium.com';
 
 
  // Render header after its data is ready
@@ -417,8 +412,6 @@ private async _getDocumentCenterItems(): Promise<any[]> {
 
   const data = await response.json();
 
-  console.log('Document Center items:', data.value);
-
   return data.value || [];
 }
 
@@ -487,34 +480,36 @@ private _getIconUrl(item: any): string {
     return '';
   }
 }
-// private async _isAdminUser(): Promise<boolean> {
-//   try {
-//     const response = await this.context.spHttpClient.get(
-//       `${this.context.pageContext.web.absoluteUrl}/_api/web/currentuser/groups?$select=Title`,
-//       SPHttpClient.configurations.v1
-//     );
 
-//     if (!response.ok) {
-//       return false;
-//     }
+private async _isAdminUser(): Promise<boolean> {
+  try {
+    const response = await this.context.spHttpClient.get(
+      `${this.context.pageContext.web.absoluteUrl}/_api/web/currentuser/groups?$select=Title`,
+      SPHttpClient.configurations.v1
+    );
 
-//     const result = await response.json();
+    if (!response.ok) {
+      return false;
+    }
 
-//     const adminGroups = [
-//       'Communication Admin',
-//       'Portal Admin'
-//     ];
+    const result = await response.json();
 
-//     return result.value.some((group: { Title: string }) =>
-//       adminGroups.some(
-//         (adminGroup: string) =>
-//           group.Title.trim().toLowerCase() === adminGroup.toLowerCase()
-//       )
-//     );
-//   } catch {
-//     return false;
-//   }
-// }
+
+    const adminGroups = [
+  'Communications Admin',
+  'Portal Admin (IT)'
+];
+
+    return result.value.some((group: { Title: string }) =>
+      adminGroups.some(
+        (adminGroup: string) =>
+          group.Title.trim().toLowerCase() === adminGroup.toLowerCase()
+      )
+    );
+  } catch {
+    return false;
+  }
+}
 
 
 
@@ -545,7 +540,7 @@ private _getIconUrl(item: any): string {
   this._controlledDocumentItems,
   this._documentCenterItems,
   this._listingPageItems,
-  // this._isAdmin
+  this._isAdmin
   
 );
 
@@ -567,21 +562,31 @@ private _setupDepartmentMegaMenu(): void {
   // Handle department submenu click
   headerElement.addEventListener('click', (event: MouseEvent): void => {
     const target = event.target as HTMLElement;
-    const toggle = target.closest('.dept-submenu-toggle') as HTMLElement | null;
-
+    const toggle = target.closest('.dept-submenu-toggle') as HTMLAnchorElement | null;
     if (!toggle) {
-      return;
+      return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
+const item = toggle.closest('.dept-submenu') as HTMLElement | null;
 
-    const menu = toggle.closest('.dept-dropdown') as HTMLElement | null;
-    const item = toggle.closest('.dept-submenu') as HTMLElement | null;
+// Plain link (Listing page, Shared Workspace): navigate
+if (!item || !item.querySelector('.dept-submenu-list')) {
+ const href: string = toggle.getAttribute('href') || '';
+ if (href && href !== '#') {
+ event.preventDefault();
+ window.location.href = href;
+ }
+ return;
+}
 
-    if (!menu || !item) {
-      return;
-    }
+// Real submenu (Departments, Controlled Documents): toggle
+event.preventDefault();
+event.stopPropagation();
+
+const menu = toggle.closest('.dept-dropdown') as HTMLElement | null;
+if (!menu) {
+ return;
+}
 
     const isOpen: boolean = item.classList.contains('open');
     const openItems = menu.querySelectorAll('.dept-submenu.open');

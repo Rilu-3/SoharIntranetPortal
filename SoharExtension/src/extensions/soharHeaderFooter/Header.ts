@@ -10,6 +10,7 @@ constructor(
   private controlledDocumentItems: any[],
   private documentCenterItems: any[],
   private listingPageItems: any[],
+   private isAdmin: boolean,
 ) { }
 
 
@@ -295,7 +296,6 @@ constructor(
   <a data-bs-auto-close="outside"
     class="nav-link dropdown-toggle d-flex align-items-center gap-2"
     href="#"
-    id="listingPageDropdown"
     role="button"
     data-bs-toggle="dropdown"
     aria-expanded="false">
@@ -304,55 +304,50 @@ constructor(
       src="${this.siteUrl}/SiteAssets/resources/images/icons/folder.png"
       alt="" />
 
-    <span>Listing page</span>
+   <span>Listing page</span>
 
-    <img class="dropdown-arrow-nav"
-      src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
-      alt="" />
-
-  </a>
-
-  <div class="dropdown-menu"
-    aria-labelledby="listingPageDropdown">
-
-    <ul class="custom-scroll-view dept-dropdown">
-
-      ${this.listingPageItems.map((item: any) => `
-        <li class="dept-submenu">
-
-          <a
-            class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
-            href="${item.Link?.Url || '#'}"
-            target="_self"
-            data-interception="off"
-            role="button">
-
-            <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
-
-            <img
-  class="sub-menu-icon sub-menu-icon-default"
-  src="${item.IconUrl || ''}"
+<img
+  class="dropdown-arrow-nav"
+  src="${this.siteUrl}/SiteAssets/resources/images/icons/dropdown-arrow.png"
   alt=""
 />
 
-              <div class="doc-centre-title">${item.Title}</div>
+</a>
 
-            </div>
+<div class="dropdown-menu" aria-labelledby="navbarScrollingDropdown">
+  <ul class="custom-scroll-view dept-dropdown">
 
-          </a>
+    ${this.listingPageItems.map((item: any) => `
+    <li class="dept-submenu">
+    <a class="dropdown-item text-sm d-flex justify-content-between align-items-center dept-submenu-toggle gap-2"
+    href="${item.Link?.Url || '#'}"
+    target="_self"
+    data-interception="off">
 
-        </li>
-      `).join('')}
+        <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
+    <img class="sub-menu-icon sub-menu-icon-default" src="${item.IconUrl || ''}" alt="" />
+    <div class="doc-centre-title">${item.Title}</div>
+    </div>
 
-    </ul>
+    </a>
+    </li>
+    `).join('')}
 
-  </div>
-
+  </ul>
+</div>
 </li>
-
-
-
-
+<!-- Admin Section  Starts Here-->
+${this.isAdmin ? `
+  <li class="nav-item d-lg-flex">
+    <a
+      class="nav-link d-flex align-items-center gap-2"
+      href="${this.siteUrl}/SitePages/Admin.aspx?env=WebViewList"
+      target="_self"
+      data-interception="off">
+      <span>Admin</span>
+    </a>
+  </li>
+` : ''}
               </ul>
 
             </div>
