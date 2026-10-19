@@ -11,7 +11,7 @@ import { SPComponentLoader } from '@microsoft/sp-loader';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import wpAnnouncementOffersListing, { IListingCardView, ListingCategory } from './AnnouncementOfferListingHtml';
  
-export interface IWpOffersListingWebPartProps {
+export interface IWpAnnouncementOffersListingWebPartProps {
   description: string;
 }
  
@@ -36,7 +36,7 @@ export interface IAnnouncementItem {
   EndDate: any;
 }
  
-export default class WpOffersListingWebPart extends BaseClientSideWebPart<IWpOffersListingWebPartProps> {
+export default class WpAnnouncementOffersListingWebPart extends BaseClientSideWebPart<IWpAnnouncementOffersListingWebPartProps> {
  
   private _selectedCategory: ListingCategory = 'Offers';
   private _requestId: number = 0; // guards against out-of-order responses when switching quickly
@@ -52,6 +52,18 @@ export default class WpOffersListingWebPart extends BaseClientSideWebPart<IWpOff
       return 'Offers';
     }
     return undefined;
+  }
+ 
+  // Keep the selected category in the page URL so a refresh (or a shared link) stays on it.
+  // replaceState avoids adding a history entry and does not reload the page.
+  private _updateUrlCategory(category: ListingCategory): void {
+    try {
+      const url: URL = new URL(window.location.href);
+      url.searchParams.set('category', category);
+      window.history.replaceState(window.history.state, '', url.toString());
+    } catch (e) {
+      console.error('Unable to update category in URL', e);
+    }
   }
  
   public async render(): Promise<void> {
@@ -128,6 +140,7 @@ export default class WpOffersListingWebPart extends BaseClientSideWebPart<IWpOff
       return;
     }
     this._selectedCategory = category;
+    this._updateUrlCategory(category);
  
     const label: Element | null = this.domElement.querySelector('#IdSelectedCategory');
     if (label) {
