@@ -361,13 +361,28 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
     this.socialMediaObserver.observe(document.body, { childList: true, subtree: true });
   }
 
-    private _getActiveDateFilter(): string {
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' }); // "2026-10-16"
-  const dubaiMidnight = new Date(`${today}T00:00:00+04:00`).toISOString();
-  console.log(today);           // "2026-10-16"
-  console.log(dubaiMidnight);      // "2026-10-15T20:00:00.000Z"
+ private async _getSiteOffsetMinutes(webUrl: string): Promise<number> {
+  const response: SPHttpClientResponse = await this.context.spHttpClient.get(
+    `${webUrl}/_api/web/RegionalSettings/TimeZone`,
+    SPHttpClient.configurations.v1
+  );
+  const json = await response.json();
+  return -json.Information.Bias; // Abu Dhabi/Muscat = 240
+}
  
-  return `StartDate le datetime'${dubaiMidnight}' and EndDate ge datetime'${dubaiMidnight}'`;
+private async _getActiveDateFilter(webUrl: string): Promise<string> {
+  const offsetMin = await this._getSiteOffsetMinutes(webUrl);
+ 
+  // The viewer's own calendar date, e.g. "2026-10-16"
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const parts = new Date().toLocaleDateString('en-CA', { timeZone: userTimeZone }).split('-');
+ 
+  // That date at 00:00, shifted by the site offset to match how SharePoint stored dates
+  const threshold = new Date(
+    Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])) - offsetMin * 60000
+  ).toISOString();
+ 
+  return `StartDate le datetime'${threshold}' and EndDate ge datetime'${threshold}'`;
 }
 
   // ==================== RENDER ====================
@@ -378,7 +393,8 @@ private waitForLibraries(timeout: number = 20000): Promise<void> {
       workbenchContent.style.maxWidth = 'none';
     }
 
-    const filter = `Status eq 'Active' and ${this._getActiveDateFilter()}`;
+   const filter = `Status eq 'Active' and ${ await this._getActiveDateFilter(this.context.pageContext.web.absoluteUrl) }`;
+ 
 
     const baseUrl = this.context.pageContext.web.absoluteUrl;
     const newsarrowIconUrl = `${baseUrl}/SiteAssets/resources/images/icons/arrow-right-short.svg`;
@@ -1712,40 +1728,49 @@ if (formattedMatch) {
   // ==================== ANNOUNCEMENT / OFFERS ====================
 
   private setupViewAllLink(arrowIconUrl: string): void {
-    const baseUrl = this.context.pageContext.web.absoluteUrl;
+  const baseUrl = this.context.pageContext.web.absoluteUrl;
  
-    const arrowImage = this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
-    if (!arrowImage) {
-      console.error('arrow image element not found');
-      return;
-    }
- 
-    // Set arrow image
-    arrowImage.src = arrowIconUrl;
- 
-    const viewAllLink = this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
-    if (!viewAllLink) {
-      console.error('View All elements not found');
-      return;
-    }
- 
-    // Set default URL
-    viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Announcements&env=WebViewList`;
- 
-    // Change URL when tab changes
-    const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', () => {
-        const selectedTab = tab.getAttribute('data-tab-ao');
- 
-        if (selectedTab === 'announcement') {
-          viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Announcements&env=WebViewList`;
-        } else if (selectedTab === 'offers') {
-          viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Offers&env=WebViewList`;
-        }
-      });
-    });
+  const arrowImage = this.domElement.querySelector('#ao-view-all-arrow') as HTMLImageElement;
+  if (!arrowImage) {
+    console.error('arrow image element not found');
+    return;
   }
+ 
+  // Set arrow image
+  arrowImage.src = arrowIconUrl;
+ 
+  const viewAllLink = this.domElement.querySelector('#ao-view-all') as HTMLAnchorElement;
+  if (!viewAllLink) {
+    console.error('View All elements not found');
+    return;
+  }
+ 
+  // Set default URL
+  viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Announcements&env=WebViewList`;
+ 
+  // Change URL (and visibility) when tab changes
+  const tabs = this.domElement.querySelectorAll('[data-tab-ao]');
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const selectedTab = tab.getAttribute('data-tab-ao');
+ 
+      if (selectedTab === 'new-joiners') {
+        // No "View All" page for new joiners
+        viewAllLink.style.setProperty('display', 'none', 'important');
+        return;
+      }
+ 
+      // Any other tab: make sure the link is visible again
+      viewAllLink.style.removeProperty('display');
+ 
+      if (selectedTab === 'announcement') {
+        viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Announcements&env=WebViewList`;
+      } else if (selectedTab === 'offers') {
+        viewAllLink.href = `${baseUrl}/SitePages/OfferAnnouncement.aspx?category=Offers&env=WebViewList`;
+      }
+    });
+  });
+}
 
 private async _renderAnnouncementsAsync(apiUrl: string): Promise<void> {
     try {
