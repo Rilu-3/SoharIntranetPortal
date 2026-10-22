@@ -1,7 +1,7 @@
- 
 import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { SPHttpClient } from '@microsoft/sp-http';
+import { SPComponentLoader } from '@microsoft/sp-loader';
  
 import adminPageHtml, {
   IAdminListView
@@ -22,6 +22,11 @@ interface ISPListsResponse {
  
 export default class AdminPageWebPart
   extends BaseClientSideWebPart<Record<string, never>> {
+ 
+  public async onInit(): Promise<void> {
+    const baseUrl: string = this.context.pageContext.web.absoluteUrl;
+    SPComponentLoader.loadCss(`${baseUrl}/SiteAssets/resources/css/list.css`);
+  }
  
   public async render(): Promise<void> {
     this.domElement.innerHTML = adminPageHtml.wrapperHtml(
@@ -46,6 +51,12 @@ export default class AdminPageWebPart
       this.domElement.innerHTML = adminPageHtml.wrapperHtml(
         adminPageHtml.errorHtml
       );
+    } finally {
+     
+      const listCss = document.querySelector('link[href*="list.css"]');
+      if (listCss) {
+        document.head.appendChild(listCss);
+      }
     }
   }
  
@@ -100,7 +111,7 @@ private toListView(list: ISPList): IAdminListView {
       ? listPath.substring(webPath.length)
       : listPath;
  
-  // Open the SharePoint list directly.
+ 
   const listUrl =
     `${webUrl.replace(/\/$/, '')}${relativePath}`;
  
@@ -114,5 +125,3 @@ private toListView(list: ISPList): IAdminListView {
     return Version.parse('1.0');
   }
 }
- 
- 
