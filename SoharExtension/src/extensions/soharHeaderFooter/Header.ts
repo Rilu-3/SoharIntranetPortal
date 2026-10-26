@@ -301,7 +301,7 @@ constructor(
     aria-expanded="false">
 
     <img class="nav-menu-icon"
-      src="${this.siteUrl}/SiteAssets/resources/images/icons/folder.png"
+      src="${this.siteUrl}/SiteAssets/resources/images/icons/list.png"
       alt="" />
 
    <span>Listing page</span>

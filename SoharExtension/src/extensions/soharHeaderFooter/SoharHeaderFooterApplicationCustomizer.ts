@@ -757,32 +757,51 @@ const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/ite
     return '';
   }
 
-  private _renderFooterItems(items: any[]): string {
-    return items.map((item: any) => {
-      const contactDetails: string = item.ContactDetails || '';
-      const imageUrl: string = this._getFooterIconUrl(item);
+ 
+private _renderFooterItems(items: any[]): string {
+  return items.map((item: any) => {
+    const contactDetails: string = item.ContactDetails || '';
+    const imageUrl: string = this._getFooterIconUrl(item);
 
-      return Footer.itemTemplate.replace('__ICON_URL__', () => imageUrl).replace('__CONTACT_DETAILS__', () => contactDetails);
-    }).join('');
-  }
+    return Footer.itemTemplate
+      .replace('__ICON_URL__', () => imageUrl)
+      .replace('__CONTACT_DETAILS__', () => contactDetails);
+  }).join('');
+}
 
-  private _buildFooterHtml(footerItems: any[]): string {
-    const normalise = (value: any): string => String(value || '').trim().toLowerCase();
+private _buildFooterHtml(footerItems: any[]): string {
+  const normalise = (value: any): string =>
+    String(value || '').trim().toLowerCase();
 
-    const activeItems: any[] = footerItems.filter((item: any) => normalise(item.Status) === 'active');
-    const importantContacts: any[] = activeItems.filter((item: any) => normalise(item.Category) === 'important contacts');
-    const medicalServices: any[] = activeItems.filter((item: any) => normalise(item.Category) === 'medical services');
+  const activeItems: any[] = footerItems.filter(
+    (item: any) => normalise(item.Status) === 'active'
+  );
 
-    return Footer.html
-      .replace('__IMPORTANT_CONTACTS__', () => this._renderFooterItems(importantContacts))
-      .replace('__MEDICAL_SERVICES__', () => this._renderFooterItems(medicalServices))
-      .replace('__CURRENT_YEAR__', new Date().getFullYear().toString());
-  }
+  const importantContacts: any[] = activeItems.filter(
+    (item: any) => normalise(item.Category) === 'important contacts'
+  );
 
-  // ============================================================
-  // RENDER FOOTER
-  // ============================================================
+  const medicalServices: any[] = activeItems.filter(
+    (item: any) => normalise(item.Category) === 'medical services'
+  );
 
+  return Footer.html
+    .replace(
+      '__IMPORTANT_CONTACTS__',
+      () => this._renderFooterItems(importantContacts)
+    )
+    .replace(
+      '__MEDICAL_SERVICES__',
+      () => this._renderFooterItems(medicalServices)
+    )
+    .replace(
+      '__CURRENT_YEAR__',
+      new Date().getFullYear().toString()
+    );
+}
+
+
+ 
   private _isSearchPage(): boolean {
     return window.location.pathname.toLowerCase().indexOf('/_layouts/15/search.aspx') !== -1;
   }
