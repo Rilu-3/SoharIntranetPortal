@@ -10,7 +10,7 @@ import adminPageHtml, {
 interface ISPList {
   Title: string;
   Hidden: boolean;
-  BaseTemplate: number;
+  BaseTemplate: number; 
   RootFolder: {
     ServerRelativeUrl: string;
   };

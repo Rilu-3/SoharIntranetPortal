@@ -2538,22 +2538,32 @@ private async _renderNewJoinersAsync(apiUrl: string): Promise<void> {
       return;
     }
 
-    let html = '';
-
+        let html = '';
+ 
     upcomingBirthdays.forEach((item) => {
+
       const birthDate = new Date(item.BirthDate);
+
       const month = birthDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+
       const day = birthDate.getDate().toString();
+
       const imageUrl = this.getBirthdayImageUrl(item.EmployeePhoto);
-
+ 
       html += Birthday.singleElementHtml
-        .replace(/__KEY_URL_IMG__/g, imageUrl)
-        .replace(/__KEY_TITLE__/g, item.Title)
-        .replace(/__KEY_MONTH__/g, month)
-        .replace(/__KEY_DAY__/g, day);
-    });
 
-    container.innerHTML = html;
+        .replace(/__KEY_URL_IMG__/g, imageUrl)
+
+        .replace(/__KEY_TITLE__/g, item.Title)
+
+        .replace(/__KEY_MONTH__/g, month)
+
+        .replace(/__KEY_DAY__/g, day);
+
+    });
+ 
+    container.innerHTML = html || Birthday.noElementHtml;
+ 
   }
 
   // HR API - Birthdays
