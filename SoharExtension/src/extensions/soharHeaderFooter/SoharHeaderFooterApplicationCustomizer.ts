@@ -758,14 +758,39 @@ const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/ite
   }
 
  
+// private _renderFooterItems(items: any[]): string {
+//   return items.map((item: any) => {
+//     const contactDetails: string = item.ContactDetails || '';
+//     const imageUrl: string = this._getFooterIconUrl(item);
+
+//     return Footer.itemTemplate
+//       .replace('__ICON_URL__', () => imageUrl)
+//       .replace('__CONTACT_DETAILS__', () => contactDetails);
+//   }).join('');
+// }
+
 private _renderFooterItems(items: any[]): string {
   return items.map((item: any) => {
-    const contactDetails: string = item.ContactDetails || '';
     const imageUrl: string = this._getFooterIconUrl(item);
+    const doc: Document = new DOMParser().parseFromString(item.ContactDetails || '', 'text/html');
+
+    doc.querySelectorAll('a').forEach((a: HTMLAnchorElement) => {
+      a.removeAttribute('title');
+      const isEmail: boolean = (a.getAttribute('href') || '').indexOf('mailto:') === 0;
+
+      if (isEmail) {
+        a.className = 'pre-footer-link';
+      } else {
+        a.className = 'contact-tel';
+        if (!a.querySelector('strong')) {
+          a.innerHTML = '<strong>' + a.innerHTML + '</strong>';
+        }
+      }
+    });
 
     return Footer.itemTemplate
       .replace('__ICON_URL__', () => imageUrl)
-      .replace('__CONTACT_DETAILS__', () => contactDetails);
+      .replace('__CONTACT_DETAILS__', () => doc.body.innerHTML);
   }).join('');
 }
 
