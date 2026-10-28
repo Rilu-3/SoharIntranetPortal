@@ -719,7 +719,7 @@ if (!menu) {
   // ============================================================
 
   private async _getFooterItems(): Promise<any[]> {
-const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/items?$select=Id,ContactDetails,Category,Status,Icon,Created&$orderby=Created desc`;
+const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/items?$select=Id,Title,ContactDetails,Category,Status,Icon,ShowInTopContacts,Created&$orderby=Created desc`;
     try {
       const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
 
@@ -728,6 +728,7 @@ const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/ite
       }
 
       const data = await response.json();
+
       return data.value || [];
     } catch (error) {
       Log.error(LOG_SOURCE, error instanceof Error ? error : new Error(String(error)));
@@ -769,6 +770,65 @@ const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/ite
 //   }).join('');
 // }
 
+
+private _renderTopContacts(items: any[]): string {
+  return items.map((item: any) => {
+    const imageUrl: string = this._getFooterIconUrl(item);
+
+    const doc: Document = new DOMParser().parseFromString(
+      item.ContactDetails || '',
+      'text/html'
+    );
+
+    const details: string = doc.body.textContent || '';
+
+    const contactMatch = details.match(
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d\s()-]{6,}\d/i
+    );
+
+    let contactDetails: string = '';
+
+    if (contactMatch && contactMatch.index !== undefined) {
+      const contactText: string = details.substring(contactMatch.index).trim();
+
+      const emailMatch = contactText.match(
+        /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
+      );
+
+      const phoneMatch = contactText.match(
+        /\+?\d[\d\s()-]{6,}\d/
+      );
+
+      let formattedText: string = escape(contactText);
+
+      if (emailMatch) {
+        const email: string = emailMatch[0];
+
+        formattedText = formattedText.replace(
+          email,
+          `<a class="pre-footer-link" href="mailto:${email}">${email}</a>`
+        );
+      }
+
+      if (phoneMatch) {
+        const phone: string = phoneMatch[0];
+
+        formattedText = formattedText.replace(
+          phone,
+          `<a class="contact-tel" href="tel:${phone.replace(/[^\d+]/g, '')}"><strong>${phone}</strong></a>`
+        );
+      }
+
+      contactDetails = formattedText;
+    }
+
+    return Footer.topContactTemplate
+      .replace('__ICON_URL__', () => imageUrl)
+      .replace('__CONTACT_TITLE__', () => escape(item.Title || ''))
+      .replace('__CONTACT_DETAILS__', () => contactDetails);
+  }).join('');
+}
+
 private _renderFooterItems(items: any[]): string {
   return items.map((item: any) => {
     const imageUrl: string = this._getFooterIconUrl(item);
@@ -781,18 +841,53 @@ private _renderFooterItems(items: any[]): string {
       if (isEmail) {
         a.className = 'pre-footer-link';
       } else {
-        a.className = 'contact-tel';
-        if (!a.querySelector('strong')) {
-          a.innerHTML = '<strong>' + a.innerHTML + '</strong>';
-        }
-      }
-    });
+  a.className = 'contact-tel';
+  const phoneNumber: string = (a.textContent || '').replace(/[^\d+]/g, '');
+  if (phoneNumber) {
+    a.setAttribute('href', 'tel:' + phoneNumber);
+  }
+  if (!a.querySelector('strong')) {
+    a.innerHTML = '<strong>' + a.innerHTML + '</strong>';
+  }
+}
+   });
 
     return Footer.itemTemplate
       .replace('__ICON_URL__', () => imageUrl)
       .replace('__CONTACT_DETAILS__', () => doc.body.innerHTML);
   }).join('');
 }
+
+// private _buildFooterHtml(footerItems: any[]): string {
+//   const normalise = (value: any): string =>
+//     String(value || '').trim().toLowerCase();
+
+//   const activeItems: any[] = footerItems.filter(
+//     (item: any) => normalise(item.Status) === 'active'
+//   );
+
+//   const importantContacts: any[] = activeItems.filter(
+//     (item: any) => normalise(item.Category) === 'important contacts'
+//   );
+
+//   const medicalServices: any[] = activeItems.filter(
+//     (item: any) => normalise(item.Category) === 'medical services'
+//   );
+
+//   return Footer.html
+//     .replace(
+//       '__IMPORTANT_CONTACTS__',
+//       () => this._renderFooterItems(importantContacts)
+//     )
+//     .replace(
+//       '__MEDICAL_SERVICES__',
+//       () => this._renderFooterItems(medicalServices)
+//     )
+//     .replace(
+//       '__CURRENT_YEAR__',
+//       new Date().getFullYear().toString()
+//     );
+// }
 
 private _buildFooterHtml(footerItems: any[]): string {
   const normalise = (value: any): string =>
@@ -801,7 +896,29 @@ private _buildFooterHtml(footerItems: any[]): string {
   const activeItems: any[] = footerItems.filter(
     (item: any) => normalise(item.Status) === 'active'
   );
+const topContacts: any[] = activeItems
+  .filter((item: any) => {
+    const showInTopContacts =
+      String(item.ShowInTopContacts || '').trim().toLowerCase();
 
+    const title = String(item.Title || '').trim();
+    const details = String(item.ContactDetails || '').trim();
+
+    const isEmailOrNumber = (value: string): boolean =>
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(value) ||
+      /(\+?\d[\d\s()-]{6,}\d)/.test(value);
+
+    return (
+      showInTopContacts === 'yes' &&
+      (isEmailOrNumber(title) || isEmailOrNumber(details))
+    );
+  })
+  .sort(
+    (a: any, b: any) =>
+      new Date(b.Created).getTime() - new Date(a.Created).getTime()
+  )
+  .slice(0, 2);
+  
   const importantContacts: any[] = activeItems.filter(
     (item: any) => normalise(item.Category) === 'important contacts'
   );
@@ -811,6 +928,10 @@ private _buildFooterHtml(footerItems: any[]): string {
   );
 
   return Footer.html
+    .replace(
+      '__TOP_CONTACTS__',
+      () => this._renderTopContacts(topContacts)
+    )
     .replace(
       '__IMPORTANT_CONTACTS__',
       () => this._renderFooterItems(importantContacts)
@@ -824,7 +945,6 @@ private _buildFooterHtml(footerItems: any[]): string {
       new Date().getFullYear().toString()
     );
 }
-
 
  
   private _isSearchPage(): boolean {

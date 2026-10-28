@@ -11,43 +11,7 @@ export default class Footer {
 
           <div class="contact-strip-items">
 
-            <div class="contact-strip-item">
-
-              <span class="pre-footer-item-icon">
-<img src="https://soharaluminium5.sharepoint.com/sites/DevPortal/SiteAssets/resources/images/icons/footer/emergency-call.png" alt="" />              </span>
-
-              <div class="contact-strip-text">
-                <p class="contact-strip-label">Emergencies</p>
-                <p class="contact-strip-value">
-                  <a class="contact-tel" href="tel:+96826863333">
-                    <strong>(+968)26863333</strong>
-                  </a>
-                  or Ext. 3333 internally
-                </p>
-              </div>
-
-            </div>
-
-            <div class="contact-strip-item">
-
-              <span class="pre-footer-item-icon">
-                <img src="https://soharaluminium5.sharepoint.com/sites/DevPortal/SiteAssets/resources/images/icons/footer/email.png" alt="" />
-              </span>
-
-              <div class="contact-strip-text">
-                <p class="contact-strip-label">Feedback &amp; reporting</p>
-                <p class="contact-strip-value">
-                  <a href="mailto:hotline@sohar-aluminium.com" class="pre-footer-link">
-                    hotline@sohar-aluminium.com
-                  </a>
-                  or
-                  <a class="contact-tel" href="tel:+96826863317">
-                    <strong>(+968)26863317</strong>
-                  </a>
-                </p>
-              </div>
-
-            </div>
+            __TOP_CONTACTS__
 
           </div>
 
@@ -77,85 +41,107 @@ export default class Footer {
       </div>
 
     </footer>
-<div
-  class="offcanvas offcanvas-end contacts-offcanvas"
-  tabindex="-1"
-  id="allContactsPanel"
-  aria-labelledby="allContactsTitle">
 
-  <div class="offcanvas-header">
-    <h3 class="offcanvas-title" id="allContactsTitle">
-      All contacts
-    </h3>
+    <div
+      class="offcanvas offcanvas-end contacts-offcanvas"
+      tabindex="-1"
+      id="allContactsPanel"
+      aria-labelledby="allContactsTitle">
 
-    <button
-      type="button"
-      class="btn-close btn-close-white"
-      data-bs-dismiss="offcanvas"
-      aria-label="Close">
-    </button>
-  </div>
+      <div class="offcanvas-header">
+        <h3 class="offcanvas-title" id="allContactsTitle">
+          All contacts
+        </h3>
 
-  <div class="offcanvas-body custom-scroll-view">
-    <ul class="nav contacts-tabs" role="tablist">
-
-      <li class="nav-item" role="presentation">
         <button
-          class="nav-link active"
-          id="important-contacts-tab"
-          data-bs-toggle="tab"
-          data-bs-target="#importantContacts"
           type="button"
-          role="tab"
-          aria-controls="importantContacts"
-          aria-selected="true">
-          Important Contacts
+          class="btn-close btn-close-white"
+          data-bs-dismiss="offcanvas"
+          aria-label="Close">
         </button>
-      </li>
-
-      <li class="nav-item" role="presentation">
-        <button
-          class="nav-link"
-          id="medical-services-tab"
-          data-bs-toggle="tab"
-          data-bs-target="#medicalServices"
-          type="button"
-          role="tab"
-          aria-controls="medicalServices"
-          aria-selected="false">
-          Medical Services
-        </button>
-      </li>
-
-    </ul>
-
-    <div class="tab-content">
-      <div
-        class="tab-pane fade show active"
-        id="importantContacts"
-        role="tabpanel"
-        aria-labelledby="important-contacts-tab"
-        tabindex="0">
-
-        <ul class="pre-footer-list">
-          __IMPORTANT_CONTACTS__
-        </ul>
       </div>
 
-      <div
-        class="tab-pane fade"
-        id="medicalServices"
-        role="tabpanel"
-        aria-labelledby="medical-services-tab"
-        tabindex="0">
+      <div class="offcanvas-body custom-scroll-view">
+        <ul class="nav contacts-tabs" role="tablist">
 
-        <ul class="pre-footer-list">
-          __MEDICAL_SERVICES__
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="important-contacts-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#importantContacts"
+              type="button"
+              role="tab"
+              aria-controls="importantContacts"
+              aria-selected="true">
+              Important Contacts
+            </button>
+          </li>
+
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="medical-services-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#medicalServices"
+              type="button"
+              role="tab"
+              aria-controls="medicalServices"
+              aria-selected="false">
+              Medical Services
+            </button>
+          </li>
+
         </ul>
+
+        <div class="tab-content">
+
+          <div
+            class="tab-pane fade show active"
+            id="importantContacts"
+            role="tabpanel"
+            aria-labelledby="important-contacts-tab"
+            tabindex="0">
+
+            <ul class="pre-footer-list">
+              __IMPORTANT_CONTACTS__
+            </ul>
+
+          </div>
+
+          <div
+            class="tab-pane fade"
+            id="medicalServices"
+            role="tabpanel"
+            aria-labelledby="medical-services-tab"
+            tabindex="0">
+
+            <ul class="pre-footer-list">
+              __MEDICAL_SERVICES__
+            </ul>
+
+          </div>
+
+        </div>
       </div>
     </div>
-  </div>
-</div>
+  `;
+
+  public static topContactTemplate: string = `
+    <div class="contact-strip-item">
+
+      <span class="pre-footer-item-icon">
+        <img src="__ICON_URL__" alt="" />
+      </span>
+
+      <div class="contact-strip-text">
+        <p class="contact-strip-label">__CONTACT_TITLE__</p>
+        <p class="contact-strip-value">
+          __CONTACT_DETAILS__
+        </p>
+      </div>
+
+    </div>
   `;
 
   public static itemTemplate: string = `
