@@ -46,19 +46,12 @@ interface IBannerItem {
 }
 
 interface IMediaGalleryItem {
-
   Id: number;
-
-  Title: string;
-
+  FileLeafRef: string;
+  FileRef: string;
   Caption: string;
-
   Status: string;
-
   SortOrder: number;
-
-  Image?: string | ISharePointImage;
-
 }
 
 export default class WpHomePageWebPart
@@ -440,281 +433,127 @@ export default class WpHomePageWebPart
 
   // ==================== GET MEDIA GALLERY ITEMS ====================
 
-  private async _getMediaGalleryItems(): Promise<void> {
+ private async _getMediaGalleryItems(): Promise<void> {
+  try {
+    const siteUrl =
+      'https://soharaluminium5.sharepoint.com/sites/Communication';
 
-    try {
+    const url =
+      `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items` +
+      `?$select=Id,FileLeafRef,FileRef,Caption,Status,SortOrder` +
+      `&$filter=Status eq 'Active'` +
+      `&$orderby=SortOrder asc`;
 
-      const siteUrl =
-
-        this.context.pageContext.web.absoluteUrl;
-
-      const url =
-
-        `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image&$orderby=SortOrder asc`;
-
-      const response =
-
-        await this.context.spHttpClient.get(
-
-          url,
-
-          SPHttpClient.configurations.v1,
-
-          {
-
-            headers: {
-
-              'Accept':
-
-                'application/json;odata=nometadata'
-
-            }
-
-          }
-
-        );
-
-      if (!response.ok) {
-
-        throw new Error(
-
-          `Media Gallery list request failed: ${response.status}`
-
-        );
-
+    const response = await this.context.spHttpClient.get(
+      url,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          'Accept': 'application/json;odata=nometadata'
+        }
       }
+    );
 
-      const data =
-
-        await response.json();
-
-      const galleryItems: IMediaGalleryItem[] =
-
-        data.value
-
-          .filter(
-
-            (item: IMediaGalleryItem) =>
-
-              item.Status === 'Active'
-
-          )
-
-          .sort(
-
-            (a: IMediaGalleryItem, b: IMediaGalleryItem) =>
-
-              a.SortOrder - b.SortOrder
-
-          );
-
-      console.log(
-
-        'Media Gallery Items:',
-
-        galleryItems
-
+    if (!response.ok) {
+      throw new Error(
+        `Media Gallery request failed: ${response.status}`
       );
-
-      this._renderMediaGallery(
-
-        galleryItems
-
-      );
-
-    } catch (error) {
-
-      console.error(
-
-        'Error loading Media Gallery list:',
-
-        error
-
-      );
-
-      const galleryWrapper =
-
-        this.domElement.querySelector(
-
-          '.gallery-swiper .swiper-wrapper'
-
-        );
-
-      if (galleryWrapper !== null) {
-
-        galleryWrapper.innerHTML =
-
-          MediaGalleryTemplate.noRecord;
-
-      }
-
     }
 
+    const data = await response.json();
+
+    const galleryItems: IMediaGalleryItem[] = data.value;
+
+    console.log('Media Gallery Items:', galleryItems);
+
+    this._renderMediaGallery(galleryItems);
+
+  } catch (error) {
+    console.error('Error loading Media Gallery:', error);
+
+    const galleryWrapper = this.domElement.querySelector(
+      '.gallery-swiper .swiper-wrapper'
+    );
+
+    if (galleryWrapper !== null) {
+      galleryWrapper.innerHTML = MediaGalleryTemplate.noRecord;
+    }
   }
+}
 
   // ==================== RENDER MEDIA GALLERY ====================
 
-  private _renderMediaGallery(
+private _renderMediaGallery(
+  galleryItems: IMediaGalleryItem[]
+): void {
 
-    galleryItems: IMediaGalleryItem[]
+  let allElementsHtml: string = '';
 
-  ): void {
+  galleryItems.forEach((item: IMediaGalleryItem) => {
 
-    let allElementsHtml: string = '';
+    const imageUrl = `${window.location.origin}${item.FileRef}`;
 
-    galleryItems.forEach(
-
-      (item: IMediaGalleryItem) => {
-
-        const imageData = this.getImageData(item.Image);
-
-        const imageUrl =
-
-          imageData?.serverRelativeUrl || '';
-
-
-
-        console.log(
-
-          'Gallery Image URL:',
-
+    const singleElementHtml =
+      MediaGalleryTemplate.singleElementHtml
+        .replace(
+          '__KEY_GALLERY_IMAGE__',
           imageUrl
-
+        )
+        .replace(
+          '__KEY_GALLERY_CAPTION__',
+          item.Caption || item.FileLeafRef || ''
         );
 
-        const singleElementHtml =
+    allElementsHtml += singleElementHtml;
+  });
 
-          MediaGalleryTemplate.singleElementHtml
+  if (allElementsHtml === '') {
+    allElementsHtml = MediaGalleryTemplate.noRecord;
+  }
 
-            .replace(
+  const galleryWrapper = this.domElement.querySelector(
+    '.gallery-swiper .swiper-wrapper'
+  );
 
-              '__KEY_GALLERY_IMAGE__',
+  if (galleryWrapper !== null) {
+    galleryWrapper.innerHTML = allElementsHtml;
 
-              imageUrl
-
-            )
-
-            .replace(
-
-              '__KEY_GALLERY_CAPTION__',
-
-              item.Caption || item.Title || ''
-
-            );
-
-        allElementsHtml +=
-
-          singleElementHtml;
-
-      }
-
+    // Fill Modal Gallery
+    const modalWrapper = this.domElement.querySelector(
+      '.gallery-modal-swiper .swiper-wrapper'
     );
 
-    if (allElementsHtml === '') {
+    if (modalWrapper !== null) {
 
-      allElementsHtml =
+      let modalElementsHtml: string = '';
 
-        MediaGalleryTemplate.noRecord;
+      galleryItems.forEach((item: IMediaGalleryItem) => {
 
+        const imageUrl =
+          `${window.location.origin}${item.FileRef}`;
+
+        modalElementsHtml += `
+          <div class="swiper-slide gallery-swiper-slide">
+            <img
+              src="${imageUrl}"
+              alt="${item.Caption || item.FileLeafRef || ''}"
+            />
+          </div>
+        `;
+      });
+
+      modalWrapper.innerHTML = modalElementsHtml;
     }
 
-    const galleryWrapper =
+    const galleryElement = this.domElement.querySelector(
+      '.gallery-swiper'
+    ) as HTMLElement & { swiper?: any };
 
-      this.domElement.querySelector(
-
-        '.gallery-swiper .swiper-wrapper'
-
-      );
-
-    if (galleryWrapper !== null) {
-
-      galleryWrapper.innerHTML =
-
-        allElementsHtml;
-
-      /*
-
-       * Fill Modal Gallery
-
-       */
-
-      const modalWrapper =
-
-        this.domElement.querySelector(
-
-          '.gallery-modal-swiper .swiper-wrapper'
-
-        );
-
-      if (modalWrapper !== null) {
-
-        let modalElementsHtml: string = '';
-
-        galleryItems.forEach(
-
-          (item: IMediaGalleryItem) => {
-
-            const imageData = this.getImageData(item.Image);
-
-            const imageUrl =
-
-              imageData?.serverRelativeUrl || '';
-
-
-
-            modalElementsHtml += `
-
-              <div class="swiper-slide gallery-swiper-slide">
-
-                <img
-
-                  src="${imageUrl}"
-
-                  alt="${item.Caption || item.Title || ''}"
-
-                />
-
-              </div>
-
-            `;
-
-          }
-
-        );
-
-        modalWrapper.innerHTML =
-
-          modalElementsHtml;
-
-      }
-
-      const galleryElement =
-
-        this.domElement.querySelector(
-
-          '.gallery-swiper'
-
-        ) as HTMLElement & {
-
-          swiper?: any;
-
-        };
-
-      if (
-
-        galleryElement &&
-
-        galleryElement.swiper
-
-      ) {
-
-        galleryElement.swiper.update();
-
-      }
-
+    if (galleryElement && galleryElement.swiper) {
+      galleryElement.swiper.update();
     }
-
   }
+}
 
   // ==================== LOAD BOOTSTRAP ====================
 
