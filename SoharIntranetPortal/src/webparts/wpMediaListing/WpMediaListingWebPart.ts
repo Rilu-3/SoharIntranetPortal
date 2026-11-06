@@ -24,11 +24,11 @@ export interface ISPLists {
 export interface ISPList {
   Id: number;
   Title: string;
-  Caption: string;
   Status: string;
   SortOrder: number;
-  Image: any;
-  GalleryDate: string;
+  FileLeafRef: string;
+  FileRef: string;
+  Created: string;
 }
 
 // Only media items with this status are displayed
@@ -53,35 +53,35 @@ export default class WpMediaListingWebPart extends BaseClientSideWebPart<IWpMedi
   private _selectedMonth: string = ALL_MONTHS;
 
   public async render(): Promise<void> {
-    const webUrl: string = this.context.pageContext.web.absoluteUrl;
-    const resourceUrl: string = `${webUrl}/SiteAssets/resources`;
-    const homeUrl: string = `${webUrl}/SitePages/Home.aspx?env=WebViewList`;
+  const webUrl: string = this.context.pageContext.web.absoluteUrl;
+  const resourceUrl: string = `${webUrl}/SiteAssets/resources`;
+  const homeUrl: string = `${webUrl}/SitePages/Home.aspx?env=WebViewList`;
 
-    // Show page header with loader until data is ready
-    this.domElement.innerHTML = wpMediaListing.wrapperHtml(resourceUrl, homeUrl, wpMediaListing.loadingHtml);
-    this._bindYearFilter();
-    this._bindGalleryModal();
+  // Show page header with loader until data is ready
+  this.domElement.innerHTML = wpMediaListing.wrapperHtml(resourceUrl, homeUrl, wpMediaListing.loadingHtml);
+  this._bindYearFilter();
+  this._bindGalleryModal();
 
-    const apiUrl: string = `${webUrl}/_api/web/lists/GetByTitle('${LIST_TITLE}')/items?$select=Id,Title,Caption,Status,SortOrder,Image,GalleryDate,Created&$filter=Status eq '${PUBLISHED_STATUS}'&$orderby=SortOrder asc,Created desc&$top=500`;
+  const communicationUrl: string = "https://soharaluminium5.sharepoint.com/sites/Communication";
 
-    try {
-      const items: ISPList[] = await this._getListData(apiUrl);
+  const apiUrl: string = `${communicationUrl}/_api/web/lists/GetByTitle('Media_Gallery')/items?$select=Id,Title,Status,SortOrder,FileLeafRef,FileRef,Created&$filter=Status eq '${PUBLISHED_STATUS}'&$orderby=SortOrder asc,Created desc&$top=500`;
+  try {
+    const items: ISPList[] = await this._getListData(apiUrl);
 
-      // Keep only items that have an image
-      this._mediaItems = items.filter((item: ISPList) => !!this._getImageUrl(item, LIST_TITLE));
+    // Keep only items that have an image
+    this._mediaItems = items.filter((item: ISPList) => !!item.FileRef);
 
-      // Populate Year and Month dropdowns from GalleryDate
-      this._renderYears(this._getDistinctYears(this._mediaItems));
-      this._renderMonths(this._getDistinctMonths(this._mediaItems));
+    // Populate Year and Month dropdowns from GalleryDate
+    this._renderYears(this._getDistinctYears(this._mediaItems));
+    this._renderMonths();
+    // Display all media initially
+    this._renderMedia();
 
-      // Display all media initially
-      this._renderMedia();
-
-    } catch (error) {
-      console.error("Error loading media gallery", error);
-      this._setContent(wpMediaListing.noRecordHtml);
-    }
+  } catch (error) {
+    console.error("Error loading media gallery", error);
+    this._setContent(wpMediaListing.noRecordHtml);
   }
+}
 
   // Get data from the SharePoint list
   private async _getListData(apiUrl: string): Promise<ISPList[]> {
@@ -132,38 +132,38 @@ export default class WpMediaListingWebPart extends BaseClientSideWebPart<IWpMedi
   }
 
   // Distinct years from GalleryDate, newest first
-  private _getDistinctYears(items: ISPList[]): string[] {
-    const years: number[] = [];
+private _getDistinctYears(items: ISPList[]): string[] {
+  const years: number[] = [];
 
-    for (let i = 0; i < items.length; i++) {
-      const dateParts = this._getGalleryDateParts(items[i].GalleryDate);
+  for (let i = 0; i < items.length; i++) {
+    const dateParts = this._getGalleryDateParts(items[i].Created);
 
-      if (dateParts && years.indexOf(dateParts.year) === -1) {
-        years.push(dateParts.year);
-      }
+    if (dateParts && years.indexOf(dateParts.year) === -1) {
+      years.push(dateParts.year);
     }
-
-    years.sort((a: number, b: number) => b - a);
-
-    return years.map((year: number) => String(year));
   }
+
+  years.sort((a: number, b: number) => b - a);
+
+  return years.map((year: number) => String(year));
+}
 
   // Distinct months from GalleryDate
-  private _getDistinctMonths(items: ISPList[]): string[] {
-    const months: number[] = [];
+//  private _getDistinctMonths(items: ISPList[]): string[] {
+//   const months: number[] = [];
 
-    for (let i = 0; i < items.length; i++) {
-      const dateParts = this._getGalleryDateParts(items[i].GalleryDate);
+//   for (let i = 0; i < items.length; i++) {
+//     const dateParts = this._getGalleryDateParts(items[i].Created);
 
-      if (dateParts && months.indexOf(dateParts.month) === -1) {
-        months.push(dateParts.month);
-      }
-    }
+//     if (dateParts && months.indexOf(dateParts.month) === -1) {
+//       months.push(dateParts.month);
+//     }
+//   }
 
-    months.sort((a: number, b: number) => a - b);
+//   months.sort((a: number, b: number) => a - b);
 
-    return months.map((month: number) => MONTH_NAMES[month - 1]);
-  }
+//   return months.map((month: number) => MONTH_NAMES[month - 1]);
+// }
 
   // Populate the year dropdown
   private _renderYears(years: string[]): void {
@@ -183,21 +183,21 @@ export default class WpMediaListingWebPart extends BaseClientSideWebPart<IWpMedi
   }
 
   // Populate the month dropdown
-  private _renderMonths(months: string[]): void {
-    const menu: Element | null = this.domElement.querySelector('#dropdownMenuMonth + .dropdown-menu');
+  private _renderMonths(): void {
+  const menu: Element | null = this.domElement.querySelector('#dropdownMenuMonth + .dropdown-menu');
 
-    if (menu === null) {
-      return;
-    }
-
-    let html: string = wpMediaListing.monthItemHtml(ALL_MONTHS);
-
-    for (let i = 0; i < months.length; i++) {
-      html += wpMediaListing.monthItemHtml(escape(months[i]));
-    }
-
-    menu.innerHTML = html;
+  if (menu === null) {
+    return;
   }
+
+  let html: string = wpMediaListing.monthItemHtml(ALL_MONTHS);
+
+  for (let i = 0; i < MONTH_NAMES.length; i++) {
+    html += wpMediaListing.monthItemHtml(escape(MONTH_NAMES[i]));
+  }
+
+  menu.innerHTML = html;
+}
 
   // Handle year and month selection
   private _bindYearFilter(): void {
@@ -311,7 +311,7 @@ export default class WpMediaListingWebPart extends BaseClientSideWebPart<IWpMedi
 
     // Filter media using GalleryDate
     const filteredItems: ISPList[] = this._mediaItems.filter((item: ISPList) => {
-      const dateParts = this._getGalleryDateParts(item.GalleryDate);
+      const dateParts = this._getGalleryDateParts(item.Created);
 
       if (!dateParts) {
         return this._selectedYear === ALL_YEARS && this._selectedMonth === ALL_MONTHS;
@@ -378,32 +378,20 @@ export default class WpMediaListingWebPart extends BaseClientSideWebPart<IWpMedi
 // }
 
   // Resolve image URL from SharePoint Image column JSON
-  private _getImageUrl(item: ISPList, listUrlName: string): string {
-    if (!item.Image) {
-      return "";
-    }
-
-    try {
-      const img: any = JSON.parse(item.Image);
-      const webUrl: string = this.context.pageContext.web.absoluteUrl;
-
-      // Image stored in Site Assets (serverRelativeUrl provided)
-      if (img.serverRelativeUrl) {
-        const origin: string = img.serverUrl || window.location.origin;
-        return origin + encodeURI(img.serverRelativeUrl);
-      }
-
-      // Image stored as list item attachment (only fileName provided)
-      if (img.fileName) {
-        return `${webUrl}/Lists/${listUrlName}/Attachments/${item.Id}/${encodeURIComponent(img.fileName)}`;
-      }
-
-    } catch (e) {
-      console.error("Unable to parse Image", e);
-    }
-
+ private _getImageUrl(item: ISPList, listUrlName: string): string {
+  if (!item.FileRef) {
     return "";
   }
+
+  try {
+    return window.location.origin + encodeURI(item.FileRef);
+
+  } catch (e) {
+    console.error("Unable to get Image URL", e);
+  }
+
+  return "";
+}
 
   public async onInit(): Promise<void> {
     await this._loadCSS();

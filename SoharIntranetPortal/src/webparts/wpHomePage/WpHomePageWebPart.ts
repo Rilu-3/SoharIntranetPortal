@@ -40,7 +40,8 @@ interface IMediaGalleryItem {
   Caption: string;
   Status: string;
   SortOrder: number;
-  Image: string | ISharePointImage | undefined;
+  FileLeafRef: string;
+  FileRef: string;
 }
 
 // Interface used for both Outlook My Events and SharePoint Organizational Events
@@ -1643,88 +1644,108 @@ if (formattedMatch) {
 
   // ==================== MEDIA GALLERY ====================
 
-  private async _getMediaGalleryItems(): Promise<void> {
-    try {
-      const siteUrl = this.context.pageContext.web.absoluteUrl;
-      const url = `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items?$select=Id,Title,Caption,Status,SortOrder,Image,Created&$filter=Status eq 'Active'&$orderby=SortOrder asc,Created desc`;
-      const response = await this.context.spHttpClient.get(url, SPHttpClient.configurations.v1, { headers: { 'Accept': 'application/json;odata=nometadata' } });
+private async _getMediaGalleryItems(): Promise<void> {
+  try {
+    const siteUrl =
+      'https://soharaluminium5.sharepoint.com/sites/Communication';
 
-      if (!response.ok) {
-        throw new Error(`Media Gallery list request failed: ${response.status}`);
-      }
+    const url =
+  `${siteUrl}/_api/web/lists/getbytitle('Media_Gallery')/items` +
+  `?$select=Id,Title,FileLeafRef,FileRef,Status,SortOrder,Created` +
+  `&$filter=Status eq 'Active'` +
+  `&$orderby=SortOrder asc,Created desc`;
 
-      const data = await response.json();
-      const galleryItems: IMediaGalleryItem[] = data.value.filter((item: IMediaGalleryItem) => item.Status === 'Active').sort((a: IMediaGalleryItem, b: IMediaGalleryItem) => a.SortOrder - b.SortOrder);
+    const response =
+      await this.context.spHttpClient.get(
+        url,
+        SPHttpClient.configurations.v1,
+        {
+          headers: {
+            'Accept': 'application/json;odata=nometadata'
+          }
+        }
+      );
 
-      this._renderMediaGallery(galleryItems);
-    } catch (error) {
-      console.error('Error loading Media Gallery list:', error);
-
-      const galleryWrapper = this.domElement.querySelector('.gallery-swiper .swiper-wrapper');
-      if (galleryWrapper !== null) {
-        galleryWrapper.innerHTML = MediaGalleryTemplate.noRecord;
-      }
-    }
-  }
-
-  private _renderMediaGallery(galleryItems: IMediaGalleryItem[]): void {
-    let allElementsHtml: string = '';
-
-    galleryItems.forEach((item: IMediaGalleryItem) => {
-      let imageData: any = {};
-      if (item.Image) {
-        imageData = typeof item.Image === 'string' ? JSON.parse(item.Image) : item.Image;
-      }
-
-      const imageUrl = imageData.serverRelativeUrl || '';
-
-      const singleElementHtml = MediaGalleryTemplate.singleElementHtml
-        .replace('__KEY_GALLERY_IMAGE__', imageUrl)
-        .replace('__KEY_GALLERY_CAPTION__', item.Caption || item.Title || '');
-
-      allElementsHtml += singleElementHtml;
-    });
-
-    if (allElementsHtml === '') {
-      allElementsHtml = MediaGalleryTemplate.noRecord;
+    if (!response.ok) {
+      throw new Error(
+        `Media Gallery request failed: ${response.status}`
+      );
     }
 
-    const galleryWrapper = this.domElement.querySelector('.gallery-swiper .swiper-wrapper');
+    const data = await response.json();
+
+    const galleryItems: IMediaGalleryItem[] =
+      data.value.sort(
+        (a: IMediaGalleryItem, b: IMediaGalleryItem) =>
+          a.SortOrder - b.SortOrder
+      );
+
+    console.log('Media Gallery Items:', galleryItems);
+
+    this._renderMediaGallery(galleryItems);
+
+  } catch (error) {
+    console.error('Error loading Media Gallery:', error);
+
+    const galleryWrapper =
+      this.domElement.querySelector(
+        '.gallery-swiper .swiper-wrapper'
+      );
 
     if (galleryWrapper !== null) {
-      galleryWrapper.innerHTML = allElementsHtml;
-
-      // Fill Modal Gallery
-      const modalWrapper = this.domElement.querySelector('.gallery-modal-swiper .swiper-wrapper');
-
-      if (modalWrapper !== null) {
-        let modalElementsHtml: string = '';
-
-        galleryItems.forEach((item: IMediaGalleryItem) => {
-          let imageData: any = {};
-          if (item.Image) {
-            imageData = typeof item.Image === 'string' ? JSON.parse(item.Image) : item.Image;
-          }
-
-          const imageUrl = imageData.serverRelativeUrl || '';
-
-          modalElementsHtml += `
-            <div class="swiper-slide gallery-swiper-slide">
-              <img src="${imageUrl}" alt="${item.Caption || item.Title || ''}" />
-            </div>
-          `;
-        });
-
-        modalWrapper.innerHTML = modalElementsHtml;
-      }
-
-      const galleryElement = this.domElement.querySelector('.gallery-swiper') as HTMLElement & { swiper?: any };
-      if (galleryElement && galleryElement.swiper) {
-        galleryElement.swiper.update();
-      }
+      galleryWrapper.innerHTML = MediaGalleryTemplate.noRecord;
     }
   }
+}
+ private _renderMediaGallery(galleryItems: IMediaGalleryItem[]): void {
+  let allElementsHtml: string = '';
 
+  galleryItems.forEach((item: IMediaGalleryItem) => {
+
+    const imageUrl = item.FileRef;
+
+    const singleElementHtml = MediaGalleryTemplate.singleElementHtml
+      .replace('__KEY_GALLERY_IMAGE__', imageUrl)
+      
+
+    allElementsHtml += singleElementHtml;
+  });
+
+  if (allElementsHtml === '') {
+    allElementsHtml = MediaGalleryTemplate.noRecord;
+  }
+
+  const galleryWrapper = this.domElement.querySelector('.gallery-swiper .swiper-wrapper');
+
+  if (galleryWrapper !== null) {
+    galleryWrapper.innerHTML = allElementsHtml;
+
+    // Fill Modal Gallery
+    const modalWrapper = this.domElement.querySelector('.gallery-modal-swiper .swiper-wrapper');
+
+    if (modalWrapper !== null) {
+      let modalElementsHtml: string = '';
+
+      galleryItems.forEach((item: IMediaGalleryItem) => {
+
+        const imageUrl = item.FileRef;
+
+        modalElementsHtml += `
+          <div class="swiper-slide gallery-swiper-slide">
+            <img src="${imageUrl}" alt="${item.Caption || item.Title || ''}" />
+          </div>
+        `;
+      });
+
+      modalWrapper.innerHTML = modalElementsHtml;
+    }
+
+    const galleryElement = this.domElement.querySelector('.gallery-swiper') as HTMLElement & { swiper?: any };
+    if (galleryElement && galleryElement.swiper) {
+      galleryElement.swiper.update();
+    }
+  }
+}
   // ==================== ANNOUNCEMENT / OFFERS ====================
 
   private setupViewAllLink(arrowIconUrl: string): void {
