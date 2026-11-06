@@ -78,16 +78,16 @@ private async _initialise(): Promise<void> {
  
 const headerDataPromise: Promise<[string, any[], any[], any[], any[], boolean]> =
   Promise.all([
-    this._getUserDesignation(),
-    this._getDepartments(),
-    this._getControlledDocuments(),
-    this._getDocumentCenterItems(),
-    this._getListingPageItems(),
-    this._isAdminUser()
+    this._getUserDesignation().catch(() => ''),
+    this._getDepartments().catch(() => []),
+    this._getControlledDocuments().catch(() => []),
+    this._getDocumentCenterItems().catch(() => []),
+    this._getListingPageItems().catch(() => []),
+    this._isAdminUser().catch(() => false)
   ]);
  
-  const footerItemsPromise: Promise<any[]> = this._getFooterItems();
- 
+const footerItemsPromise: Promise<any[]> =
+  this._getFooterItems().catch(() => []); 
   // Receive all five results in the same order as Promise.all
 const [
   designation,

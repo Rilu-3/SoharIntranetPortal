@@ -13,7 +13,15 @@ constructor(
   private lmePrice: string,
 ) { }
  
- 
+ private _escapeHtml(value: string): string {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
   public render(): string {
  
     return `
@@ -202,7 +210,7 @@ constructor(
                                   <img class="sub-menu-icon sub-menu-icon-default"
                                     src="${iconUrl}" alt="" />
  
-                                  <div class="doc-centre-title">${title}</div>
+                                  <div class="doc-centre-title">${this._escapeHtml(title)}</div>
  
                                 </div>
                                    <img class="submenu-arrow"
@@ -216,7 +224,7 @@ constructor(
                                   placeholder="Search documents..." />
  
                                 <ul>
-                                  ${this.controlledDocumentItems.map((document: any) => `<li><a class="dropdown-item text-sm" href="${document.Link?.Url || '#'}" target="_self" data-interception="off"><span>${document.Title}</span></a></li>`).join('')}
+                                  ${this.controlledDocumentItems.map((document: any) => `<li><a class="dropdown-item text-sm" href="${document.Link?.Url || '#'}" target="_self" data-interception="off"><span>${this._escapeHtml(document.Title)}</span></a></li>`).join('')}
                                 </ul>
  
                               </div>
@@ -258,7 +266,7 @@ constructor(
                                   placeholder="Search departments..." />
  
                                 <ul>
-                                  ${this.departmentItems.map((department: any) => `<li><a class="dropdown-item text-sm" href="${department.Link?.Url || '#'}" target="_self" data-interception="off"><span>${department.Title}</span></a></li>`).join('')}
+                                  ${this.departmentItems.map((department: any) => `<li><a class="dropdown-item text-sm" href="${department.Link?.Url || '#'}" target="_self" data-interception="off"><span>${this._escapeHtml(department.Title)}</span></a></li>`).join('')}
                                 </ul>
  
                               </div>
@@ -283,7 +291,7 @@ constructor(
                                   <img class="sub-menu-icon sub-menu-icon-default"
                                     src="${iconUrl}" alt="" />
  
-                                  <div class="doc-centre-title">${title}</div>
+                                  <div class="doc-centre-title">${this._escapeHtml(title)}</div>
  
                                 </div>
  
@@ -337,7 +345,7 @@ constructor(
  
         <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden min-w-0">
     <img class="sub-menu-icon sub-menu-icon-default" src="${item.IconUrl || ''}" alt="" />
-    <div class="doc-centre-title">${item.Title}</div>
+    <div class="doc-centre-title">${this._escapeHtml(item.Title)}</div>
     </div>
  
     </a>
