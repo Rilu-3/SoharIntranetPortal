@@ -350,8 +350,6 @@ const url: string =
   }
 }
 private async _getControlledDocuments(): Promise<any[]> {
- 
- 
 const url: string =
   `${SITE_URL}/_api/web/lists/getbytitle('Controlled Documents')/items` +
   `?$select=Id,Title,Link,Status,SortOrder` +
@@ -393,7 +391,6 @@ const url: string =
     return [];
   }
 }
- 
  
 private async _getDocumentCenterItems(): Promise<any[]> {
   const url =
@@ -552,7 +549,6 @@ private async _getLmePrice(): Promise<string> {
  
 private async _loadLmePrice(): Promise<void> {
   const price: string = await this._getLmePrice();
- 
   // On failure keep the last known price (if any)
   if (price) {
     this._lmePrice = price;
@@ -581,35 +577,28 @@ private async _loadLmePrice(): Promise<void> {
     const userEmail: string = this.context.pageContext.user.email || '';
     const profilePhoto: string = `${SITE_URL}/_layouts/15/userphoto.aspx?size=L&accountname=${encodeURIComponent(userEmail)}`;
  
-const header: Header = new Header(
-  SITE_URL,
-  userName,
-  escape(this._designation),
-  profilePhoto,
-  this._departmentItems,
-  this._controlledDocumentItems,
-  this._documentCenterItems,
-  this._listingPageItems,
-  this._isAdmin,
-  this._lmePrice
-);
- 
-this._topPlaceholder.domElement.innerHTML = header.render();
- 
-this._setupSearchFunctionality();
-this._setupDepartmentMegaMenu();
-this._setActiveNavLink();
- 
-// Fetch the latest LME price without blocking the header
-this._loadLmePrice().catch(() => { /* already logged */ });
+    const header: Header = new Header(
+      SITE_URL,
+      userName,
+      escape(this._designation),
+      profilePhoto,
+      this._departmentItems,
+      this._controlledDocumentItems,
+      this._documentCenterItems,
+      this._listingPageItems,
+      this._isAdmin,
+      this._lmePrice
+    );
  
     this._topPlaceholder.domElement.innerHTML = header.render();
  
     this._setupSearchFunctionality();
     this._setupDepartmentMegaMenu();
     this._setActiveNavLink();
-  }
  
+    // Fetch the latest LME price without blocking the header
+    this._loadLmePrice().catch(() => { /* already logged */ });
+  }
  
 private _setupDepartmentMegaMenu(): void {
   if (!this._topPlaceholder) {
@@ -818,17 +807,6 @@ const url: string = `${SITE_URL}/_api/web/lists/getbytitle('FooterContacts')/ite
   }
  
  
-// private _renderFooterItems(items: any[]): string {
-//   return items.map((item: any) => {
-//     const contactDetails: string = item.ContactDetails || '';
-//     const imageUrl: string = this._getFooterIconUrl(item);
- 
-//     return Footer.itemTemplate
-//       .replace('__ICON_URL__', () => imageUrl)
-//       .replace('__CONTACT_DETAILS__', () => contactDetails);
-//   }).join('');
-// }
- 
  
 private _renderTopContacts(items: any[]): string {
   return items.map((item: any) => {
@@ -917,36 +895,6 @@ private _renderFooterItems(items: any[]): string {
   }).join('');
 }
  
-// private _buildFooterHtml(footerItems: any[]): string {
-//   const normalise = (value: any): string =>
-//     String(value || '').trim().toLowerCase();
- 
-//   const activeItems: any[] = footerItems.filter(
-//     (item: any) => normalise(item.Status) === 'active'
-//   );
- 
-//   const importantContacts: any[] = activeItems.filter(
-//     (item: any) => normalise(item.Category) === 'important contacts'
-//   );
- 
-//   const medicalServices: any[] = activeItems.filter(
-//     (item: any) => normalise(item.Category) === 'medical services'
-//   );
- 
-//   return Footer.html
-//     .replace(
-//       '__IMPORTANT_CONTACTS__',
-//       () => this._renderFooterItems(importantContacts)
-//     )
-//     .replace(
-//       '__MEDICAL_SERVICES__',
-//       () => this._renderFooterItems(medicalServices)
-//     )
-//     .replace(
-//       '__CURRENT_YEAR__',
-//       new Date().getFullYear().toString()
-//     );
-// }
  
 private _buildFooterHtml(footerItems: any[]): string {
   const normalise = (value: any): string =>
@@ -1060,7 +1008,14 @@ const topContacts: any[] = activeItems
     if (this._bottomPlaceholder && this._bottomPlaceholder.domElement) {
       const footerElement: HTMLElement = this._bottomPlaceholder.domElement;
       footerElement.innerHTML = this._footerHtml;
- 
+
+      const contactsPanel: HTMLElement | null =
+      footerElement.querySelector('#allContactsPanel');
+
+      if (contactsPanel && contactsPanel.parentElement !== document.body) {
+        document.body.appendChild(contactsPanel);
+      }
+
       const spCanvasElement: Element | null = document.querySelector('.SPCanvas div');
  
       if (spCanvasElement) {
