@@ -866,34 +866,110 @@ private _renderTopContacts(items: any[]): string {
   }).join('');
 }
  
+// private _renderFooterItems(items: any[]): string {
+//   return items.map((item: any) => {
+//     const imageUrl: string = this._getFooterIconUrl(item);
+//     const doc: Document = new DOMParser().parseFromString(item.ContactDetails || '', 'text/html');
+ 
+//     doc.querySelectorAll('a').forEach((a: HTMLAnchorElement) => {
+//       a.removeAttribute('title');
+//       const isEmail: boolean = (a.getAttribute('href') || '').indexOf('mailto:') === 0;
+ 
+//       if (isEmail) {
+//         a.className = 'pre-footer-link';
+//       } else {
+//   a.className = 'contact-tel';
+//   const phoneNumber: string = (a.textContent || '').replace(/[^\d+]/g, '');
+//   if (phoneNumber) {
+//     a.setAttribute('href', 'tel:' + phoneNumber);
+//   }
+//   if (!a.querySelector('strong')) {
+//     a.innerHTML = '<strong>' + a.innerHTML + '</strong>';
+//   }
+// }
+//    });
+ 
+//     return Footer.itemTemplate
+//       .replace('__ICON_URL__', () => imageUrl)
+//       .replace('__CONTACT_DETAILS__', () => doc.body.innerHTML);
+//   }).join('');
+// }
+
 private _renderFooterItems(items: any[]): string {
   return items.map((item: any) => {
     const imageUrl: string = this._getFooterIconUrl(item);
-    const doc: Document = new DOMParser().parseFromString(item.ContactDetails || '', 'text/html');
- 
+
+    const doc: Document = new DOMParser().parseFromString(
+      item.ContactDetails || '',
+      'text/html'
+    );
+
+    // Remove unsafe elements
+    doc.querySelectorAll(
+      'script, iframe, object, embed, form, style, link, meta, base'
+    ).forEach((element: Element) => {
+      element.remove();
+    });
+
+    // Remove unsafe attributes
+    doc.body.querySelectorAll('*').forEach((element: Element) => {
+
+      for (let i: number = element.attributes.length - 1; i >= 0; i--) {
+        const attribute: Attr = element.attributes[i];
+        const name: string = attribute.name.toLowerCase();
+        const value: string = attribute.value.trim().toLowerCase();
+
+        if (
+          name.indexOf('on') === 0 ||
+          name === 'srcdoc' ||
+          ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+            (
+              value.indexOf('javascript:') === 0 ||
+              value.indexOf('data:') === 0 ||
+              value.indexOf('vbscript:') === 0
+            ))
+        ) {
+          element.removeAttribute(attribute.name);
+        }
+      }
+    });
+
+    // Preserve existing email and phone functionality
     doc.querySelectorAll('a').forEach((a: HTMLAnchorElement) => {
       a.removeAttribute('title');
-      const isEmail: boolean = (a.getAttribute('href') || '').indexOf('mailto:') === 0;
- 
+
+      const href: string = a.getAttribute('href') || '';
+      const isEmail: boolean = href.toLowerCase().indexOf('mailto:') === 0;
+
       if (isEmail) {
         a.className = 'pre-footer-link';
       } else {
-  a.className = 'contact-tel';
-  const phoneNumber: string = (a.textContent || '').replace(/[^\d+]/g, '');
-  if (phoneNumber) {
-    a.setAttribute('href', 'tel:' + phoneNumber);
-  }
-  if (!a.querySelector('strong')) {
-    a.innerHTML = '<strong>' + a.innerHTML + '</strong>';
-  }
-}
-   });
- 
+        a.className = 'contact-tel';
+
+        const phoneNumber: string = (a.textContent || '').replace(/[^\d+]/g, '');
+
+        if (phoneNumber) {
+          a.setAttribute('href', 'tel:' + phoneNumber);
+        } else {
+          a.removeAttribute('href');
+        }
+
+        if (!a.querySelector('strong')) {
+          const strong: HTMLElement = doc.createElement('strong');
+          strong.textContent = a.textContent || '';
+          a.textContent = '';
+          a.appendChild(strong);
+        }
+      }
+    });
+
     return Footer.itemTemplate
       .replace('__ICON_URL__', () => imageUrl)
       .replace('__CONTACT_DETAILS__', () => doc.body.innerHTML);
+
   }).join('');
 }
+
  
  
 private _buildFooterHtml(footerItems: any[]): string {
